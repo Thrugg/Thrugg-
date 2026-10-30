@@ -8,16 +8,11 @@ A hiking app for mountain and lake hikes in Bavaria, Austria, Switzerland and th
 
 Open the address in Safari, tap Share, then **Add to Home Screen**. It opens full-screen like an app. On a Mac, just bookmark it (or in Safari, File → Add to Dock).
 
-## Sharing one logbook between devices (optional)
+## Saving and syncing
 
-Without this, each device keeps its own logbook. To share one:
-1. Create a free project at https://supabase.com.
-2. Open its **SQL Editor**, paste the SQL from the app (Settings → Sync → "SQL for the Supabase SQL editor") and run it.
-3. Under **Authentication → Users**, add one user (an email and password for both of you) and tick **Auto Confirm User**.
-4. Under **Project Settings → API**, copy the **Project URL** and the **publishable (anon) key**.
-5. In the app on each device: Settings → Sync → paste both, enter the email and password, then **Save and sign in**.
+Everything you enter (names, the dog, home base, hikes done, the bucket list) is saved automatically on the device. Once the shared Supabase account is set up (`tools/supabase-setup.sql`, keys in `cloud.js`), sign in once on each device and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once.
 
-Your logbook, names and settings live in the browser and in your own Supabase project, never in this repository.
+Your logbook, names and settings live in your browser and your own Supabase project, never in this repository.
 
 ## New hikes every week
 

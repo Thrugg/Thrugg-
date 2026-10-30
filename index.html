@@ -588,6 +588,7 @@ a.btn{text-decoration:none}
 <input type="file" id="fileGpx" accept=".gpx,application/gpx+xml,application/octet-stream" multiple hidden>
 <input type="file" id="fileBackup" accept=".json,application/json" hidden>
 
+<script src="cloud.js"></script>
 <script>
 let HIKES = [
 {"id":"eibsee-loop","n":"Eibsee lake circuit","ar":"Garmisch & Zugspitze","rg":"Bavaria","c":"DE","p":[[47.45794,10.98996],[47.4626,10.979],[47.4598,10.9603],[47.4521,10.97]],"hi":2,"tk":"lake","ty":"loop","km":7.4,"up":120,"mx":1010,"lo":975,"g":"easy","sc":"T1","tg":["lake","swim","views","family"],"ss":[4,11],"d":{"r":"free","t":"ok","h2o":1,"n":"Lakeside path, shady in parts; leash in the busy stretches near the hotel."},"b":"Turquoise lake with small islands right under the Zugspitze north face."},
@@ -2039,11 +2040,14 @@ const Dlg = {
         <div class="row2"><label class="field">First name<input name="n0" autocomplete="given-name" required></label><label class="field">Second name<input name="n1"></label></div>
         <label class="field">Dog's name <small>optional, add it later in Settings</small><input name="dog" value="${esc(S.dogName)}"></label>
         <small class="muted">Home base for drive times: ${esc(S.home.name)}. You can change it, the pace and the map style in Settings.</small>`,
-      foot: `<button type="button" class="btn ghost" data-close>Later</button><button class="btn primary" type="submit">Start</button>`,
-      onOpen: f => { LS.set('welcomed', 1); setTimeout(() => f.n0.focus(), 50); },
+      foot: `${Sync.shared() ? '<button type="button" class="btn ghost" id="wSync">Already set up? Sign in</button>' : '<button type="button" class="btn ghost" data-close>Later</button>'}<button class="btn primary" type="submit">Start</button>`,
+      onOpen: f => {
+        LS.set('welcomed', 1); setTimeout(() => f.n0.focus(), 50);
+        const w = $('#wSync'); if (w) w.onclick = () => { $('#dlg').close(); Cloud.dialog(() => Sync.run(true)); };
+      },
       onSubmit: f => {
         S.names = [f.n0.value.trim(), f.n1.value.trim()]; S.dogName = f.dog.value.trim();
-        saveSettings(); brandLine(); UI.syncFind(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog();
+        saveSettings(); brandLine(); shareSettings(); UI.syncFind(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog();
       }
     });
   },
@@ -2083,12 +2087,16 @@ const Dlg = {
         <div class="set-sec"><h3>Pace</h3><div class="row2"><label class="field">Mode<select name="pm"><option value="auto" ${S.pace.mode === 'auto' ? 'selected' : ''}>Learn from our logged times</option><option value="manual" ${S.pace.mode === 'manual' ? 'selected' : ''}>Fixed factor</option></select></label><label class="field">Factor <small>1.00 = signposted</small><input name="pf" type="number" min="0.5" max="1.5" step="0.01" value="${S.pace.manual}"></label></div></div>
         <div class="set-sec"><h3>Map</h3><div class="row2"><label class="field">Theme<select name="theme">${[['system', 'Follow the device'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => `<option value="${v}" ${S.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="field">Terrain exaggeration <small>${S.exag.toFixed(2)}×</small><input name="exag" type="range" min="1" max="2" step="0.05" value="${S.exag}"></label></div>
         <label class="chk"><input type="checkbox" name="autoTrace" ${S.autoTrace ? 'checked' : ''}> Trace all hike routes in the background (once, then cached)</label></div>
-        <div class="set-sec"><h3>Sync between your devices</h3>
+        ${Sync.shared() ? `<div class="set-sec"><h3>Sync between your devices</h3>
+          <small class="muted">Sign in once on each device with your shared account. The logbook, bucket list, your names, the dog and the home base then stay the same everywhere, automatically.</small>
+          <input type="hidden" name="su" value=""><input type="hidden" name="sk" value="">
+          <div class="row2"><label class="field">Email<input name="se" type="email" value="${esc(S.sync.email)}" autocomplete="username"></label><label class="field">Password<input name="sp" type="password" autocomplete="current-password"></label></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn ghost small" id="sConnect">Sign in</button><button type="button" class="btn ghost small" id="sNow">Sync now</button><button type="button" class="btn ghost small" id="sOut">Sign out</button><span class="muted" id="syncStatus">${esc(Sync.msg || '')}</span></div></div>` : `<div class="set-sec"><h3>Sync between your devices</h3>
           <small class="muted">Without sync, each device keeps its own logbook. To share one logbook: create a free Supabase project, run the SQL below in its SQL editor, add one user under Authentication (tick “Auto confirm”), then enter the details here on each device. You both sign in with that same account.</small>
           <div class="row2"><label class="field">Project URL<input name="su" value="${esc(S.sync.url)}" placeholder="https://xxxx.supabase.co"></label><label class="field">Publishable (anon) key<input name="sk" value="${esc(S.sync.key)}" placeholder="sb_publishable_… or eyJ…"></label></div>
           <div class="row2"><label class="field">Email<input name="se" type="email" value="${esc(S.sync.email)}" autocomplete="username"></label><label class="field">Password<input name="sp" type="password" autocomplete="current-password"></label></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn ghost small" id="sConnect">Save and sign in</button><button type="button" class="btn ghost small" id="sNow">Sync now</button><button type="button" class="btn ghost small" id="sOut">Sign out</button><span class="muted" id="syncStatus">${esc(Sync.msg || (Sync.configured() ? '' : 'Not set up'))}</span></div>
-          <details><summary class="muted" style="cursor:pointer">SQL for the Supabase SQL editor</summary><div class="codebox" id="sqlBox">${esc(sql)}</div><button type="button" class="btn ghost small" id="sqlCopy" style="margin-top:6px">Copy SQL</button></details></div>
+          <details><summary class="muted" style="cursor:pointer">SQL for the Supabase SQL editor</summary><div class="codebox" id="sqlBox">${esc(sql)}</div><button type="button" class="btn ghost small" id="sqlCopy" style="margin-top:6px">Copy SQL</button></details></div>`}
         <div class="set-sec"><h3>Backup</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost small" id="sExport">${ic('i-upload')}Export our data</button><button type="button" class="btn ghost small" id="sImport">Import a backup</button></div></div>
         <div class="set-sec"><h3>How difficulty is graded</h3><div class="tablewrap"><table class="grade-table"><thead><tr><th>Cordée</th><th>Switzerland (SAC)</th><th>Austria / Bavaria</th><th>Italy (CAI)</th></tr></thead><tbody>
           <tr><td><span class="gchip g-easy">Easy</span></td><td>T1 · yellow trail</td><td>valley and blue trails</td><td>T</td></tr>
@@ -2104,7 +2112,7 @@ const Dlg = {
         $('#sConnect').onclick = async () => { saveSync(); try { $('#syncStatus').textContent = 'Signing in…'; await Sync.signIn(f.se.value.trim(), f.sp.value); Sync.start(); } catch (e) { $('#syncStatus').textContent = e.message; } };
         $('#sNow').onclick = () => { saveSync(); Sync.run(true); };
         $('#sOut').onclick = () => Sync.signOut();
-        $('#sqlCopy').onclick = async () => { try { await navigator.clipboard.writeText(sql); toast('SQL copied'); } catch (e) { const r = document.createRange(); r.selectNodeContents($('#sqlBox')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selected, copy it with ⌘C'); } };
+        if ($('#sqlCopy')) $('#sqlCopy').onclick = async () => { try { await navigator.clipboard.writeText(sql); toast('SQL copied'); } catch (e) { const r = document.createRange(); r.selectNodeContents($('#sqlBox')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selected, copy it with ⌘C'); } };
         $('#sExport').onclick = () => Backup.export();
         $('#sImport').onclick = () => $('#fileBackup').click();
       },
@@ -2116,7 +2124,7 @@ const Dlg = {
         S.pace = { mode: f.pm.value, manual: clamp(+f.pf.value || 0.88, 0.5, 1.5) };
         S.theme = f.theme.value; S.exag = +f.exag.value; S.autoTrace = f.autoTrace.checked;
         S.sync.url = f.su.value.trim(); S.sync.key = f.sk.value.trim(); S.sync.email = f.se.value.trim();
-        saveSettings(); applyTheme(); brandLine();
+        saveSettings(); applyTheme(); brandLine(); shareSettings();
         if (S.theme !== prevTheme) restyle();
         else if (S.exag !== prevExag && S.threeD && map) map.setTerrain({ source: 'dem-terrain', exaggeration: S.exag });
         pushHome();
@@ -2450,6 +2458,25 @@ const Fly = {
   }
 };
 
+/* Names, dog, home base and pace travel with the logbook, so a new device needs no setup. */
+function shareSettings() {
+  putItem('cfg:settings', 'cfg', { names: S.names, dogName: S.dogName, dogSize: S.dogSize, home: S.home, pace: S.pace });
+  LS.set('cfgApplied', ITEMS['cfg:settings'].u);
+}
+function applyCloudSettings() {
+  const it = ITEMS['cfg:settings'];
+  if (!it || it.x || !it.d || LS.get('cfgApplied') === it.u) return;
+  const prevHome = homeKey(), d = it.d;
+  if (Array.isArray(d.names)) S.names = [d.names[0] || '', d.names[1] || ''];
+  if (typeof d.dogName === 'string') S.dogName = d.dogName;
+  if (d.dogSize) S.dogSize = d.dogSize;
+  if (d.home && isFinite(d.home.lat)) S.home = Object.assign({}, S.home, d.home);
+  if (d.pace) S.pace = Object.assign({}, S.pace, d.pace);
+  saveSettings(); LS.set('cfgApplied', it.u); brandLine();
+  if ($('#dlg').open && $('#dlgTitle').textContent === 'Welcome to Cordée' && hasNames()) $('#dlg').close();
+  if (homeKey() !== prevHome) { pushHome(); loadDrive().then(() => UI.refresh()); }
+}
+
 /* ───────────── Sync (Supabase, optional) ───────────── */
 const SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js';
 const SYNC_SQL = `create table if not exists public.cordee_items (
@@ -2474,9 +2501,11 @@ create trigger cordee_touch before insert or update on public.cordee_items
 const Sync = {
   sb: null, busy: false, status: 'off', msg: '', started: false,
   soon: debounce(() => Sync.run(), 3000),
-  configured() { return !!(S.sync.url && S.sync.key); },
+  shared: () => !!(window.Cloud && Cloud.configured()),
+  configured() { return this.shared() || !!(S.sync.url && S.sync.key); },
   async client() {
     if (this.sb) return this.sb; if (!this.configured()) return null;
+    if (this.shared()) return (this.sb = await Cloud.client());
     if (!window.supabase) await loadScript(SUPA_JS);
     this.sb = window.supabase.createClient(S.sync.url, S.sync.key, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'cordee-auth' } });
     return this.sb;
@@ -2513,7 +2542,7 @@ const Sync = {
         part.forEach(([id, v]) => { if (ITEMS[id] && ITEMS[id].u === v.u) ITEMS[id].dirty = false; });
       }
       LS.set('lastPull', maxU); LS.set('items', ITEMS);
-      if (changed) { rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); }
+      if (changed) { applyCloudSettings(); rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); }
       this.setStatus('ok', 'Synced at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { console.warn('sync', e); this.setStatus('err', 'Sync failed: ' + (e.message || e)); }
     finally { this.busy = false; }
