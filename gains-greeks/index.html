@@ -216,7 +216,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
     <nav class="tabs" id="tabs">
       <a href="#desk"><small>01</small>Tax desk</a>
       <a href="#compare"><small>02</small>Compare 38</a>
-      <a href="#move"><small>03</small>Move 2028</a>
+      <a href="#move"><small>03</small>Move abroad</a>
       <a href="#strategies"><small>04</small>Strategies</a>
       <a href="#options"><small>05</small>Options lab</a>
       <a href="#ibkr"><small>06</small>IBKR import</a>
@@ -240,7 +240,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
     <div class="vhead"><h1>Same results, 38 tax codes</h1><p>Your Tax desk inputs run through every OECD member's 2026 rules. The one-off tax on this year's results is ranked; recurring wealth tax is shown beside it because it compounds against you every year.</p></div>
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:12px">
-        <div class="seg" id="cmp-filter"><button data-v="all">All 38</button><button data-v="pri">My shortlist</button><button data-v="eu">EU</button></div>
+        <div class="seg" id="cmp-filter"><button data-v="all">All 38</button><button data-v="pri">Top 6</button><button data-v="eu">EU</button></div>
         <div class="seg" id="cmp-sort"><button data-v="total">Total</button><button data-v="inv">Investing</button><button data-v="trd">Trading</button><button data-v="wealth">Wealth tax</button></div>
       </div>
       <div class="tw" id="cmp-table"></div>
@@ -249,7 +249,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
 
   <!-- 03 MOVE -->
   <section class="view" id="v-move" hidden>
-    <div class="vhead"><h1>Move 2028: where the gains land</h1><p>Your March 2028 relocation is the largest tax lever you have. This module prices the embedded gain at the border, then compounds the same portfolio for N years under each destination's rules, wealth tax included.</p></div>
+    <div class="vhead"><h1>Moving abroad: where the gains land</h1><p>A move abroad is the largest tax lever an investor has. This module prices the embedded gain at the border, then compounds the same portfolio for N years under each destination's rules, wealth tax included.</p></div>
     <div class="desk">
       <div class="stack" id="move-in"></div>
       <div class="stack" id="move-out"></div>
@@ -259,7 +259,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
   <!-- 04 STRATEGIES -->
   <section class="view" id="v-strategies" hidden>
     <div class="vhead"><h1>Legal ways to keep more</h1><p>Ranked by the saving each one produces on your current inputs. Every estimate re-runs the tax engine with the strategy applied, so the numbers move when you change the Tax desk.</p></div>
-    <div class="row" style="margin-bottom:14px"><div class="seg" id="st-filter"><button data-v="mine">My residence + shortlist</button><button data-v="all">All countries</button></div></div>
+    <div class="row" style="margin-bottom:14px"><div class="seg" id="st-filter"><button data-v="mine">My residence + top 6</button><button data-v="all">All countries</button></div></div>
     <div class="strats" id="st-list"></div>
   </section>
 
@@ -330,7 +330,7 @@ const simple=o=>(I,c)=>{
 const COUNTRIES={
 DE:{n:'Germany',cur:'EUR',conf:'V',eu:1,pri:1,src:'https://www.bundesfinanzministerium.de',srcN:'BMF · §§20, 32d EStG · InvStG',
  r:{sh:'Abgeltungsteuer 25 % + Soli = 26,375 % (27,82 % with 8 % church tax)',op:'Same rate. Premiums taxed on receipt (§20(1) Nr. 11); full loss offset since JStG 2024',al:'Sparerpauschbetrag €1,000 / €2,000 joint',hp:'None (crypto: tax-free after 1 year)',ls:'Share losses only against share gains; unlimited carry-forward; FIFO mandatory',wt:'None'},
- wrap:'Altersvorsorgedepot from 2027 (replaces Riester); bAV. Low value for you given a 2028 exit.',
+ wrap:'Altersvorsorgedepot from 2027 (replaces Riester); bAV. Low value if you plan to leave Germany.',
  ibkr:['IBKR withholds no German tax. You declare everything in Anlage KAP (shares, options, dividends) and KAP-INV (funds) and pay via your assessment.','No Freistellungsauftrag is possible at IBKR; the Sparerpauschbetrag is applied in the tax return instead.','IBKR does not compute the Vorabpauschale or the Teilfreistellung. Both are your job in KAP-INV.','Margin interest is not deductible (§20(9) EStG Werbungskostenabzugsverbot).','File a W-8BEN so US dividends are withheld at 15 %, which is fully creditable. At 30 % you lose 15 points for good.','FX gains on foreign-currency cash held under 1 year can be a private sale under §23 EStG (€1,000 Freigrenze). Convert deliberately.','Open short options at year end: the premium is taxable in the year received, even though IBKR shows no realised P&L yet.'],
  calc(I,c){
   const tfsR={shares:0,eqETF:.3,mixFund:.15,bondFund:0}[I.veh],isSh=I.veh==='shares';
@@ -635,7 +635,7 @@ function evaluate(code,I){
 /* ---------- state ---------- */
 const TODAY=new Date();
 const DEF={
- p:{res:'DE',broker:'ibkr',filing:'single',income:85000,church:0,allowUsed:0,lossCF:0,lossCFSh:0,wealthOther:20000,
+ p:{res:'DE',broker:'ibkr',filing:'single',income:60000,church:0,allowUsed:0,lossCF:0,lossCFSh:0,wealthOther:20000,
     cap:50000,gain:8000,hold:730,veh:'eqETF',div:600,wht:15,
     tCap:15000,opt:3200,swing:1500,trades:60,tHold:12,turnover:180000,margin:false,hedgeOnly:false,idx:false},
  m:{dest:'CH,DK,NO,PL,FR',V:60000,U:12000,g:6,y:1.5,N:10,before:false,stepDK:true,stepNO:false},
@@ -728,7 +728,7 @@ function renderDeskOut(){
  ${r.ks36?ksPanel(r.ks36):''}
  <div class="card"><h2>Breakdown · ${esc(C.srcN)}</h2>${linesTable(r)}</div>
  <div class="card"><h2>What to know</h2><ul class="notes">${notes.map(n=>`<li class="${n.t}">${esc(n.x)}</li>`).join('')||'<li>No special notes for this profile.</li>'}</ul></div>
- <div class="card"><h2>Same results in your shortlist</h2>
+ <div class="card"><h2>Same results in the top 6</h2>
   <p class="sm muted" style="margin:0 0 10px">${C.n} ranks #${rank} of 38 on this year's tax. Brass = annual wealth tax on top.</p>
   <div class="tw"><table class="t"><tbody>${[{c:I.res,r},...cand].map(x=>`<tr class="${x.c===I.res?'me':''}"><td style="width:150px"><span class="cc">${x.c}</span>${COUNTRIES[x.c].n}</td><td style="width:45%"><div class="hbar" style="display:flex"><i style="width:${x.r.total/mx*100}%"></i><i class="w" style="width:${x.r.wealth/mx*100}%"></i></div></td><td class="r">${eur(x.r.total)}</td><td class="r muted">${x.r.wealth?'+'+eur(x.r.wealth):''}</td></tr>`).join('')}</tbody></table></div>
  </div>`;
@@ -781,17 +781,17 @@ function renderMoveIn(){
   ${num('m','g','Price return',{unit:'%/yr',step:0.1})}
   ${num('m','y','Dividend yield',{unit:'%/yr',step:0.1})}
   ${num('m','N','Horizon after move',{unit:'years',step:1})}
-  ${sel('m','dest','Destinations',[['CH,DK,NO,PL,FR','Shortlist + France'],['CH,DK,NO,PL','Shortlist only'],['CH,PL','CH vs PL']])}
+  ${sel('m','dest','Destinations',[['CH,DK,NO,PL,FR','CH, DK, NO, PL, FR'],['CH,DK,NO,PL','CH, DK, NO, PL'],['CH,PL','CH vs PL']])}
   ${chk('m','before','Realise the embedded gain in Germany before moving','Resets cost basis; tax paid at German rates')}
   ${chk('m','stepDK','Denmark grants a cost step-up on immigration','Likely, but verify with SKAT (K)')}
   ${chk('m','stepNO','Norway grants a cost step-up on immigration','Assumed no; verify (K)')}
  </div></div>
  <div class="card"><h2>Before you deregister · checklist</h2><ul class="notes">
-  <li class="warn">§6 AStG exit tax applies to stakes of 1 % or more in any corporation, including your own GmbH. Don't set up a vermögensverwaltende GmbH before 2028.</li>
+  <li class="warn">§6 AStG exit tax applies to stakes of 1 % or more in any corporation, including your own GmbH. Don't set up a vermögensverwaltende GmbH before you move.</li>
   <li class="warn">InvStG §19 deemed-sale rules for funds apply only above the 1 % / €500k thresholds. Verify the exact wording with a Steuerberater.</li>
   <li class="info">§2 AStG extended liability and the DBA DE-CH Art. 4(4) clause target German nationals. As a French national you are very likely outside them; confirm.</li>
   <li class="tip">Harvest German losses before the move. They don't travel, and a share-loss pot dies with your German residence.</li>
-  <li class="info">The move must be real: deregister (Abmeldung), give up the Munich home, and file a split-year return for 2028.</li>
+  <li class="info">The move must be real: deregister (Abmeldung), give up the German home, and file a split-year return for the year you leave.</li>
   <li class="info">Switzerland: choose the canton deliberately (Zug/Schwyz vs Zurich/Geneva) and stay inside KS 36 from day one.</li>
   <li class="info">Norway: an ASK must be with a Norwegian provider; IBKR positions stay in the ordinary regime.</li>
   <li class="info">Poland: the OKI account starts 1 Jan 2027 and is tax-free up to PLN 100k of assets.</li>
@@ -822,7 +822,7 @@ function renderMoveOut(){
 /* ---------- 04 STRATEGIES ---------- */
 const T=(c,I)=>evaluate(c,I).total;
 const STRATS=[
- {id:'reloc',t:'Time realisations around the 2028 move',c:['DE'],imp:5,eff:2,
+ {id:'reloc',t:'Time realisations around a move abroad',c:['DE'],imp:5,eff:2,
   est:I=>{const d=['CH','PL','NO','DK'].map(c=>({c,v:T('DE',I)-T(c,I)})).sort((a,b)=>b.v-a.v);return{v:d[0].v,x:`Best: ${COUNTRIES[d[0].c].n}`};},
   m:'Switzerland and Poland tax less than Germany: defer gains until you are resident there. Norway is higher (37,84 % on shares): realise in Germany first. Denmark likely steps up your cost basis on arrival, so harvest German losses before leaving.',r:'The move must be genuine (centre of vital interests). Check treaty tie-breakers and split-year rules.'},
  {id:'allow',t:'Fill the Sparerpauschbetrag every December',c:['DE'],imp:2,eff:1,
@@ -866,7 +866,7 @@ const STRATS=[
   m:'IBKR does not file reclaims. Swiss 35 % withholding can be cut to 15 % for German residents (Form 85, reclaim 20 points). Denmark withholds 27 % (treaty 15 %), France 25 % (treaty 12,8 %).',r:'Paperwork per country; worthwhile above a few hundred euros.'},
  {id:'domicile',t:'Prefer Irish-domiciled ETFs',c:'all',imp:2,eff:1,
   m:'An Irish fund pays 15 % US withholding inside the fund; a Luxembourg fund pays 30 %. US-domiciled ETFs are blocked for EU retail (PRIIPs) and expose non-US persons to US estate tax above US$60k.',r:'Hidden drag ≈ 0,1–0,3 % a year; check the fund\'s domicile on the factsheet.'},
- {id:'gmbh',t:'Do not open an investment GmbH before 2028',c:['DE'],imp:4,eff:4,avoid:true,
+ {id:'gmbh',t:'Do not open an investment GmbH before a move',c:['DE'],imp:4,eff:4,avoid:true,
   m:'A vermögensverwaltende GmbH pays about 1,5 % on share gains (95 % exemption, §8b KStG), but you would hold 100 % of it. That is a ≥ 1 % stake, so §6 AStG taxes the unrealised value of the GmbH when you emigrate.',r:'Revisit after you settle, under the destination\'s rules.'},
  {id:'trader',t:'Watch trader-status reclassification',c:['AU','CA','NL','NZ','BE','CH'],imp:3,eff:1,when:I=>I.trades>50,
   m:'Frequent, systematic trading can turn capital gains into business income: AU and CA (ordinary income), NL (Box 1), NZ (taxable), BE (33 % speculative), CH (income tax + AHV).',r:'Facts-and-circumstances tests; keep trading volume and holding periods documented.'},

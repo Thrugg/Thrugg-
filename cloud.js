@@ -5,8 +5,8 @@
 (function () {
   'use strict';
   const CFG = {
-    url: '',  // e.g. https://abcd1234.supabase.co
-    key: ''   // publishable key: sb_publishable_…
+    url: 'https://usgsrhwnnmumsbdgcgib.supabase.co',
+    key: 'sb_publishable_J1dwK1TQB5ar7ebeplw1yA_f4a1HEt3'
   };
   const SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js';
   const rawSet = Storage.prototype.setItem, rawRemove = Storage.prototype.removeItem;

@@ -261,7 +261,7 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
           <select id="country" class="country-select"></select>
         </div>
         <div id="convNote" class="note warn" style="margin-top:12px" hidden></div>
-        <div id="exNote" class="note" style="margin-top:12px" hidden>Example profile: a finance controller in Munich. Replace these numbers with yours. They stay in this browser only.</div>
+        <div id="exNote" class="note" style="margin-top:12px" hidden>Example profile: an employee in Germany. Replace these numbers with yours. They stay in this browser only.</div>
         <div class="fields">
           <div class="row2">
             <div class="field"><label for="grossAnnual">Gross pay per year</label><div class="inp"><input id="grossAnnual" type="number" inputmode="decimal" min="0" step="1000"><span class="unit" data-cur></span></div></div>
@@ -1244,8 +1244,8 @@ This leaves margin for friction the rules do not capture.</div>
   'use strict';
   const N = window.NETSCORE, D = N.DATA, C = D.C, ORDER = D.ORDER, DPM = N.DPM;
   const KEY = 'safetyNetScore.v1';
-  const EXAMPLE = { grossAnnual: 85000, netMonthly: 4300, essential: 2800, otherIncome: 0, savings: 10000, monthlySaving: 1000,
-    age: 32, years: 6, children: 0, deTaxClass: '1', dkMemberYears: 1, seMemberMonths: 12, beCategory: 'isole',
+  const EXAMPLE = { grossAnnual: 55000, netMonthly: 3000, essential: 2000, otherIncome: 0, savings: 8000, monthlySaving: 500,
+    age: 35, years: 10, children: 0, deTaxClass: '1', dkMemberYears: 1, seMemberMonths: 12, beCategory: 'isole',
     taxOverride: null, netBenefitOverride: null, example: true };
   const DEF_ASM = Object.assign({}, N.DEFAULT_ASSUMPTIONS);
   const LEVELS = [
