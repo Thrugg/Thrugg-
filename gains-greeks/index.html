@@ -1,0 +1,1374 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gains & Greeks"><meta name="theme-color" content="#fafcfb">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
+<script src="../cloud.js"></script><script>Cloud.mirror("gains-greeks", "gg.v1");</script>
+</head><body>
+<title>Gains & Greeks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Libre+Caslon+Display&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky ledger header + scrollable module rail; each module is a two-pane desk (inputs | results) that stacks under 940px. */
+:root{
+  --paper:#edf1f0; --surface:#fafcfb; --raised:#ffffff; --ink:#12232a; --muted:#56686c; --line:#d2dbda; --soft:#e3eae9;
+  --petrol:#0d5465; --on-petrol:#ffffff; --brass:#94650f; --gain:#17714a; --loss:#ad352d; --warn:#8a6100;
+  --display:"Libre Caslon Display","Libre Caslon Text",Georgia,"Times New Roman",serif;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0b1417; --surface:#111d21; --raised:#16252a; --ink:#e2ebe9; --muted:#93a4a7; --line:#24363b; --soft:#1a2b30;
+  --petrol:#58b0c2; --on-petrol:#06181c; --brass:#d7a547; --gain:#4fc28c; --loss:#f07166; --warn:#e3b24b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0b1417; --surface:#111d21; --raised:#16252a; --ink:#e2ebe9; --muted:#93a4a7; --line:#24363b; --soft:#1a2b30;
+  --petrol:#58b0c2; --on-petrol:#06181c; --brass:#d7a547; --gain:#4fc28c; --loss:#f07166; --warn:#e3b24b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+a{color:var(--petrol)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.wrap{max-width:1260px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* Header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar1{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 10px;margin-right:auto;min-width:0}
+.brand b{font-family:var(--display);font-weight:400;font-size:26px;letter-spacing:.2px;line-height:1}
+.brand b i{font-style:normal;color:var(--brass)}
+.brand span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.ctx{display:flex;gap:8px;flex-wrap:wrap}
+.ctx label{display:flex;flex-direction:column;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);gap:2px}
+.ctx select{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:13px;letter-spacing:0;text-transform:none;color:var(--ink);max-width:190px}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-bottom:-1px}
+.tabs::-webkit-scrollbar{display:none}
+.tabs a{flex:none;text-decoration:none;color:var(--muted);padding:9px 12px 10px;border-bottom:2px solid transparent;font-weight:500;font-size:13px;white-space:nowrap}
+.tabs a:hover{color:var(--ink)}
+.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--brass)}
+.tabs a small{font-family:var(--mono);font-size:10px;color:var(--brass);margin-right:6px}
+
+main{padding-block:22px 60px}
+@media (max-width:640px){.top{position:relative;top:0}.ctx select{max-width:150px}}
+.view[hidden]{display:none}
+.vhead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 20px;margin-bottom:16px}
+.vhead h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,4.4vw,40px);line-height:1.05;margin:0;text-wrap:balance}
+.vhead p{margin:0;color:var(--muted);max-width:68ch;flex:1 1 320px}
+.desk{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:940px){.desk{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h2 .n{font-family:var(--mono);color:var(--brass);letter-spacing:0}
+.card h3{font-size:15px;margin:0 0 6px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fgrid .full{grid-column:1/-1}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fl{font-size:12px;color:var(--muted);font-weight:500}
+.fi{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:6px;background:var(--raised);overflow:hidden}
+.fi:focus-within{border-color:var(--petrol)}
+.fi input,.fi select{border:0;background:transparent;padding:7px 9px;width:100%;min-width:0;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.fi select{font-family:var(--sans)}
+.fi em{font-style:normal;font-size:11px;color:var(--muted);padding:0 9px;display:flex;align-items:center;background:var(--soft);border-left:1px solid var(--line);white-space:nowrap}
+.fi input:focus,.fi select:focus{outline:none}
+.f small{font-size:11px;color:var(--muted);line-height:1.35}
+.ck{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
+.ck input{margin-top:3px;accent-color:var(--petrol)}
+.ck small{display:block;color:var(--muted);font-size:11px}
+.sub{border-top:1px dashed var(--line);margin-top:12px;padding-top:12px}
+
+/* Results */
+.hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.hero>div{background:var(--surface);padding:14px 16px;min-width:0}
+.hero .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.hero .v{font-family:var(--display);font-size:clamp(24px,3vw,34px);line-height:1.15;margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hero .s{font-size:12px;color:var(--muted)}
+.hero .lead{background:var(--petrol);color:var(--on-petrol)}
+.hero .lead .k,.hero .lead .s{color:inherit;opacity:.8}
+@media (max-width:640px){.hero{grid-template-columns:1fr 1fr}}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.split{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.kv .tot{border-top:1px solid var(--line);padding-top:6px;font-weight:600;color:var(--ink)}
+.big{font-family:var(--display);font-size:28px;line-height:1.1}
+.pos{color:var(--gain)} .neg{color:var(--loss)}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:7px 8px;border-bottom:1px solid var(--soft);vertical-align:top}
+table.t td.r,table.t th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t tr.me td{background:color-mix(in srgb,var(--brass) 10%,transparent)}
+table.t tr.sum td{font-weight:600;border-top:1px solid var(--line);border-bottom:0}
+th.sortable{cursor:pointer;user-select:none} th.sortable:hover{color:var(--ink)}
+.stamp{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid currentColor;border-radius:3px;padding:0 4px;line-height:15px;white-space:nowrap;transform:rotate(-2deg)}
+.stamp.V{color:var(--gain)} .stamp.K{color:var(--warn)}
+.cc{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:500;background:var(--soft);border:1px solid var(--line);border-radius:3px;padding:0 5px;margin-right:6px;color:var(--ink)}
+.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--gain) 16%,transparent);color:var(--gain)}
+.pill.bad{background:color-mix(in srgb,var(--loss) 15%,transparent);color:var(--loss)}
+.pill.w{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.pill.b{background:color-mix(in srgb,var(--brass) 16%,transparent);color:var(--brass)}
+.notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.notes li{display:grid;grid-template-columns:20px 1fr;gap:8px;font-size:13px;line-height:1.45}
+.notes li::before{content:"i";font-family:var(--mono);font-size:11px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--muted);margin-top:1px}
+.notes li.warn::before{content:"!";background:color-mix(in srgb,var(--loss) 15%,transparent);color:var(--loss)}
+.notes li.tip::before{content:"→";background:color-mix(in srgb,var(--gain) 15%,transparent);color:var(--gain)}
+.notes li.ibkr::before{content:"IB";font-size:8.5px;background:color-mix(in srgb,var(--petrol) 16%,transparent);color:var(--petrol)}
+.hbar{height:8px;background:var(--soft);border-radius:2px;overflow:hidden;min-width:60px}
+.hbar i{display:block;height:100%;background:var(--petrol)}
+.hbar i.w{background:var(--brass)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--raised)}
+.seg button{border:0;background:transparent;padding:6px 11px;font-size:12px;cursor:pointer;color:var(--muted);font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--petrol);color:var(--on-petrol)}
+.btn{border:1px solid var(--line);background:var(--raised);border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--petrol)}
+.btn.pri{background:var(--petrol);border-color:var(--petrol);color:var(--on-petrol)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)} .sm{font-size:12px}
+.ks{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (max-width:640px){.ks{grid-template-columns:1fr}}
+.ks div{border:1px solid var(--line);border-radius:7px;padding:8px;font-size:12px;background:var(--raised)}
+.ks div b{display:block;font-size:11px;margin-bottom:2px}
+.ks .ok b{color:var(--gain)} .ks .no b{color:var(--loss)}
+
+/* Strategies */
+.strats{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.st{display:flex;flex-direction:column;gap:8px}
+.st header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.st h3{font-size:15px;margin:0;line-height:1.3}
+.st .save{font-family:var(--display);font-size:22px;white-space:nowrap;color:var(--gain);line-height:1}
+.st .save.na{font-family:var(--sans);font-size:11px;color:var(--muted)}
+.st p{margin:0;font-size:13px}
+.st .risk{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+.st .tags{display:flex;gap:4px;flex-wrap:wrap}
+
+/* Options lab */
+.ol-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.legs{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+.legs th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 5px;font-weight:600}
+.legs td{padding:3px 4px}
+.legs input,.legs select{width:100%;border:1px solid var(--line);border-radius:5px;background:var(--raised);padding:5px 6px;font-family:var(--mono);font-size:12.5px;min-width:0}
+.legs select{font-family:var(--sans)}
+.legs input:disabled{opacity:.35}
+.legs .x{border:0;background:none;cursor:pointer;color:var(--muted);font-size:16px;padding:2px 6px}
+.legs .err input{border-color:var(--loss)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.metrics>div{background:var(--surface);padding:10px 12px;min-width:0}
+.metrics .k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.metrics .v{font-family:var(--mono);font-size:15px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums}
+.metrics .s{font-size:11px;color:var(--muted)}
+.chart svg{width:100%;height:auto;display:block}
+.chart .ax{stroke:var(--line);stroke-width:1}
+.chart .zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.chart .tick{fill:var(--muted);font-family:var(--mono);font-size:10px}
+.chart .exp{fill:none;stroke:var(--petrol);stroke-width:2.2}
+.chart .now{fill:none;stroke:var(--brass);stroke-width:2;stroke-dasharray:6 4}
+.chart .band{fill:var(--petrol);opacity:.07}
+.chart .spot{stroke:var(--brass);stroke-width:1}
+.chart .be{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
+.chart .bar{fill:var(--petrol)} .chart .bar.me{fill:var(--brass)}
+.chart .lbl{fill:var(--ink);font-family:var(--mono);font-size:11px}
+.chart .lblm{fill:var(--muted);font-family:var(--sans);font-size:11px}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid var(--petrol);vertical-align:middle;margin-right:6px}
+.legend i.d{border-top:2px dashed var(--brass)}
+.mx{border-collapse:separate;border-spacing:1px;font-family:var(--mono);font-size:11.5px;font-variant-numeric:tabular-nums}
+.mx th{font-weight:500;color:var(--muted);padding:4px 6px;white-space:nowrap;font-size:10.5px;background:var(--surface);position:sticky;top:0}
+.mx th.px{position:sticky;left:0;z-index:1;text-align:right}
+.mx td{padding:4px 7px;text-align:right;white-space:nowrap;border-radius:2px;min-width:58px}
+.mx tr.spot th.px{color:var(--brass)}
+.mx tr.tgt th.px{color:var(--petrol);font-weight:600}
+.mx tr.tgt td{box-shadow:inset 0 2px 0 var(--petrol),inset 0 -2px 0 var(--petrol)}
+.mx .tgl{font-family:var(--sans);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.chart .tgt{stroke:var(--petrol);stroke-width:1.4;stroke-dasharray:2 3}
+.qbtn{border:0;border-left:1px solid var(--line);background:var(--soft);color:var(--petrol);font-size:12px;font-weight:600;padding:0 10px;cursor:pointer;white-space:nowrap}
+.qbtn:hover{background:var(--petrol);color:var(--on-petrol)}.qbtn:disabled{opacity:.6;cursor:wait}
+.qs{display:block;margin-bottom:4px;color:var(--ink)}.qs.err{color:var(--loss)}.qs .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gain);margin-right:6px;vertical-align:1px}.qs.busy .dot{background:var(--brass)}
+.metrics .tg{background:color-mix(in srgb,var(--petrol) 9%,var(--surface))}
+.mx td.sel{outline:1.5px solid var(--ink);outline-offset:-1px}
+.range{display:flex;align-items:center;gap:10px}
+.range input{flex:1;accent-color:var(--brass)}
+.range output{font-family:var(--mono);font-size:12px;min-width:94px;text-align:right}
+textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-radius:7px;background:var(--raised);padding:10px;font-family:var(--mono);font-size:11.5px;resize:vertical}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:16px;text-align:center;color:var(--muted);font-size:13px}
+.drop.on{border-color:var(--petrol);color:var(--ink)}
+.cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.cal div{border-left:2px solid var(--brass);padding:2px 0 2px 10px;font-size:13px}
+.cal b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.foot{margin-top:28px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;max-width:90ch}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:8px;font-size:13px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="top">
+  <div class="wrap">
+    <div class="bar1">
+      <div class="brand"><b>Gains <i>&amp;</i> Greeks</b><span>Investor tax desk · 38 OECD</span></div>
+      <div class="ctx">
+        <label>Tax residence<select id="g-res" data-s="p" data-k="res"></select></label>
+        <label>Broker<select id="g-broker" data-s="p" data-k="broker"><option value="ibkr">Interactive Brokers</option><option value="domestic">Domestic bank/broker</option></select></label>
+        <label>Filing<select id="g-filing" data-s="p" data-k="filing"><option value="single">Single</option><option value="joint">Married / joint</option></select></label>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <a href="#desk"><small>01</small>Tax desk</a>
+      <a href="#compare"><small>02</small>Compare 38</a>
+      <a href="#move"><small>03</small>Move 2028</a>
+      <a href="#strategies"><small>04</small>Strategies</a>
+      <a href="#options"><small>05</small>Options lab</a>
+      <a href="#ibkr"><small>06</small>IBKR import</a>
+      <a href="#rules"><small>07</small>Rules &amp; sources</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+  <!-- 01 TAX DESK -->
+  <section class="view" id="v-desk">
+    <div class="vhead"><h1>What the taxman takes</h1><p>Enter one tax year of results. Long-term investing and options or swing trading are taxed in separate baskets where the law separates them, so the split below follows each country's own loss-offset rules. Figures shown are an example profile until you replace them.</p></div>
+    <div class="desk">
+      <div class="stack" id="desk-in"></div>
+      <div class="stack" id="desk-out"></div>
+    </div>
+  </section>
+
+  <!-- 02 COMPARE -->
+  <section class="view" id="v-compare" hidden>
+    <div class="vhead"><h1>Same results, 38 tax codes</h1><p>Your Tax desk inputs run through every OECD member's 2026 rules. The one-off tax on this year's results is ranked; recurring wealth tax is shown beside it because it compounds against you every year.</p></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:12px">
+        <div class="seg" id="cmp-filter"><button data-v="all">All 38</button><button data-v="pri">My shortlist</button><button data-v="eu">EU</button></div>
+        <div class="seg" id="cmp-sort"><button data-v="total">Total</button><button data-v="inv">Investing</button><button data-v="trd">Trading</button><button data-v="wealth">Wealth tax</button></div>
+      </div>
+      <div class="tw" id="cmp-table"></div>
+    </div>
+  </section>
+
+  <!-- 03 MOVE -->
+  <section class="view" id="v-move" hidden>
+    <div class="vhead"><h1>Move 2028: where the gains land</h1><p>Your March 2028 relocation is the largest tax lever you have. This module prices the embedded gain at the border, then compounds the same portfolio for N years under each destination's rules, wealth tax included.</p></div>
+    <div class="desk">
+      <div class="stack" id="move-in"></div>
+      <div class="stack" id="move-out"></div>
+    </div>
+  </section>
+
+  <!-- 04 STRATEGIES -->
+  <section class="view" id="v-strategies" hidden>
+    <div class="vhead"><h1>Legal ways to keep more</h1><p>Ranked by the saving each one produces on your current inputs. Every estimate re-runs the tax engine with the strategy applied, so the numbers move when you change the Tax desk.</p></div>
+    <div class="row" style="margin-bottom:14px"><div class="seg" id="st-filter"><button data-v="mine">My residence + shortlist</button><button data-v="all">All countries</button></div></div>
+    <div class="strats" id="st-list"></div>
+  </section>
+
+  <!-- 05 OPTIONS LAB -->
+  <section class="view" id="v-options" hidden>
+    <div class="vhead"><h1>Options lab</h1><p>Prices every leg with Black-Scholes-Merton (European) or a Cox-Ross-Rubinstein binomial tree (American, early exercise). It projects the position across price and time, like optionsprofitcalculator.com, and adds probability, Greeks and the after-tax result in your country.</p></div>
+    <div class="stack" id="ol"></div>
+  </section>
+
+  <!-- 06 IBKR -->
+  <section class="view" id="v-ibkr" hidden>
+    <div class="vhead"><h1>IBKR statement import</h1><p>Paste or drop an Interactive Brokers Flex Query or Activity Statement CSV. Trades are bucketed into the baskets your tax residence uses, converted to euros, and can be pushed into the Tax desk. Nothing leaves your browser.</p></div>
+    <div class="desk">
+      <div class="stack" id="ib-in"></div>
+      <div class="stack" id="ib-out"></div>
+    </div>
+  </section>
+
+  <!-- 07 RULES -->
+  <section class="view" id="v-rules" hidden>
+    <div class="vhead"><h1>Rules &amp; sources</h1><p>Every parameter the engine uses, with its verification status. <span class="stamp V">Verified 2026</span> means checked against 2026-dated sources. <span class="stamp K">To verify</span> means taken from established rules; check the primary source before acting.</p></div>
+    <div class="stack" id="rules"></div>
+  </section>
+
+  <p class="foot">Planning tool, not tax or investment advice. Rules as of 24 Oct 2026; progressive schedules for non-priority countries are simplified (single filer, national rates). FX rates are indicative and editable under Rules &amp; sources. Confirm with a Steuerberater before acting on relocation or exit-tax decisions.</p>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/*ENGINE-START*/
+const FX={EUR:1,USD:1.16,GBP:0.87,CHF:0.935,DKK:7.46,NOK:11.7,SEK:11.0,PLN:4.25,CZK:24.4,HUF:390,AUD:1.78,CAD:1.62,JPY:175,KRW:1650,NZD:1.98,ISK:142,ILS:3.9,MXN:21.5,CLP:1100,COP:4600,CRC:590,TRY:48};
+const pct=x=>(Math.round(x*100000)/1000).toLocaleString('de-DE',{maximumFractionDigits:3})+' %';
+const dur=d=>d>=365?(Math.round(d/365*10)/10)+(d>=730?' years':' year'):Math.round(d/30.4)+' months';
+function prog(x,br){let t=0,p=0;for(const[u,r]of br){if(x<=p)break;t+=(Math.min(x,u)-p)*r;p=u;}return t;}
+function stk(base,add,br){return prog(Math.max(0,base+add),br)-prog(Math.max(0,base),br);}
+function nb(sum,cf,allow){cf=cf||0;allow=allow||0;let net=sum;const u=net>0?Math.min(net,cf):0;net-=u;const a=Math.min(allow,Math.max(0,net));return{net,taxable:Math.max(0,net-a),allow:a,cf:net<0?-net:0,cfUsed:u};}
+
+function makeCtx(I,cur,res){
+  const r=FX[cur]||1;
+  return{r,L:e=>e*r,E:l=>l/r,
+    add(label,base,tax){res.lines.push({label,base,tax});},
+    wealth(label,amt){if(amt>0.5)res.lines.push({label,base:null,tax:amt,wealth:true});res.wealth+=Math.max(0,amt);},
+    note(t,x){res.notes.push({t,x});},
+    cf(a,how){if(a>1)res.notes.push({t:'info',x:`Loss of ${Math.round(a).toLocaleString('de-DE')} € carries forward${how?' ('+how+')':''}.`});},
+    div(rate,label){if(I.div>0){const t=Math.max(0,rate-I.wht)*I.div;res.lines.push({label:label||`Dividends at ${pct(rate)} (after foreign-tax credit)`,base:I.div,tax:t});}},
+    divAt(taxGross,label){if(I.div>0){const cr=Math.min(taxGross,I.div*I.wht);res.lines.push({label,base:I.div,tax:Math.max(0,taxGross-cr)});}},
+    ks36:null};
+}
+
+const simple=o=>(I,c)=>{
+  let g=I.gain,sw=I.swing;
+  if(o.ex&&I.hold>=o.ex&&I.gain){c.add(`Long-term gain exempt (held ≥ ${dur(o.ex)})`,I.gain,0);g=0;}
+  if(o.ex&&I.tHold>=o.ex)sw=0;
+  const cf=o.carry===false?0:I.lossCF;
+  if(o.or!=null){
+    const b1=nb(g+sw,cf,0),b2=nb(I.opt,0,0);
+    c.add(`Shares & ETFs at ${pct(o.rate)}`,b1.taxable,b1.taxable*o.rate);
+    c.add(`Options & derivatives at ${pct(o.or)}`,b2.taxable,b2.taxable*o.or);
+    c.cf(b1.cf+b2.cf);
+  }else{
+    const b=nb(g+sw+I.opt,cf,0);
+    c.add(`Gains basket (shares, ETFs, options) at ${pct(o.rate)}`,b.taxable,b.taxable*o.rate);
+    if(o.carry===false&&b.cf>0)c.note('warn','Net losses cannot be carried forward here; they expire at year end.');else c.cf(b.cf);
+  }
+  c.div(o.dr??o.rate);
+};
+
+const COUNTRIES={
+DE:{n:'Germany',cur:'EUR',conf:'V',eu:1,pri:1,src:'https://www.bundesfinanzministerium.de',srcN:'BMF · §§20, 32d EStG · InvStG',
+ r:{sh:'Abgeltungsteuer 25 % + Soli = 26,375 % (27,82 % with 8 % church tax)',op:'Same rate. Premiums taxed on receipt (§20(1) Nr. 11); full loss offset since JStG 2024',al:'Sparerpauschbetrag €1,000 / €2,000 joint',hp:'None (crypto: tax-free after 1 year)',ls:'Share losses only against share gains; unlimited carry-forward; FIFO mandatory',wt:'None'},
+ wrap:'Altersvorsorgedepot from 2027 (replaces Riester); bAV. Low value for you given a 2028 exit.',
+ ibkr:['IBKR withholds no German tax. You declare everything in Anlage KAP (shares, options, dividends) and KAP-INV (funds) and pay via your assessment.','No Freistellungsauftrag is possible at IBKR; the Sparerpauschbetrag is applied in the tax return instead.','IBKR does not compute the Vorabpauschale or the Teilfreistellung. Both are your job in KAP-INV.','Margin interest is not deductible (§20(9) EStG Werbungskostenabzugsverbot).','File a W-8BEN so US dividends are withheld at 15 %, which is fully creditable. At 30 % you lose 15 points for good.','FX gains on foreign-currency cash held under 1 year can be a private sale under §23 EStG (€1,000 Freigrenze). Convert deliberately.','Open short options at year end: the premium is taxable in the year received, even though IBKR shows no realised P&L yet.'],
+ calc(I,c){
+  const tfsR={shares:0,eqETF:.3,mixFund:.15,bondFund:0}[I.veh],isSh=I.veh==='shares';
+  let S=(isSh?I.gain:0)+I.swing;
+  const fundT=isSh?0:I.gain*(1-tfsR);
+  let G=fundT+I.div+I.opt;
+  if(S>0)S-=Math.min(S,I.lossCFSh);
+  if(G>0)G-=Math.min(G,I.lossCF);
+  let sCF=0,gCF=0;
+  if(S<0){sCF=-S;S=0;}
+  if(G<0){const off=Math.min(-G,S);S-=off;G+=off;if(G<0){gCF=-G;G=0;}}
+  const allowMax=I.filing==='joint'?2000:1000,allowRem=Math.max(0,allowMax-I.allowUsed);
+  const pos=S+G,a=Math.min(allowRem,pos),base=pos-a;
+  const k=I.church,kr=k?1/(4+k):.25;
+  if(isSh||I.swing)c.add('Share gains net (Aktienverlusttopf)',(isSh?I.gain:0)+I.swing,null);
+  if(!isSh&&I.gain)c.add(`Fund gain after ${pct(tfsR)} Teilfreistellung (§20 InvStG)`,fundT,null);
+  if(I.opt)c.add('Options & premiums (general pot)',I.opt,null);
+  if(I.div)c.add('Dividends (general pot)',I.div,null);
+  if(a)c.add('Sparerpauschbetrag applied',-a,null);
+  const divTaxable=pos>0?base*Math.min(1,I.div/pos):0;
+  const credit=Math.min(I.div*I.wht,kr*divTaxable);
+  const kap=base*kr-credit;
+  c.add(`Kapitalertragsteuer ${k?'(reduced for church tax)':'25 %'}${credit>0?', after foreign-tax credit':''}`,base,kap);
+  c.add('Solidaritätszuschlag 5,5 %',kap,kap*.055);
+  if(k)c.add(`Kirchensteuer ${pct(k)}`,kap,kap*k);
+  if(sCF)c.note('info',`Share losses of ${Math.round(sCF).toLocaleString('de-DE')} € carry forward and can only offset future share gains (§20(6) S.4 EStG).`);
+  if(gCF)c.note('info',`General losses of ${Math.round(gCF).toLocaleString('de-DE')} € carry forward against any capital income.`);
+  if(allowRem-a>1)c.note('tip',`${Math.round(allowRem-a).toLocaleString('de-DE')} € of your Sparerpauschbetrag is unused. Realise that much gain before 31 Dec and buy back; Germany has no wash-sale rule.`);
+  if(!isSh&&I.cap>0&&I.veh!=='bondFund'){const vp=I.cap*.032*.7,t=vp*(1-tfsR)*(.25*1.055);c.note(I.broker==='ibkr'?'ibkr':'info',`Vorabpauschale 2026 on ${Math.round(I.cap).toLocaleString('de-DE')} € of accumulating funds: about ${Math.round(vp).toLocaleString('de-DE')} € deemed income, ≈ ${Math.round(t).toLocaleString('de-DE')} € tax, deemed received 4 Jan 2027 (Basiszins 3,20 %). It is a prepayment credited on sale.${I.broker==='ibkr'?' IBKR does not compute it; declare it in KAP-INV.':''}`);}
+  if(I.margin)c.note('warn','Margin interest is not deductible in Germany. Leverage costs come fully out of after-tax return.');
+ }},
+CH:{n:'Switzerland',cur:'CHF',conf:'V',pri:1,src:'https://www.estv2.admin.ch/dvs/kreisschreiben/dbst-ks-2012-1-036-d-de.pdf',srcN:'ESTV Kreisschreiben Nr. 36 · cantonal tax law (ZH)',
+ r:{sh:'0 % on private capital gains',op:'0 % while private (KS 36 safe harbour); otherwise income tax + ~10 % AHV',al:'—',hp:'Safe harbour needs holding ≥ 6 months',ls:'Private losses not deductible',wt:'Cantonal, progressive (≈0.1–1.0 % marginal)'},
+ wrap:'Pillar 3a: deductible, CHF 7,258 (2026) / CHF 7,373 (2027) for employees with a pension fund.',
+ ibkr:['Holding options at IBKR is fine; writing them regularly breaks criterion 5 of KS 36 (derivatives only for hedging).','List every position in the Wertschriftenverzeichnis yourself and reclaim the 35 % Verrechnungssteuer through the tax return.','Margin at IBKR fails criterion 4 (no debt financing). Keep margin off if you want 0 %.'],
+ calc(I,c){
+  const inc=c.L(I.income)*.82,joint=I.filing==='joint';
+  const zh=[[30000,.10],[60000,.20],[100000,.27],[150000,.32],[250000,.36],[Infinity,.40]];
+  const active=I.opt!==0||I.swing!==0,totalG=I.gain+I.opt+I.swing,startCap=Math.max(1,I.cap+I.tCap);
+  const crit=[
+   {ok:I.hold>=182&&(!active||I.tHold>=182),t:'Holding ≥ 6 months',d:active?`Trading avg ${I.tHold} days`:`${I.hold} days`},
+   {ok:I.turnover<=5*startCap,t:'Turnover ≤ 5× capital',d:`${(I.turnover/startCap).toFixed(1)}× capital`},
+   {ok:totalG<=0||totalG/(I.income+totalG)<.5,t:'Gains < 50 % of income',d:totalG>0?`${Math.round(totalG/(I.income+totalG)*100)} % of income`:'no net gain'},
+   {ok:!I.margin,t:'No margin / debt',d:I.margin?'margin used':'unleveraged'},
+   {ok:I.opt===0||I.hedgeOnly,t:'Options only to hedge',d:I.opt===0?'no options':I.hedgeOnly?'hedges only':'speculative options'}];
+  c.ks36=crit;
+  const met=crit.filter(x=>x.ok).length;
+  if(met===5)c.add('Private capital gains: shares, ETFs and options are tax-free',totalG,0);
+  else{
+   const g=c.L(totalG),it=stk(inc,g,zh),ahv=Math.max(0,g)*.10;
+   c.add('Reclassified as professional trading: income tax (Zurich marginal, est.)',totalG,c.E(it));
+   c.add('AHV/IV/EO self-employed contributions ≈ 10 %',Math.max(0,totalG),c.E(ahv));
+   c.note('warn',`KS 36 safe harbour failed (${met}/5 criteria). Failing is not automatic reclassification; the canton then judges the overall picture. This model is conservative and shows the reclassified case.`);
+  }
+  if(I.div>0){const base=inc+(met===5?0:Math.max(0,c.L(totalG)));const t=c.E(stk(base,c.L(I.div),zh));c.divAt(t,'Dividends taxed as income (Zurich marginal, est.)');}
+  const w=c.L(I.cap+I.tCap+I.wealthOther),allow=joint?159000:80000;
+  const zt=[[238000,.0005],[637000,.001],[1273000,.0015],[2229000,.002],[3182000,.0025],[Infinity,.003]];
+  c.wealth('Wealth tax, Zurich city (canton 98 % + city 119 %, est.)',c.E(prog(Math.max(0,w-allow),zt)*2.17));
+  c.note('info','Canton matters: Zug or Schwyz roughly halves Zurich income and wealth tax; Geneva and Vaud are higher. Accumulating ETFs still create annual taxable income from reinvested dividends.');
+ }},
+DK:{n:'Denmark',cur:'DKK',conf:'V',eu:1,pri:1,src:'https://skat.dk',srcN:'SKAT · Den juridiske vejledning C.B.1.8 · KGL §§29, 32',
+ r:{sh:'Aktieindkomst 27 % to DKK 79,400, 42 % above',op:'Kapitalindkomst ≈37–42 %, mark-to-market, ring-fenced losses',al:'Aktiesparekonto 17 % on up to DKK 174,200',hp:'None; most ETFs taxed annually (lager)',ls:'Share losses vs share income; contract losses only vs contract gains',wt:'None'},
+ wrap:'Aktiesparekonto (ASK): 17 % mark-to-market, cap DKK 174,200 in 2026; a rise to DKK 500,000 is planned for 2027.',
+ ibkr:['IBKR is a foreign broker: report holdings and gains yourself via TastSelv; SKAT does not get automatic data from IBKR as from Danish banks.','An ASK cannot be held at IBKR; it must be with a Danish bank.','Check every ETF against SKAT\'s ABIS list. Off-list ETFs are taxed as kapitalindkomst every year.'],
+ calc(I,c){
+  const thr=I.filing==='joint'?158800:79400,capThr=I.filing==='joint'?110000:55000;
+  const akVeh=I.veh!=='bondFund';
+  let ak=c.L((akVeh?I.gain:0)+I.swing+I.div);
+  if(ak>0)ak-=Math.min(ak,c.L(I.lossCFSh));
+  const akTax=ak>0?prog(ak,[[thr,.27],[Infinity,.42]]):0;
+  const divL=c.L(I.div),divTax=ak>0?akTax*Math.min(1,divL/ak):0,cr=Math.min(divTax,divL*I.wht);
+  c.add('Aktieindkomst: shares, equity ETFs, dividends (27 % / 42 %)',c.E(Math.max(0,ak)),c.E(akTax-cr));
+  if(ak<0)c.cf(c.E(-ak),'only against future share income');
+  let con=c.L(I.opt);if(con>0)con-=Math.min(con,c.L(I.lossCF));
+  if(con<0){c.note('warn',`Option losses of ${Math.round(c.E(-con)).toLocaleString('de-DE')} € are ring-fenced: they only offset future gains on financial contracts, never salary or shares.`);con=0;}
+  const kap=c.L(akVeh?0:I.gain);
+  const k=kap+con,kTax=k>0?prog(k,[[capThr,.37],[Infinity,.42]]):k*.25;
+  c.add('Kapitalindkomst: options & bond funds (≈37 % / 42 %)',c.E(k),c.E(kTax));
+  if(I.veh!=='shares')c.note('info','Most UCITS ETFs are taxed on annual mark-to-market (lagerprincippet): unrealised gains are taxed every year, so there is no deferral.');
+  if(I.opt&&I.veh==='shares')c.note('warn','Covered calls mismatch: shares sit in aktieindkomst, the written call in kapitalindkomst. A loss on one cannot offset a gain on the other.');
+ }},
+NO:{n:'Norway',cur:'NOK',conf:'V',pri:1,src:'https://www.skatteetaten.no',srcN:'Skatteetaten · Forskuddsutskrivingen 2026 · Skatte-ABC F-5',
+ r:{sh:'(Gain − shielding) × 1,72 × 22 % = 37,84 %',op:'22 % ordinary income (no 1,72 factor)',al:'Shielding deduction (≈3,6 % of cost per year)',hp:'None',ls:'Losses deductible at 37,84 % / 22 % against all income',wt:'1,0 % above NOK 1,9m (1,1 % above 21,5m); shares at 80 %'},
+ wrap:'Aksjesparekonto (ASK): EEA-listed shares and >80 % equity funds, tax deferred until withdrawals exceed deposits. IPS for pensions.',
+ ibkr:['IBKR is not an ASK provider; tax-deferred share switching needs a Norwegian ASK.','Report IBKR holdings and gains yourself in the skattemelding (foreign broker, RF-1159 equivalent fields).','Margin interest is deductible at 22 % in Norway, unlike Germany.'],
+ calc(I,c){
+  const eqS={shares:1,eqETF:1,mixFund:.5,bondFund:0}[I.veh],yrs=Math.floor(I.hold/365),f=1.72*.22;
+  let shield=c.L(I.cap*eqS)*.036*yrs;
+  const divL=c.L(I.div),du=Math.min(shield,divL);shield-=du;const divT=divL-du;
+  const eqG=c.L(I.gain*eqS+I.swing),eqT=eqG>0?Math.max(0,eqG-shield):eqG;
+  if(I.div>0){const t=divT*f,cr=Math.min(t,divL*I.wht);c.add('Dividends above shielding × 1,72 × 22 %',c.E(divT),c.E(t-cr));}
+  c.add('Share & equity-fund gains above shielding × 1,72 × 22 %',c.E(eqT),c.E(eqT*f));
+  const bond=c.L(I.gain*(1-eqS));if(bond)c.add('Bond-fund share of gain at 22 %',c.E(bond),c.E(bond*.22));
+  c.add('Options & derivatives at 22 %',I.opt,I.opt*.22);
+  if(eqT<0||I.opt<0)c.note('tip','Losses here reduce tax on your salary in the same year (shown as negative tax).');
+  if(yrs>0)c.note('info',`Shielding estimated at 3,6 % × cost × ${yrs} full year(s). The real rate is set yearly (2026 rate published Jan 2027).`);
+  const base=c.L(I.cap+I.tCap)*.8+c.L(I.wealthOther),thr=I.filing==='joint'?3.8e6:1.9e6;
+  c.wealth('Wealth tax 1,0 % above threshold (shares valued at 80 %)',c.E(prog(base,[[thr,0],[21.5e6,.01],[Infinity,.011]])));
+ }},
+PL:{n:'Poland',cur:'PLN',conf:'V',eu:1,pri:1,src:'https://www.podatki.gov.pl',srcN:'podatki.gov.pl · PIT-38 · art. 30b PIT Act',
+ r:{sh:'19 % flat (Belka tax)',op:'19 %, same PIT-38 basket as shares',al:'IKE / IKZE; OKI account from 2027 (PLN 100k)',hp:'None',ls:'5 years, max 50 % of a year\'s loss per year',wt:'None (4 % solidarity levy above PLN 1m income)'},
+ wrap:'IKE (limit PLN 28,260 in 2026) and IKZE; OKI from 1 Jan 2027: no Belka tax up to PLN 100k of assets.',
+ ibkr:['IBKR issues no PIT-8C. You self-report in PIT-38 and convert every trade at the NBP Table A rate of the business day before (T-1).','Foreign withholding is credited via PIT/ZG, up to 19 %.'],
+ calc(I,c){
+  const g=nb(I.gain+I.opt+I.swing,I.lossCF,0);
+  c.add('PIT-38 basket: shares, ETFs, options, CFDs at 19 %',g.taxable,g.taxable*.19);
+  c.div(.19,'Dividends at 19 % (credit via PIT/ZG)');
+  const inc=c.L(I.income),cap=c.L(g.taxable+I.div),sol=.04*(Math.max(0,inc+cap-1e6)-Math.max(0,inc-1e6));
+  if(sol>0)c.add('Solidarity levy 4 % above PLN 1m',c.E(cap),c.E(sol));
+  c.cf(g.cf,'5 years, at most 50 % of the loss in any one year');
+ }},
+FR:{n:'France',cur:'EUR',conf:'V',eu:1,pri:1,src:'https://www.impots.gouv.fr',srcN:'impots.gouv.fr · LFSS 2026 art. 12 · CGI art. 200 A',
+ r:{sh:'PFU 31,4 % (12,8 % IR + 18,6 % social levies) or barème',op:'PFU 31,4 %',al:'PEA (€150k), assurance-vie',hp:'Abatements only for pre-2018 shares under barème',ls:'10-year carry-forward against gains',wt:'IFI on real estate only'},
+ wrap:'PEA: after 5 years only 18,6 % social levies. Assurance-vie: after 8 years, €4,600/€9,200 allowance, social levies stay at 17,2 %.',
+ ibkr:['An IBKR account must be declared on form 3916 every year (€1,500 fine per undeclared account).','Gains go on form 2074; nothing is withheld at source.','Dividends from a foreign account require the 12,8 % advance payment by the 15th of the following month (form 2778-DIV).'],
+ calc(I,c){
+  const parts=I.filing==='joint'?2:1,br=[[11600,0],[29579,.11],[84577,.30],[181917,.41],[Infinity,.45]];
+  const ir=x=>prog(x/parts,br)*parts,sal=I.income*.9;
+  const g=nb(I.gain+I.opt+I.swing,I.lossCF,0);
+  const pfuG=g.taxable*.314,pfuD=Math.max(0,.314-I.wht)*I.div,pfu=pfuG+pfuD;
+  const capInc=g.taxable+I.div*.6,irB=ir(sal+capInc)-ir(sal);
+  const irDiv=capInc>0?irB*(I.div*.6/capInc):0,cr=Math.min(I.div*I.wht,irDiv+.186*I.div);
+  const bar=irB+.186*(g.taxable+I.div)-cr;
+  if(bar<pfu-1){
+   c.add('Barème option: income tax on gains and 60 % of dividends',g.taxable+I.div*.6,irB-Math.min(cr,irDiv));
+   c.add('Social levies 18,6 %',g.taxable+I.div,.186*(g.taxable+I.div)-Math.max(0,cr-irDiv));
+   c.note('tip',`The progressive scale beats the PFU here by ${Math.round(pfu-bar).toLocaleString('de-DE')} €. The option is global: it covers all your capital income for the year.`);
+  }else{
+   c.add('PFU 31,4 % on net gains',g.taxable,pfuG);
+   if(I.div)c.add('PFU 31,4 % on dividends (after foreign-tax credit)',I.div,pfuD);
+  }
+  const rfr0=sal,rfr=sal+g.taxable+I.div,t=I.filing==='joint'?500000:250000;
+  const ce=x=>Math.max(0,Math.min(x,2*t)-t)*.03+Math.max(0,x-2*t)*.04,cehr=ce(rfr)-ce(rfr0);
+  if(cehr>0)c.add('High-income contribution (CEHR 3 % / 4 %)',rfr-rfr0,cehr);
+  c.cf(g.cf,'10 years, gains only');
+ }},
+AT:{n:'Austria',cur:'EUR',conf:'K',eu:1,src:'https://www.bmf.gv.at',srcN:'BMF Austria · §27a EStG',
+ r:{sh:'27,5 % KESt',op:'27,5 %',al:'—',hp:'None',ls:'Same-year offset only; no carry-forward',wt:'None'},wrap:'No dedicated equity wrapper; Zukunftsvorsorge is limited.',
+ calc:simple({rate:.275,carry:false})},
+AU:{n:'Australia',cur:'AUD',conf:'K',src:'https://www.ato.gov.au',srcN:'ATO · ITAA 1997 Div 115',
+ r:{sh:'Marginal rate (0–45 %) + 2 % Medicare levy',op:'Capital account; traders taxed as ordinary income',al:'A$18,200 tax-free threshold',hp:'50 % CGT discount after 12 months',ls:'Capital losses only against capital gains; Part IVA for wash sales',wt:'None'},
+ wrap:'Superannuation: 15 % on earnings, 10 % on discounted gains, 0 % in pension phase.',
+ calc(I,c){
+  const br=[[18200,0],[45000,.16],[135000,.30],[190000,.37],[Infinity,.45]],inc=c.L(I.income);
+  let s=c.L((I.hold<365?I.gain:0)+I.swing+I.opt),l=c.L(I.hold>=365?I.gain:0),loss=c.L(I.lossCF)+(s<0?-s:0)+(l<0?-l:0);
+  s=Math.max(0,s);l=Math.max(0,l);const us=Math.min(loss,s);s-=us;loss-=us;const ul=Math.min(loss,l);l-=ul;loss-=ul;
+  const ncg=s+l*.5,t=stk(inc,ncg,br)+ncg*.02;
+  c.add(`Net capital gain (${l>0?'50 % discount on long-term part':'no discount'}) at marginal rate + Medicare`,c.E(ncg),c.E(t));
+  if(I.div>0)c.divAt(c.E(stk(inc+ncg,c.L(I.div),br)+c.L(I.div)*.02),'Dividends at marginal rate (unfranked foreign)');
+  c.cf(c.E(loss),'capital gains only');
+  if(I.trades>100)c.note('warn','At this frequency the ATO may treat you as a share trader: profits become ordinary income (no discount), but losses become deductible.');
+ }},
+BE:{n:'Belgium',cur:'EUR',conf:'V',eu:1,src:'https://finance.belgium.be',srcN:'SPF Finances · Act of 6 April 2026',
+ r:{sh:'10 % from 1 Jan 2026 (pre-2026 gains grandfathered at 31 Dec 2025 value)',op:'10 % in the same regime',al:'€10,000 per person per year; unused carry up to €15,000',hp:'—',ls:'Offset within the same regime and year',wt:'0,15 % securities-account tax above €1m'},
+ wrap:'Pension savings (épargne-pension) with 25–30 % tax reduction.',
+ calc(I,c){
+  const ex=I.filing==='joint'?20000:10000,g=nb(I.gain+I.swing+I.opt,0,ex);
+  if(g.allow)c.add('Annual exemption (€10,000 per person)',g.allow,0);
+  c.add('Capital gains tax 10 %',g.taxable,g.taxable*.10);
+  if(I.div>0){const d=Math.max(0,I.div-833);c.divAt(d*.30,'Dividends 30 % (≈€833 exemption via return)');}
+  const v=I.cap+I.tCap;if(v>1e6)c.wealth('Securities-account tax 0,15 %',v*.0015);
+  if(I.trades>150)c.note('warn','Very frequent trading risks the 33 % "abnormal management of private wealth" regime.');
+  c.note('info','Stock-exchange tax (TOB, 0,12–1,32 % per trade) applies to foreign brokers like IBKR too, and you declare it yourself.');
+ }},
+CA:{n:'Canada',cur:'CAD',conf:'K',src:'https://www.canada.ca/en/revenue-agency.html',srcN:'CRA · ITA s.38 (Ontario rates used)',
+ r:{sh:'50 % inclusion at marginal rate',op:'Same, or 100 % business income for traders',al:'TFSA, RRSP, FHSA',hp:'None',ls:'Superficial-loss rule 30 days; carry back 3 years, forward indefinitely',wt:'None'},
+ wrap:'TFSA (tax-free growth) and RRSP (deductible contributions).',
+ calc(I,c){
+  const br=[[12500,0],[53000,.2005],[58500,.2415],[106000,.2965],[117000,.3148],[150000,.4341],[181000,.4497],[220000,.4829],[258000,.4985],[Infinity,.5353]];
+  const inc=c.L(I.income),g=nb(c.L(I.gain+I.swing+I.opt),c.L(I.lossCF),0),tx=g.taxable*.5,t=stk(inc,tx,br);
+  c.add('Taxable capital gain: 50 % inclusion at combined marginal rate',c.E(tx),c.E(t));
+  if(I.div>0)c.divAt(c.E(stk(inc+tx,c.L(I.div),br)),'Foreign dividends at marginal rate');
+  c.cf(c.E(g.cf));
+  if(I.trades>100)c.note('warn','Frequent trading can be business income: 100 % inclusion.');
+ }},
+CL:{n:'Chile',cur:'CLP',conf:'K',src:'https://www.sii.cl',srcN:'SII · art. 107 LIR',r:{sh:'10 % sole tax on locally listed shares with market presence',op:'Ordinary income',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'APV voluntary pension savings.',
+ calc(I,c){simple({rate:.10})(I,c);c.note('warn','The 10 % rate applies to Chilean-listed shares with market presence. Foreign shares held at IBKR fall into the progressive global complementary tax (up to 40 %).');}},
+CO:{n:'Colombia',cur:'COP',conf:'K',src:'https://www.dian.gov.co',srcN:'DIAN · Estatuto Tributario',r:{sh:'Ganancia ocasional 15 % if held ≥ 2 years; otherwise ordinary income',op:'Ordinary income',al:'Small listed stakes (< 10 %) may be exempt',hp:'2-year test',ls:'—',wt:'Wealth tax above ~72,000 UVT'},wrap:'Voluntary pension funds (AFC/FVP).',
+ calc(I,c){const lg=I.hold>=730?I.gain:0,b1=nb(lg,0,0),b2=nb((I.hold<730?I.gain:0)+I.swing+I.opt,I.lossCF,0);c.add('Long-held gains (≥ 2 years) at 15 %',b1.taxable,b1.taxable*.15);c.add('Short-term gains as ordinary income (≈28 %, est.)',b2.taxable,b2.taxable*.28);c.div(.20);}},
+CR:{n:'Costa Rica',cur:'CRC',conf:'K',src:'https://www.hacienda.go.cr',srcN:'Hacienda · Ley 9635',r:{sh:'15 %',op:'15 %',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'—',calc:simple({rate:.15})},
+CZ:{n:'Czechia',cur:'CZK',conf:'K',eu:1,src:'https://www.financnisprava.cz',srcN:'Finanční správa · §4 ZDP',
+ r:{sh:'15 % / 23 % above ~CZK 1,76m',op:'15 % / 23 %',al:'Gross proceeds ≤ CZK 100k/yr exempt',hp:'Exempt after 3 years (cap CZK 40m/yr)',ls:'Same-year offset only',wt:'None'},wrap:'DIP long-term investment product (deductible).',
+ calc(I,c){const inc=c.L(I.income),br=[[1762812,.15],[Infinity,.23]];let g=I.gain;if(I.hold>=1095&&g){c.add('Exempt: 3-year time test met',g,0);g=0;}
+  const s=c.L(g+I.swing+I.opt),t=s>0?stk(inc,s,br):0;c.add('Taxable gains at 15 % / 23 %',c.E(Math.max(0,s)),c.E(t));if(s<0)c.note('warn','Losses cannot be carried forward in Czechia.');c.div(.15);}},
+EE:{n:'Estonia',cur:'EUR',conf:'K',eu:1,src:'https://www.emta.ee',srcN:'EMTA · Income Tax Act',r:{sh:'22 %',op:'22 %',al:'Investment account (investeerimiskonto) defers tax',hp:'—',ls:'—',wt:'None'},wrap:'Investment account: gains taxed only when withdrawn above deposits.',calc:simple({rate:.22})},
+FI:{n:'Finland',cur:'EUR',conf:'K',eu:1,src:'https://www.vero.fi',srcN:'Vero · Tuloverolaki',
+ r:{sh:'30 % / 34 % on capital income above €30k',op:'Same',al:'Proceeds ≤ €1,000/yr exempt; equity savings account',hp:'Deemed acquisition cost 20 % (40 % after 10 years)',ls:'5-year carry-forward',wt:'None'},wrap:'Osakesäästötili (equity savings account, €100k).',
+ calc(I,c){let g=I.gain;const pr=I.cap+I.gain;if(g>0){const dg=pr*(I.hold>=3650?.6:.8);if(dg<g){c.add('Deemed acquisition cost applied',g-dg,0);g=dg;}}
+  const b=nb(g+I.swing+I.opt,I.lossCF,0),d=I.div*.85,br=[[30000,.30],[Infinity,.34]],tot=prog(b.taxable+d,br),gt=prog(b.taxable,br);
+  c.add('Capital income at 30 % / 34 %',b.taxable,gt);if(I.div>0)c.divAt(tot-gt,'Listed dividends (85 % taxable)');c.cf(b.cf,'5 years');}},
+GR:{n:'Greece',cur:'EUR',conf:'K',eu:1,src:'https://www.aade.gr',srcN:'AADE · art. 42 ITC',r:{sh:'0 % on listed shares (stake < 0,5 %)',op:'15 % on derivatives (verify)',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'—',
+ calc(I,c){c.add('Listed shares & ETFs (stake < 0,5 %): exempt',I.gain+I.swing,0);const b=nb(I.opt,0,0);c.add('Derivatives at 15 %',b.taxable,b.taxable*.15);c.div(.05);c.note('warn','Check whether non-EU listings (US shares at IBKR) qualify for the exemption.');}},
+HU:{n:'Hungary',cur:'HUF',conf:'K',eu:1,src:'https://nav.gov.hu',srcN:'NAV · Szja tv.',r:{sh:'15 % on controlled-market trades',op:'15 %',al:'TBSZ 5-year account: 0 %',hp:'TBSZ',ls:'Controlled-market losses: 2 years back and forward',wt:'None'},wrap:'TBSZ long-term investment account: 0 % after 5 years.',
+ calc(I,c){simple({rate:.15})(I,c);c.note('info','Assumes controlled-market transactions through an EEA investment firm. Otherwise 13 % social contribution tax is added (capped).');}},
+IS:{n:'Iceland',cur:'ISK',conf:'K',src:'https://www.skatturinn.is',srcN:'Skatturinn',r:{sh:'22 % capital income',op:'22 %',al:'Small interest/dividend allowance',hp:'—',ls:'—',wt:'None'},wrap:'—',calc:simple({rate:.22})},
+IE:{n:'Ireland',cur:'EUR',conf:'V',eu:1,src:'https://www.revenue.ie',srcN:'Revenue · Budget 2027',
+ r:{sh:'CGT 31 % (from 7 Oct 2026); ETFs: exit tax 38 %',op:'CGT 31 %',al:'€1,270 (CGT only, not exit tax)',hp:'8-year deemed disposal on funds',ls:'4-week bed & breakfast rule; no loss relief on funds',wt:'None'},wrap:'PRSA / pensions; Investment Account from July 2027 (1 % annual tax above €50k).',
+ calc(I,c){const etf=I.veh!=='shares';if(etf){if(I.gain>0)c.add('ETF gain: exit tax 38 % (no allowance, no loss relief)',I.gain,I.gain*.38);else if(I.gain<0)c.note('warn','Fund losses are not deductible under the exit-tax regime.');}
+  const g=nb((etf?0:I.gain)+I.swing+I.opt,I.lossCF,1270);if(g.allow)c.add('CGT annual exemption',g.allow,0);c.add('CGT 31 %',g.taxable,g.taxable*.31);
+  const mr=I.income>70044?.522:I.income>44000?.472:.302;c.divAt(I.div*mr,'Dividends at marginal rate + USC + PRSI');c.cf(g.cf);
+  if(etf)c.note('info','Funds face deemed disposal every 8 years. The exit-tax rate falls to 35 % on 1 Jan 2027.');}},
+IL:{n:'Israel',cur:'ILS',conf:'K',src:'https://www.gov.il/en/departments/israel_tax_authority',srcN:'Israel Tax Authority',r:{sh:'25 % (+3 % surtax, +2 % on capital income above threshold)',op:'25 %',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'Keren Hishtalmut (study fund).',
+ calc(I,c){simple({rate:.25})(I,c);c.note('info','High incomes add a 3 % surtax plus 2 % on capital income.');}},
+IT:{n:'Italy',cur:'EUR',conf:'K',eu:1,src:'https://www.agenziaentrate.gov.it',srcN:'Agenzia delle Entrate · TUIR art. 67',
+ r:{sh:'26 %',op:'26 % (redditi diversi)',al:'—',hp:'—',ls:'4-year carry-forward; ETF gains cannot absorb losses',wt:'IVAFE / imposta di bollo 0,2 %'},wrap:'PIR (5-year exemption, limits apply).',
+ ibkr:['A foreign broker means the regime dichiarativo: quadro RT/RM for gains, quadro RW for the account, IVAFE 0,2 % on value.'],
+ calc(I,c){const etf=I.veh!=='shares';let rc=0,eL=0;if(etf){if(I.gain>0)rc=I.gain;else eL=I.gain;}
+  if(rc)c.add('ETF gain: redditi di capitale 26 % (cannot absorb losses)',rc,rc*.26);
+  const b=nb((etf?eL:I.gain)+I.swing+I.opt,I.lossCF,0);c.add('Redditi diversi: shares, options at 26 %',b.taxable,b.taxable*.26);c.div(.26);c.cf(b.cf,'4 years');
+  c.wealth(I.broker==='ibkr'?'IVAFE 0,2 % on foreign custody':'Imposta di bollo 0,2 %',(I.cap+I.tCap)*.002);
+  if(etf&&b.cf>0)c.note('warn','Losses in redditi diversi cannot offset ETF gains, which are redditi di capitale.');}},
+JP:{n:'Japan',cur:'JPY',conf:'K',src:'https://www.nta.go.jp',srcN:'NTA',r:{sh:'20,315 %',op:'20,315 % (listed)',al:'NISA (lifetime ¥18m)',hp:'—',ls:'3-year carry-forward',wt:'None'},wrap:'NISA: tax-free, lifetime ¥18m.',calc:simple({rate:.20315})},
+KR:{n:'Korea',cur:'KRW',conf:'K',src:'https://www.nts.go.kr',srcN:'NTS',r:{sh:'Domestic small holders 0 %; foreign shares 22 %',op:'Derivatives 11 %',al:'₩2,5m deduction per basket',hp:'—',ls:'—',wt:'None'},wrap:'ISA (Korean).',
+ calc(I,c){const d=2.5e6,g=c.L(I.gain+I.swing),gt=Math.max(0,g-d),o=c.L(I.opt),ot=Math.max(0,o-d);c.add('Foreign shares 22 % above ₩2,5m deduction',c.E(Math.max(0,g)),c.E(gt*.22));c.add('Derivatives 11 % above ₩2,5m',c.E(Math.max(0,o)),c.E(ot*.11));c.div(.154);c.note('info','Assumes foreign shares (as at IBKR). Domestic listed shares are 0 % for small holders.');}},
+LV:{n:'Latvia',cur:'EUR',conf:'K',eu:1,src:'https://www.vid.gov.lv',srcN:'VID',r:{sh:'25,5 % capital income',op:'25,5 %',al:'Investment account defers tax',hp:'—',ls:'—',wt:'None'},wrap:'Investment account.',calc:simple({rate:.255})},
+LT:{n:'Lithuania',cur:'EUR',conf:'K',eu:1,src:'https://www.vmi.lt',srcN:'VMI',r:{sh:'Progressive capital-income rates from 2026 (verify)',op:'Same',al:'Small exemption (verify)',hp:'—',ls:'—',wt:'None'},wrap:'Pillar III pension.',
+ calc(I,c){simple({rate:.15})(I,c);c.note('warn','Lithuania reworked capital-income rates for 2026; the 15 % used here is low-confidence.');}},
+LU:{n:'Luxembourg',cur:'EUR',conf:'K',eu:1,src:'https://impotsdirects.public.lu',srcN:'ACD · LIR art. 99bis',
+ r:{sh:'0 % if held > 6 months (stake < 10 %)',op:'Speculative (< 6 months) at marginal rate',al:'€500 speculative-gain exemption',hp:'6 months',ls:'Speculative losses only against speculative gains',wt:'None'},wrap:'Prévoyance-vieillesse (art. 111bis).',
+ calc(I,c){const br=[[13230,0],[25000,.12],[45000,.25],[60000,.33],[150000,.39],[Infinity,.42]],sol=1.07,long=I.hold>=183;
+  let sp=(long?0:I.gain)+(I.tHold>=183?0:I.swing)+I.opt;if(long&&I.gain)c.add('Gain exempt (held > 6 months, stake < 10 %)',I.gain,0);
+  if(sp>0&&sp<500){c.add('Speculative gains under €500: exempt',sp,0);sp=0;}
+  c.add('Speculative gains (< 6 months) at marginal rate + solidarity',Math.max(0,sp),stk(I.income,Math.max(0,sp),br)*sol);
+  if(I.div>0)c.divAt(stk(I.income+Math.max(0,sp),I.div*.5,br)*sol,'Dividends, 50 % exempt, at marginal rate');}},
+MX:{n:'Mexico',cur:'MXN',conf:'K',src:'https://www.sat.gob.mx',srcN:'SAT · LISR art. 129',r:{sh:'10 % on Mexican-listed shares',op:'Ordinary',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'PPR personal retirement plan.',
+ calc(I,c){simple({rate:.10})(I,c);c.note('warn','The 10 % rate needs a Mexican intermediary. Through IBKR gains fall into progressive income tax (up to 35 %).');}},
+NL:{n:'Netherlands',cur:'EUR',conf:'V',eu:1,src:'https://www.belastingdienst.nl',srcN:'Belastingdienst · Box 3 (2026)',
+ r:{sh:'Box 3: 36 % on a deemed 6,00 % return above €59,357',op:'Box 3 (Box 1 if it is a trading business)',al:'€59,357 / €118,714 with fiscal partner',hp:'—',ls:'Counter-evidence of a lower actual return allowed',wt:'Box 3 works as a wealth tax'},wrap:'Lijfrente (deductible annuity saving).',
+ calc(I,c){const ex=I.filing==='joint'?118714:59357,A=I.cap+I.tCap+I.wealthOther,sh=A>0?Math.max(0,A-ex)/A:0;
+  const dm=A*.06*sh,b3=dm*.36,act=(I.gain+I.div+I.opt+I.swing)*sh,at=Math.max(0,act)*.36;
+  if(at<b3){c.add('Box 3 deemed return (6,00 % on assets above exemption)',dm,null);c.add('Counter-evidence: actual return × 36 % (lower)',act,at);c.note('tip','Your actual return is below the deemed return, so the tegenbewijsregeling lowers the bill. Actual return includes unrealised changes in value.');}
+  else c.add('Box 3: deemed 6,00 % return on assets above exemption × 36 %',dm,b3);
+  c.note('info','Box 3 taxes wealth, not realised gains. An actual-return regime is planned for 2028 (Senate vote postponed June 2026).');if(I.trades>200)c.note('warn','Very active trading can move results into Box 1 (up to 49,5 %).');}},
+NZ:{n:'New Zealand',cur:'NZD',conf:'K',src:'https://www.ird.govt.nz',srcN:'IRD · FIF rules',r:{sh:'No general CGT; FIF 5 % fair-dividend rate if foreign cost > NZ$50k',op:'Taxable if trading or bought to sell',al:'NZ$50k FIF de minimis',hp:'—',ls:'Trading losses deductible',wt:'None'},wrap:'KiwiSaver; PIE funds (28 % cap).',
+ calc(I,c){const br=[[15600,.105],[53500,.175],[78100,.30],[180000,.33],[Infinity,.39]],inc=c.L(I.income),cost=c.L(I.cap);let fif=0;
+  if(cost>50000){fif=cost*.05;c.add('FIF: 5 % of opening value taxed at marginal rate',c.E(fif),c.E(stk(inc,fif,br)));c.add('Realised gain on foreign shares: not taxed under FIF',I.gain,0);}
+  else{c.add('Gains on investments held long-term: not taxed',I.gain,0);if(I.div>0)c.divAt(c.E(stk(inc,c.L(I.div),br)),'Dividends at marginal rate');}
+  const tr=c.L(I.swing+I.opt);c.add('Trading profits (swing & options) as income',c.E(tr),c.E(stk(inc+fif,tr,br)));}},
+PT:{n:'Portugal',cur:'EUR',conf:'K',eu:1,src:'https://info.portaldasfinancas.gov.pt',srcN:'Portal das Finanças · CIRS art. 72',
+ r:{sh:'28 % autonomous rate (or opt to aggregate)',op:'28 %',al:'—',hp:'Mandatory aggregation if held < 365 days and income in top bracket',ls:'5-year carry-forward if you aggregate',wt:'None'},wrap:'PPR retirement savings plan.',
+ calc(I,c){const top=86634,sg=(I.hold<365?I.gain:0)+I.swing+I.opt,lg=I.hold>=365?I.gain:0,agg=sg>0&&I.income+sg>=top;
+  if(agg){c.add('Short-held gains: mandatory aggregation (≈48 % marginal)',sg,sg*.48);const b=nb(lg,I.lossCF,0);c.add('Long-held gains at 28 %',b.taxable,b.taxable*.28);c.note('warn','Gains on assets held under 365 days are aggregated at progressive rates once your income reaches the top bracket.');}
+  else{const b=nb(sg+lg,I.lossCF,0);c.add('Gains at 28 % autonomous rate',b.taxable,b.taxable*.28);}c.div(.28);}},
+SK:{n:'Slovakia',cur:'EUR',conf:'K',eu:1,src:'https://www.financnasprava.sk',srcN:'Finančná správa',r:{sh:'Progressive 19–35 %',op:'Same',al:'—',hp:'Listed securities held > 1 year exempt (verify)',ls:'Offset within category',wt:'None'},wrap:'Pillar III pension.',
+ calc(I,c){const br=[[43983,.19],[60000,.25],[75000,.30],[Infinity,.35]];let g=I.gain;if(I.hold>=365&&g){c.add('Listed securities held > 1 year: exempt',g,0);g=0;}
+  const s=g+I.swing+I.opt;c.add('Taxable gains at progressive rate',Math.max(0,s),s>0?stk(I.income,s,br):0);c.div(.07);c.note('warn','Check whether the health-insurance levy also applies to your gains.');}},
+SI:{n:'Slovenia',cur:'EUR',conf:'K',eu:1,src:'https://www.fu.gov.si',srcN:'FURS · ZDoh-2',r:{sh:'25 % → 20 % (5 y) → 15 % (10 y) → 0 % (15 y)',op:'25 % (verify short-term derivative rules)',al:'—',hp:'Sliding scale',ls:'—',wt:'None'},wrap:'—',
+ calc(I,c){const y=I.hold/365,r=y>=15?0:y>=10?.15:y>=5?.20:.25,b1=nb(I.gain,I.lossCF,0),b2=nb(I.swing+I.opt,0,0);c.add(`Shares & ETFs at ${pct(r)} (held ${y.toFixed(1)} years)`,b1.taxable,b1.taxable*r);c.add('Short-term gains & derivatives at 25 %',b2.taxable,b2.taxable*.25);c.div(.25);}},
+ES:{n:'Spain',cur:'EUR',conf:'K',eu:1,src:'https://sede.agenciatributaria.gob.es',srcN:'AEAT · LIRPF art. 66',
+ r:{sh:'Savings scale 19 / 21 / 23 / 27 / 30 %',op:'Same savings base',al:'—',hp:'—',ls:'2-month anti-wash; 4-year carry-forward; 25 % cross-offset with dividends',wt:'Wealth tax 0,2–3,5 % (regional) + solidarity tax above €3m'},wrap:'Planes de pensiones (limited).',
+ ibkr:['Foreign assets above €50,000 must be reported on Modelo 720 (penalties reduced after the 2022 CJEU ruling).'],
+ calc(I,c){const br=[[6000,.19],[50000,.21],[200000,.23],[300000,.27],[Infinity,.30]],g=nb(I.gain+I.swing+I.opt,I.lossCF,0);let gn=g.net,d=I.div;
+  if(gn<0){const off=Math.min(-gn,.25*d);d-=off;gn+=off;}const gT=Math.max(0,gn),tot=prog(gT+d,br),gt=prog(gT,br);
+  c.add('Savings base: gains at 19–30 %',gT,gt);if(I.div>0)c.divAt(tot-gt,'Dividends in the savings base');c.cf(Math.max(0,-gn),'4 years');
+  const W=I.cap+I.tCap+I.wealthOther;c.wealth('Wealth tax, state scale above €700k (est.; regional reliefs ignored)',prog(Math.max(0,W-700000),[[167129,.002],[334252,.003],[668499,.005],[1336999,.009],[2673999,.013],[5347998,.017],[10695996,.021],[Infinity,.035]]));}},
+SE:{n:'Sweden',cur:'SEK',conf:'K',eu:1,src:'https://www.skatteverket.se',srcN:'Skatteverket',r:{sh:'30 %',op:'30 % (listed: 70 % loss rule)',al:'ISK: schablon tax, SEK 300k tax-free (2026)',hp:'—',ls:'70 % of a listed-share loss deductible',wt:'None'},wrap:'Investeringssparkonto (ISK): flat yearly tax on value, no gains tax.',
+ calc(I,c){const n=I.gain+I.swing+I.opt;if(n>=0)c.add('Capital income at 30 %',n,n*.3);else c.add('Net loss: 70 % deductible, 30 % tax reduction',n,n*.7*.3);c.div(.30);c.note('tip','An ISK replaces gains tax with a small yearly charge on value; for active traders it is usually far cheaper.');}},
+TR:{n:'Türkiye',cur:'TRY',conf:'K',src:'https://www.gib.gov.tr',srcN:'GİB',r:{sh:'BIST shares exempt after 1 year; foreign shares progressive 15–40 %',op:'Withholding regime',al:'—',hp:'1 year (BIST)',ls:'—',wt:'None'},wrap:'BES private pension.',
+ calc(I,c){simple({rate:.30})(I,c);c.note('warn','Foreign shares (as at IBKR) are taxed at progressive rates; 30 % is a mid-bracket estimate.');}},
+UK:{n:'United Kingdom',cur:'GBP',conf:'K',src:'https://www.gov.uk/capital-gains-tax',srcN:'HMRC · TCGA 1992',
+ r:{sh:'CGT 18 % / 24 %',op:'CGT; spread betting exempt',al:'£3,000 AEA; ISA £20k; £500 dividend allowance',hp:'—',ls:'Same-day, 30-day bed & breakfasting, s104 pooling',wt:'None'},wrap:'ISA (£20k/yr, tax-free) and SIPP (relief at marginal rate).',
+ calc(I,c){const inc=c.L(I.income),pa=Math.max(0,12570-Math.max(0,(inc-100000)/2)),ns=Math.max(0,inc-pa),d=c.L(I.div),dAl=Math.min(500,d);
+  const dBr=[[37700,.1075],[125140,.3575],[Infinity,.3935]],dTax=prog(ns+d,dBr)-prog(ns+dAl,dBr);
+  if(I.div>0)c.divAt(c.E(dTax),'Dividends 10,75 % / 35,75 % after £500 allowance');
+  const gBr=[[37700,.18],[Infinity,.24]],g=nb(c.L(I.gain+I.swing+I.opt),c.L(I.lossCF),3000),cg=prog(ns+d+g.taxable,gBr)-prog(ns+d,gBr);
+  if(g.allow)c.add('Annual exempt amount (£3,000)',c.E(g.allow),0);c.add('CGT at 18 % / 24 %',c.E(g.taxable),c.E(cg));c.cf(c.E(g.cf));
+  c.note('tip','Spread bets on the same underlyings are outside CGT entirely, and an ISA shelters £20k a year.');}},
+US:{n:'United States',cur:'USD',conf:'K',src:'https://www.irs.gov',srcN:'IRS · IRC §§1, 1222, 1256, 1411',
+ r:{sh:'LT 0 / 15 / 20 % + 3,8 % NIIT; ST at ordinary rates',op:'§1256 60/40 for index options; §475(f) trader election',al:'Roth IRA, 401(k)',hp:'1 year',ls:'30-day wash sale; $3,000/yr against ordinary income',wt:'None (federal)'},wrap:'Roth IRA / 401(k) / HSA.',
+ calc(I,c){const j=I.filing==='joint',sd=j?32200:16100;
+  const br=j?[[24800,.10],[100800,.12],[211400,.22],[403550,.24],[512450,.32],[768700,.35],[Infinity,.37]]:[[12400,.10],[50400,.12],[105700,.22],[201775,.24],[256225,.32],[640600,.35],[Infinity,.37]];
+  const lt=j?[[98900,0],[613700,.15],[Infinity,.20]]:[[49450,0],[545500,.15],[Infinity,.20]];
+  const ord=Math.max(0,c.L(I.income)-sd);let st=c.L((I.hold<365?I.gain:0)+I.swing+I.opt*(I.idx?.4:1))-c.L(I.lossCF),lg=c.L((I.hold>=365?I.gain:0)+(I.idx?I.opt*.6:0));
+  if(st<0&&lg>0){const o=Math.min(-st,lg);lg-=o;st+=o;}if(lg<0&&st>0){const o=Math.min(-lg,st);st-=o;lg+=o;}
+  const net=st+lg,ded=net<0?Math.min(3000,-net):0,stP=Math.max(0,st),ltP=Math.max(0,lg),qd=c.L(I.div);
+  const oa=Math.max(0,ord+stP-ded),tOrd=prog(oa,br)-prog(ord,br),tLt=prog(oa+ltP,lt)-prog(oa,lt),tDiv=prog(oa+ltP+qd,lt)-prog(oa+ltP,lt);
+  const magi=c.L(I.income)+stP+ltP+qd,nt=.038*Math.min(stP+ltP+qd,Math.max(0,magi-(j?250000:200000)));
+  c.add(ded?'Net capital loss: $3,000 deducted from ordinary income':'Short-term gains at ordinary rates',c.E(ded?-ded:stP),c.E(tOrd));
+  c.add('Long-term gains at 0 / 15 / 20 %',c.E(ltP),c.E(tLt));if(I.div>0)c.divAt(c.E(tDiv),'Qualified dividends at LTCG rates');if(nt>0)c.add('Net investment income tax 3,8 %',c.E(stP+ltP+qd),c.E(nt));
+  if(net<-3000)c.cf(c.E(-net-3000));c.note('info','Federal only; state income tax (0–13 %) is not included.');}},
+};
+for(const k in COUNTRIES)COUNTRIES[k].code=k;
+const ORDER=Object.keys(COUNTRIES).sort((a,b)=>COUNTRIES[a].n.localeCompare(COUNTRIES[b].n));
+const SHORT=['DE','CH','DK','NO','PL','FR'];
+
+function runCountry(code,I){
+  const C=COUNTRIES[code],res={lines:[],notes:[],wealth:0,ks36:null};
+  const c=makeCtx(I,C.cur,res);
+  C.calc(I,c);res.ks36=c.ks36;
+  if(I.div>0&&I.wht>0)res.lines.push({label:`Foreign withholding at source (${pct(I.wht)})`,base:I.div,tax:I.div*I.wht,wht:true});
+  res.tax=res.lines.filter(l=>!l.wealth&&l.tax!=null).reduce((s,l)=>s+l.tax,0);
+  return res;
+}
+function evaluate(code,I){
+  const full=runCountry(code,I),inv=runCountry(code,{...I,opt:0,swing:0});
+  full.total=full.tax;full.invTax=inv.tax;full.trdTax=full.tax-inv.tax;
+  full.profit=I.gain+I.div+I.opt+I.swing;full.invProfit=I.gain+I.div;full.trdProfit=I.opt+I.swing;
+  return full;
+}
+/*ENGINE-END*/
+
+/* ---------- state ---------- */
+const TODAY=new Date();
+const DEF={
+ p:{res:'DE',broker:'ibkr',filing:'single',income:85000,church:0,allowUsed:0,lossCF:0,lossCFSh:0,wealthOther:20000,
+    cap:50000,gain:8000,hold:730,veh:'eqETF',div:600,wht:15,
+    tCap:15000,opt:3200,swing:1500,trades:60,tHold:12,turnover:180000,margin:false,hedgeOnly:false,idx:false},
+ m:{dest:'CH,DK,NO,PL,FR',V:60000,U:12000,g:6,y:1.5,N:10,before:false,stepDK:true,stepNO:false},
+ o:null, ui:{cmpF:'all',cmpS:'total',stF:'mine'}
+};
+let state=JSON.parse(JSON.stringify(DEF));
+try{const s=JSON.parse(localStorage.getItem('gg.v1')||'null');if(s){for(const k of ['p','m','ui'])Object.assign(state[k],s[k]||{});if(s.o)state.o=s.o;if(s.fx)Object.assign(FX,s.fx);}}catch(e){}
+function save(){try{localStorage.setItem('gg.v1',JSON.stringify({...state,fx:FX}));}catch(e){}}
+
+function getI(){const p=state.p,n=k=>+p[k]||0;return{res:p.res,broker:p.broker,filing:p.filing,income:n('income'),church:+p.church||0,allowUsed:n('allowUsed'),lossCF:n('lossCF'),lossCFSh:n('lossCFSh'),wealthOther:n('wealthOther'),
+ cap:n('cap'),gain:n('gain'),hold:n('hold'),veh:p.veh,div:Math.max(0,n('div')),wht:Math.min(.6,Math.max(0,n('wht')/100)),tCap:n('tCap'),opt:n('opt'),swing:n('swing'),trades:n('trades'),tHold:n('tHold'),turnover:n('turnover'),margin:!!p.margin,hedgeOnly:!!p.hedgeOnly,idx:!!p.idx};}
+
+/* ---------- format ---------- */
+const nf0=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0}),nf2=new Intl.NumberFormat('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const eur=x=>x==null||!isFinite(x)?'—':(x<-.5?'−':'')+nf0.format(Math.abs(Math.round(x)))+' €';
+const pc=(x,d=1)=>isFinite(x)?(x*100).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d})+' %':'—';
+const money=(x,cur,d=0)=>!isFinite(x)?'—':(x<0?'−':'')+(cur==='USD'?'$':cur==='GBP'?'£':cur==='CHF'?'CHF ':'')+new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d}).format(Math.abs(x))+(cur==='EUR'?' €':'');
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const $=s=>document.querySelector(s);
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800);}
+const stamp=c=>`<span class="stamp ${c}">${c==='V'?'Verified 2026':'To verify'}</span>`;
+
+/* ---------- field helpers ---------- */
+function num(s,k,label,o={}){return `<label class="f${o.full?' full':''}"><span class="fl">${label}</span><span class="fi"><input id="${s}-${k}" data-s="${s}" data-k="${k}" type="number" inputmode="decimal" step="${o.step||'any'}" value="${esc(state[s][k])}">${o.unit?`<em>${o.unit}</em>`:''}</span>${o.help?`<small>${o.help}</small>`:''}</label>`;}
+function sel(s,k,label,opts,o={}){return `<label class="f${o.full?' full':''}"><span class="fl">${label}</span><span class="fi"><select id="${s}-${k}" data-s="${s}" data-k="${k}">${opts.map(([v,t])=>`<option value="${v}"${String(state[s][k])===String(v)?' selected':''}>${t}</option>`).join('')}</select></span>${o.help?`<small>${o.help}</small>`:''}</label>`;}
+function chk(s,k,label,help){return `<label class="ck full"><input type="checkbox" id="${s}-${k}" data-s="${s}" data-k="${k}"${state[s][k]?' checked':''}><span>${label}${help?`<small>${help}</small>`:''}</span></label>`;}
+
+/* ---------- 01 TAX DESK ---------- */
+function renderDeskIn(){
+ const p=state.p,de=p.res==='DE';
+ $('#desk-in').innerHTML=`
+ <div class="card"><h2><span class="n">A</span>Profile</h2><div class="fgrid">
+  ${num('p','income','Salary & other taxable income',{unit:'€/yr',full:1,help:'Gross. Sets the marginal rate in progressive countries.'})}
+  ${num('p','wealthOther','Other net wealth',{unit:'€',help:'Cash, property equity. Drives wealth tax.'})}
+  ${num('p','lossCF','Loss carried forward',{unit:'€',help:'General / all baskets'})}
+  ${de?`${sel('p','church','Kirchensteuer',[[0,'None'],[0.08,'8 % (BY, BW)'],[0.09,'9 % (other Länder)']])}
+  ${num('p','allowUsed','Allowance already used',{unit:'€',help:'Sparerpauschbetrag used at other banks'})}
+  ${num('p','lossCFSh','Share-loss pot carried',{unit:'€',full:1,help:'Aktienverlusttopf: only offsets share gains'})}`:''}
+ </div></div>
+ <div class="card"><h2><span class="n">B</span>Long-term investing</h2><div class="fgrid">
+  ${num('p','cap','Capital invested',{unit:'€'})}
+  ${num('p','gain','Realised gain / loss',{unit:'€',help:'Negative for a loss'})}
+  ${sel('p','veh','Vehicle',[['shares','Single shares'],['eqETF','Equity ETF / fund'],['mixFund','Mixed fund'],['bondFund','Bond fund']])}
+  ${num('p','hold','Holding period',{unit:'days',help:dur(+p.hold||0)})}
+  ${num('p','div','Dividends received',{unit:'€'})}
+  ${num('p','wht','Foreign withholding',{unit:'%',help:'US with W-8BEN: 15 %'})}
+ </div></div>
+ <div class="card"><h2><span class="n">C</span>Options & swing trading</h2><div class="fgrid">
+  ${num('p','tCap','Trading capital',{unit:'€'})}
+  ${num('p','opt','Net options P&L',{unit:'€',help:'Premiums + closes + expiries'})}
+  ${num('p','swing','Net swing P&L (shares)',{unit:'€'})}
+  ${num('p','tHold','Average holding',{unit:'days'})}
+  ${num('p','trades','Trades per year',{unit:'#'})}
+  ${num('p','turnover','Annual turnover',{unit:'€',help:'Buys + sells'})}
+  ${chk('p','margin','Uses margin / leverage','Breaks the Swiss safe harbour; not deductible in DE')}
+  ${chk('p','hedgeOnly','Options used only to hedge','Needed for 0 % in Switzerland')}
+  ${chk('p','idx','Mostly index options (SPX/XSP)','US §1256: 60 % long-term / 40 % short-term')}
+ </div></div>
+ <div class="row"><button class="btn" id="reset">Reset to example profile</button></div>`;
+ $('#reset').onclick=()=>{state.p=JSON.parse(JSON.stringify(DEF.p));save();syncHeader();renderDeskIn();renderActive();toast('Example profile restored');};
+}
+function linesTable(r){
+ return `<div class="tw"><table class="t"><thead><tr><th>Component</th><th class="r">Base</th><th class="r">Tax</th></tr></thead><tbody>
+ ${r.lines.filter(l=>!l.wealth).map(l=>`<tr><td>${esc(l.label)}</td><td class="r">${l.base==null?'':eur(l.base)}</td><td class="r">${l.tax==null?'<span class="muted">—</span>':eur(l.tax)}</td></tr>`).join('')}
+ <tr class="sum"><td>Tax on this year's results</td><td></td><td class="r">${eur(r.total)}</td></tr>
+ ${r.lines.filter(l=>l.wealth).map(l=>`<tr><td>${esc(l.label)} <span class="pill w">yearly</span></td><td></td><td class="r">${eur(l.tax)}</td></tr>`).join('')}
+ </tbody></table></div>`;
+}
+function ksPanel(ks){return `<div class="card"><h2>Swiss safe harbour · ESTV Kreisschreiben Nr. 36</h2><div class="ks">${ks.map(k=>`<div class="${k.ok?'ok':'no'}"><b>${k.ok?'Met':'Failed'}</b>${k.t}<br><span class="muted">${esc(k.d)}</span></div>`).join('')}</div></div>`;}
+function renderDeskOut(){
+ const I=getI(),C=COUNTRIES[I.res],r=evaluate(I.res,I);
+ const eff=r.profit>0?r.total/r.profit:NaN,effI=r.invProfit>0?r.invTax/r.invProfit:NaN,effT=r.trdProfit>0?r.trdTax/r.trdProfit:NaN;
+ const notes=[...r.notes];
+ if(I.broker==='ibkr')(C.ibkr||['IBKR is a foreign broker here: nothing is withheld locally, so you self-report gains, dividends and the account itself.']).forEach(x=>notes.push({t:'ibkr',x}));
+ const cand=SHORT.filter(c=>c!==I.res).map(c=>({c,r:evaluate(c,I)}));
+ const all=ORDER.map(c=>({c,t:evaluate(c,I).total})).sort((a,b)=>a.t-b.t);
+ const rank=all.findIndex(x=>x.c===I.res)+1;
+ const mx=Math.max(1,...cand.map(x=>x.r.total+x.r.wealth),r.total+r.wealth);
+ $('#desk-out').innerHTML=`
+ <div class="hero">
+  <div class="lead"><div class="k">Tax on 2026 results</div><div class="v">${eur(r.total)}</div><div class="s">${C.n} · <span class="stamp" style="color:inherit">${C.conf==='V'?'Verified 2026':'To verify'}</span></div></div>
+  <div><div class="k">Effective rate</div><div class="v">${pc(eff)}</div><div class="s">of ${eur(r.profit)} total profit</div></div>
+  <div><div class="k">Net after tax</div><div class="v">${eur(r.profit-r.total)}</div><div class="s">${I.cap+I.tCap>0?pc((r.profit-r.total)/(I.cap+I.tCap))+' on capital':''}</div></div>
+  <div><div class="k">Wealth tax</div><div class="v">${eur(r.wealth)}</div><div class="s">recurring, every year</div></div>
+ </div>
+ <div class="split">
+  <div class="card"><h2>Investing · shares, ETFs, dividends</h2><div class="big">${eur(r.invTax)}</div><dl class="kv" style="margin-top:8px"><dt>Profit</dt><dd>${eur(r.invProfit)}</dd><dt>Effective rate</dt><dd>${pc(effI)}</dd><dt>Net</dt><dd>${eur(r.invProfit-r.invTax)}</dd></dl></div>
+  <div class="card"><h2>Trading · options & swing</h2><div class="big">${eur(r.trdTax)}</div><dl class="kv" style="margin-top:8px"><dt>Profit</dt><dd>${eur(r.trdProfit)}</dd><dt>Marginal rate</dt><dd>${pc(effT)}</dd><dt>Net</dt><dd>${eur(r.trdProfit-r.trdTax)}</dd></dl><p class="sm muted" style="margin:8px 0 0">Measured as extra tax caused by trading, after loss offsets against your investing basket.</p></div>
+ </div>
+ ${r.ks36?ksPanel(r.ks36):''}
+ <div class="card"><h2>Breakdown · ${esc(C.srcN)}</h2>${linesTable(r)}</div>
+ <div class="card"><h2>What to know</h2><ul class="notes">${notes.map(n=>`<li class="${n.t}">${esc(n.x)}</li>`).join('')||'<li>No special notes for this profile.</li>'}</ul></div>
+ <div class="card"><h2>Same results in your shortlist</h2>
+  <p class="sm muted" style="margin:0 0 10px">${C.n} ranks #${rank} of 38 on this year's tax. Brass = annual wealth tax on top.</p>
+  <div class="tw"><table class="t"><tbody>${[{c:I.res,r},...cand].map(x=>`<tr class="${x.c===I.res?'me':''}"><td style="width:150px"><span class="cc">${x.c}</span>${COUNTRIES[x.c].n}</td><td style="width:45%"><div class="hbar" style="display:flex"><i style="width:${x.r.total/mx*100}%"></i><i class="w" style="width:${x.r.wealth/mx*100}%"></i></div></td><td class="r">${eur(x.r.total)}</td><td class="r muted">${x.r.wealth?'+'+eur(x.r.wealth):''}</td></tr>`).join('')}</tbody></table></div>
+ </div>`;
+}
+
+/* ---------- 02 COMPARE ---------- */
+function renderCompare(){
+ const I=getI(),f=state.ui.cmpF,s=state.ui.cmpS;
+ document.querySelectorAll('#cmp-filter button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f));
+ document.querySelectorAll('#cmp-sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===s));
+ let list=ORDER.filter(c=>f==='all'||(f==='pri'?SHORT.includes(c):COUNTRIES[c].eu)).map(c=>({c,r:evaluate(c,I)}));
+ const key={total:x=>x.r.total,inv:x=>x.r.invTax,trd:x=>x.r.trdTax,wealth:x=>x.r.wealth}[s];
+ list.sort((a,b)=>key(a)-key(b));
+ const mx=Math.max(1,...list.map(x=>Math.max(0,x.r.total)+x.r.wealth));
+ const prof=I.gain+I.div+I.opt+I.swing;
+ $('#cmp-table').innerHTML=`<table class="t"><thead><tr><th>#</th><th>Country</th><th class="r">Investing</th><th class="r">Trading</th><th class="r">Total</th><th class="r">Effective</th><th class="r">Wealth/yr</th><th style="min-width:120px"></th><th>Status</th></tr></thead><tbody>
+ ${list.map((x,i)=>`<tr class="${x.c===I.res?'me':''}"><td class="r muted">${i+1}</td><td style="white-space:nowrap"><span class="cc">${x.c}</span>${COUNTRIES[x.c].n}${SHORT.includes(x.c)&&x.c!==I.res?' <span class="pill b">shortlist</span>':''}</td>
+ <td class="r">${eur(x.r.invTax)}</td><td class="r">${eur(x.r.trdTax)}</td><td class="r"><b>${eur(x.r.total)}</b></td><td class="r">${prof>0?pc(x.r.total/prof):'—'}</td><td class="r">${x.r.wealth?eur(x.r.wealth):'<span class="muted">—</span>'}</td>
+ <td><div class="hbar" style="display:flex"><i style="width:${Math.max(0,x.r.total)/mx*100}%"></i><i class="w" style="width:${x.r.wealth/mx*100}%"></i></div></td><td>${stamp(COUNTRIES[x.c].conf)}${x.r.ks36&&x.r.ks36.some(k=>!k.ok)?' <span class="pill bad">KS 36 fail</span>':''}</td></tr>`).join('')}</tbody></table>
+ <p class="sm muted" style="margin:10px 0 0">Profit basis ${eur(prof)} (gain ${eur(I.gain)}, dividends ${eur(I.div)}, options ${eur(I.opt)}, swing ${eur(I.swing)}). Totals include foreign withholding. Wealth tax uses capital + trading capital + other wealth.</p>`;
+}
+
+/* ---------- 03 MOVE ---------- */
+function simulate(code,m,I0){
+ const dests=m;let V=m.V,basis=m.V-m.U,upfront=0,taxEmb=0,when='';
+ const base={...I0,opt:0,swing:0,div:0,wht:0,gain:0,veh:'eqETF',lossCF:0,lossCFSh:0,allowUsed:0,tCap:0,margin:false,hedgeOnly:true,turnover:0,trades:0,hold:730,tHold:730};
+ if(code==='DE'){basis=m.V-m.U;}
+ else if(m.before){taxEmb=evaluate('DE',{...base,cap:basis,gain:m.U,res:'DE'}).total;V-=taxEmb;basis=V;upfront=taxEmb;when='paid in DE before move';}
+ else{const step=(code==='DK'&&m.stepDK)||(code==='NO'&&m.stepNO);if(step){basis=V;when='step-up on arrival';}else when='taxed on sale in '+code;}
+ let wealthSum=0,annualSum=0,w1=0;
+ const g=m.g/100,y=m.y/100;
+ for(let t=1;t<=m.N;t++){
+  const start=V,div=V*y,growth=V*g;
+  const wt=runCountry(code,{...base,cap:V,wealthOther:I0.wealthOther}).wealth;if(t===1)w1=wt;
+  let ann=0;
+  if(code==='CH')ann=runCountry('CH',{...base,cap:V,div:div,wealthOther:0}).tax-runCountry('CH',{...base,cap:V,div:0,wealthOther:0}).tax;
+  if(code==='DK'){ann=runCountry('DK',{...base,cap:V,gain:growth+div,hold:365}).tax;basis+=growth+div-ann;}
+  V=start+growth+div-wt-ann;wealthSum+=wt;annualSum+=ann;
+ }
+ const gainEnd=V-basis;
+ const final=code==='DK'?0:evaluate(code,{...base,cap:basis,gain:gainEnd,hold:m.N*365}).total;
+ const pre=m.V*Math.pow(1+g+y,m.N);
+ return{code,taxEmb,when,w1,wealthSum,annualSum,final,net:V-final,pre,drag:1-(V-final)/pre,upfront};
+}
+function renderMoveIn(){
+ const m=state.m;
+ $('#move-in').innerHTML=`<div class="card"><h2><span class="n">A</span>Portfolio at the border</h2><div class="fgrid">
+  ${num('m','V','Portfolio value at move',{unit:'€'})}
+  ${num('m','U','Embedded unrealised gain',{unit:'€',help:'Value minus cost basis'})}
+  ${num('m','g','Price return',{unit:'%/yr',step:0.1})}
+  ${num('m','y','Dividend yield',{unit:'%/yr',step:0.1})}
+  ${num('m','N','Horizon after move',{unit:'years',step:1})}
+  ${sel('m','dest','Destinations',[['CH,DK,NO,PL,FR','Shortlist + France'],['CH,DK,NO,PL','Shortlist only'],['CH,PL','CH vs PL']])}
+  ${chk('m','before','Realise the embedded gain in Germany before moving','Resets cost basis; tax paid at German rates')}
+  ${chk('m','stepDK','Denmark grants a cost step-up on immigration','Likely, but verify with SKAT (K)')}
+  ${chk('m','stepNO','Norway grants a cost step-up on immigration','Assumed no; verify (K)')}
+ </div></div>
+ <div class="card"><h2>Before you deregister · checklist</h2><ul class="notes">
+  <li class="warn">§6 AStG exit tax applies to stakes of 1 % or more in any corporation, including your own GmbH. Don't set up a vermögensverwaltende GmbH before 2028.</li>
+  <li class="warn">InvStG §19 deemed-sale rules for funds apply only above the 1 % / €500k thresholds. Verify the exact wording with a Steuerberater.</li>
+  <li class="info">§2 AStG extended liability and the DBA DE-CH Art. 4(4) clause target German nationals. As a French national you are very likely outside them; confirm.</li>
+  <li class="tip">Harvest German losses before the move. They don't travel, and a share-loss pot dies with your German residence.</li>
+  <li class="info">The move must be real: deregister (Abmeldung), give up the Munich home, and file a split-year return for 2028.</li>
+  <li class="info">Switzerland: choose the canton deliberately (Zug/Schwyz vs Zurich/Geneva) and stay inside KS 36 from day one.</li>
+  <li class="info">Norway: an ASK must be with a Norwegian provider; IBKR positions stay in the ordinary regime.</li>
+  <li class="info">Poland: the OKI account starts 1 Jan 2027 and is tax-free up to PLN 100k of assets.</li>
+ </ul></div>`;
+}
+function renderMoveOut(){
+ const m={...state.m};['V','U','g','y','N'].forEach(k=>m[k]=+m[k]||0);m.N=Math.max(1,Math.min(40,Math.round(m.N)));
+ const I0=getI(),dests=['DE',...m.dest.split(',')];
+ const rows=dests.map(c=>simulate(c,m,I0));
+ const best=rows.reduce((a,b)=>b.net>a.net?b:a);
+ const deEmb=evaluate('DE',{...I0,opt:0,swing:0,div:0,wht:0,gain:m.U,cap:m.V-m.U,veh:'eqETF',lossCF:0,lossCFSh:0,allowUsed:0,hold:730}).total;
+ const W=640,H=40+rows.length*34,mx=Math.max(...rows.map(r=>r.pre));
+ const svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Terminal after-tax value by country">${rows.map((r,i)=>{const y=20+i*34,w=(W-230)*r.net/mx,w2=(W-230)*r.pre/mx;return `<text class="lblm" x="0" y="${y+15}">${COUNTRIES[r.code].n}</text><rect x="110" y="${y+2}" width="${w2}" height="20" fill="var(--soft)"/><rect class="bar${r.code===best.code?' me':''}" x="110" y="${y+2}" width="${Math.max(1,w)}" height="20" rx="2"/><text class="lbl" x="${118+w2}" y="${y+16}">${eur(r.net)}</text>`;}).join('')}</svg>`;
+ $('#move-out').innerHTML=`
+ <div class="hero">
+  <div class="lead"><div class="k">Best destination</div><div class="v">${COUNTRIES[best.code].n}</div><div class="s">over ${m.N} years</div></div>
+  <div><div class="k">After-tax value</div><div class="v">${eur(best.net)}</div><div class="s">vs ${eur(rows[0].net)} staying in DE</div></div>
+  <div><div class="k">Embedded gain tax in DE</div><div class="v">${eur(deEmb)}</div><div class="s">if realised before leaving</div></div>
+  <div><div class="k">Pre-tax value</div><div class="v">${eur(rows[0].pre)}</div><div class="s">${pc(m.g/100+m.y/100)} p.a.</div></div>
+ </div>
+ <div class="card chart"><h2>After-tax value after ${m.N} years (grey = pre-tax)</h2>${svg}</div>
+ <div class="card"><h2>Line by line</h2><div class="tw"><table class="t"><thead><tr><th>Country</th><th class="r">Tax on embedded gain</th><th>When</th><th class="r">Wealth tax yr 1</th><th class="r">Wealth tax total</th><th class="r">Annual income tax</th><th class="r">Tax at sale</th><th class="r">Net value</th><th class="r">Tax drag</th></tr></thead><tbody>
+ ${rows.map(r=>`<tr class="${r.code===best.code?'me':''}"><td><span class="cc">${r.code}</span>${COUNTRIES[r.code].n}</td><td class="r">${r.code==='DE'?'<span class="muted">in sale</span>':eur(r.taxEmb)}</td><td class="sm muted">${r.code==='DE'?'stay':esc(r.when)}</td><td class="r">${eur(r.w1)}</td><td class="r">${eur(r.wealthSum)}</td><td class="r">${eur(r.annualSum)}</td><td class="r">${eur(r.final)}</td><td class="r"><b>${eur(r.net)}</b></td><td class="r">${pc(r.drag)}</td></tr>`).join('')}
+ </tbody></table></div>
+ <p class="sm muted" style="margin:10px 0 0">Model: accumulating equity ETF, sold at the horizon. Switzerland taxes reinvested fund income yearly; Denmark taxes ETFs on annual mark-to-market; Germany, Norway, Poland and France defer to sale. The Vorabpauschale is treated as a prepayment and ignored. Wealth tax uses your other net wealth from the Tax desk.</p></div>`;
+}
+
+/* ---------- 04 STRATEGIES ---------- */
+const T=(c,I)=>evaluate(c,I).total;
+const STRATS=[
+ {id:'reloc',t:'Time realisations around the 2028 move',c:['DE'],imp:5,eff:2,
+  est:I=>{const d=['CH','PL','NO','DK'].map(c=>({c,v:T('DE',I)-T(c,I)})).sort((a,b)=>b.v-a.v);return{v:d[0].v,x:`Best: ${COUNTRIES[d[0].c].n}`};},
+  m:'Switzerland and Poland tax less than Germany: defer gains until you are resident there. Norway is higher (37,84 % on shares): realise in Germany first. Denmark likely steps up your cost basis on arrival, so harvest German losses before leaving.',r:'The move must be genuine (centre of vital interests). Check treaty tie-breakers and split-year rules.'},
+ {id:'allow',t:'Fill the Sparerpauschbetrag every December',c:['DE'],imp:2,eff:1,
+  est:I=>{const mx=I.filing==='joint'?2000:1000,r=I.church?1/(4+I.church)*(1.055+I.church):.26375;const used=T('DE',{...I,allowUsed:mx})-T('DE',I);return{v:Math.max(0,mx*r-used),x:'value of unused allowance'};},
+  m:'Realise gains up to the unused allowance and buy back the same day. Germany has no wash-sale rule, so you reset cost basis tax-free. At IBKR the allowance is applied in your return, not by a Freistellungsauftrag.',r:'Spread and commissions; §42 AO abuse is theoretical for a genuine sale.'},
+ {id:'tlh',t:'Harvest losses before year end',c:'all',imp:3,eff:2,
+  est:(I,c)=>{const v=T(c,I)-T(c,{...I,swing:I.swing-1000});return{v,x:'per 1.000 € of share loss'};},
+  m:'Sell positions below cost to offset this year\'s gains, then rebuy or switch to a similar instrument. In Germany share losses only offset share gains; option losses offset everything except share gains.',r:'Wash-sale rules: US 30 days, UK 30 days, Spain 2 months, Ireland 4 weeks, Canada 30 days. Poland only allows 50 % of a loss per year.'},
+ {id:'tfs',t:'Hold equity ETFs instead of single shares',c:['DE'],imp:3,eff:2,when:I=>I.veh==='shares',
+  est:I=>({v:T('DE',I)-T('DE',{...I,veh:'eqETF'}),x:'on this year\'s gain'}),
+  m:'Equity funds get a 30 % Teilfreistellung: only 70 % of the gain is taxed (18,46 % effective instead of 26,375 %). Fund gains also land in the general pot, so option losses can offset them.',r:'You give up single-stock selection. Vorabpauschale applies to accumulating funds.'},
+ {id:'hold',t:'Cross the holding-period threshold',c:['AU','US','CZ','LU','SK','CO','SI','FI'],imp:4,eff:1,
+  est:(I,c)=>{const th={AU:365,US:365,CZ:1095,LU:183,SK:365,CO:730,SI:1825,FI:3650}[c];return{v:T(c,{...I,hold:Math.min(I.hold,th-1)})-T(c,{...I,hold:Math.max(I.hold,th)}),x:`waiting ${dur(th)}`};},
+  m:'Several countries cut or remove the tax after a minimum holding period: 50 % discount (AU), long-term rates (US), full exemption (CZ 3 years, LU 6 months, SK 1 year), sliding scale (SI).',r:'Market risk while you wait; specific-lot rules decide which shares count as old.'},
+ {id:'church',t:'Remove the church-tax layer',c:['DE'],imp:2,eff:2,when:I=>I.church>0,
+  est:I=>({v:T('DE',I)-T('DE',{...I,church:0}),x:'on capital income only'}),
+  m:'Kirchensteuer adds 8–9 % on top of income tax and capital-gains tax. Leaving the church also removes it from your salary.',r:'A personal decision; listed only because it changes the numbers.'},
+ {id:'w8',t:'File a W-8BEN at IBKR',c:'all',imp:2,eff:1,when:I=>I.div>0&&I.wht>.15,
+  est:I=>({v:I.div*(I.wht-.15),x:'withholding you can stop losing'}),
+  m:'Without a W-8BEN the US withholds 30 % on dividends. Treaty countries credit only 15 %, so the other 15 points are lost for good.',r:'Renew every 3 years; IBKR prompts you.'},
+ {id:'joint',t:'Joint assessment with a spouse',c:'all',imp:2,eff:3,when:I=>I.filing==='single',
+  est:(I,c)=>({v:T(c,I)-T(c,{...I,filing:'joint'}),x:'if married / registered'}),
+  m:'Doubles the German allowance (€2,000), the Danish 27 % band and the Dutch Box 3 exemption, and halves the French income-tax quotient.',r:'Only for married couples or registered partners.'},
+ {id:'child',t:'Invest in your children\'s names',c:['DE'],imp:3,eff:3,
+  est:()=>({v:(1000+12348)*.26375,x:'up to, per child per year'}),
+  m:'A child has their own €1,000 allowance and, via the Günstigerprüfung, the €12,348 basic allowance (2026). That means up to about €13,348 of capital income a year tax-free per child.',r:'Gifts are irrevocable and the money belongs to the child. Gift allowance €400k per parent per 10 years.'},
+ {id:'ks36',t:'Stay inside the Swiss safe harbour',c:['CH','DE'],imp:5,eff:3,
+  est:I=>{const safe={...I,hold:Math.max(I.hold,365),tHold:Math.max(I.tHold,190),turnover:Math.min(I.turnover,4*(I.cap+I.tCap)),margin:false,hedgeOnly:true};return{v:T('CH',I)-T('CH',safe),x:'reclassification avoided'};},
+  m:'In Switzerland, private capital gains are 0 % only if you meet all five KS 36 criteria: holding at least 6 months, turnover at most 5× capital, gains under 50 % of income, no margin, and options only as hedges. Otherwise the canton can tax you as a professional trader, with income tax plus about 10 % AHV.',r:'Your current options and swing style fails at least one criterion. Get a Steuerruling before trading actively in Switzerland.'},
+ {id:'split',t:'Spread realisations across tax years',c:['US','UK','AU','CA','CZ','SK','LU','NZ','PT','FI','ES','FR'],imp:3,eff:2,
+  est:(I,c)=>{const h={...I,gain:I.gain/2,opt:I.opt/2,swing:I.swing/2,div:I.div/2};return{v:T(c,I)-2*T(c,h),x:'realising half now, half in January'};},
+  m:'Where rates are progressive or allowances reset yearly, realising across two tax years uses two allowances and lower brackets twice.',r:'Market risk over the gap.'},
+ {id:'1256',t:'Trade index options for §1256 60/40',c:['US'],imp:3,eff:2,when:I=>I.opt>0&&!I.idx,
+  est:I=>({v:T('US',I)-T('US',{...I,idx:true}),x:'same P&L on SPX/XSP'}),
+  m:'Broad-based index options (SPX, XSP, NDX) are taxed 60 % long-term and 40 % short-term whatever the holding period, and they have no wash-sale issue.',r:'Cash-settled and European exercise; larger notional.'},
+ {id:'margin',t:'Know where leverage costs are deductible',c:['DE','CH','NO'],imp:2,eff:1,when:I=>I.margin,
+  m:'Germany: IBKR margin interest is never deductible (§20(9) EStG). Switzerland: margin fails KS 36 criterion 4. Norway: interest is deductible at 22 %.',r:'Leverage magnifies losses that may be ring-fenced (Denmark).'},
+ {id:'premium',t:'Manage short-option premiums around 31 December',c:['DE'],imp:2,eff:2,when:I=>I.opt!==0,
+  m:'In Germany a written option\'s premium is taxed in the year you receive it (§20(1) Nr. 11). The cost of buying it back counts in the year you close it. A December sell-to-open closed in January moves income forward a year.',r:'Track open short positions at year end; IBKR\'s realised P&L does not show them.'},
+ {id:'reclaim',t:'Reclaim excess dividend withholding',c:'all',imp:2,eff:3,when:I=>I.div>0,
+  m:'IBKR does not file reclaims. Swiss 35 % withholding can be cut to 15 % for German residents (Form 85, reclaim 20 points). Denmark withholds 27 % (treaty 15 %), France 25 % (treaty 12,8 %).',r:'Paperwork per country; worthwhile above a few hundred euros.'},
+ {id:'domicile',t:'Prefer Irish-domiciled ETFs',c:'all',imp:2,eff:1,
+  m:'An Irish fund pays 15 % US withholding inside the fund; a Luxembourg fund pays 30 %. US-domiciled ETFs are blocked for EU retail (PRIIPs) and expose non-US persons to US estate tax above US$60k.',r:'Hidden drag ≈ 0,1–0,3 % a year; check the fund\'s domicile on the factsheet.'},
+ {id:'gmbh',t:'Do not open an investment GmbH before 2028',c:['DE'],imp:4,eff:4,avoid:true,
+  m:'A vermögensverwaltende GmbH pays about 1,5 % on share gains (95 % exemption, §8b KStG), but you would hold 100 % of it. That is a ≥ 1 % stake, so §6 AStG taxes the unrealised value of the GmbH when you emigrate.',r:'Revisit after you settle, under the destination\'s rules.'},
+ {id:'trader',t:'Watch trader-status reclassification',c:['AU','CA','NL','NZ','BE','CH'],imp:3,eff:1,when:I=>I.trades>50,
+  m:'Frequent, systematic trading can turn capital gains into business income: AU and CA (ordinary income), NL (Box 1), NZ (taxable), BE (33 % speculative), CH (income tax + AHV).',r:'Facts-and-circumstances tests; keep trading volume and holding periods documented.'},
+ {id:'spread',t:'Use spread betting for short-term views',c:['UK'],imp:3,eff:2,
+  m:'UK spread bets are gambling for tax purposes: no CGT on profits, no relief for losses. For a profitable short-term trader that beats CGT at 24 %.',r:'Counterparty and financing costs; losses not deductible.'},
+ {id:'wrap',t:'Use the local tax wrapper',c:'all',imp:4,eff:2,
+  est:null,dyn:c=>COUNTRIES[c].wrap,
+  m:'',r:'Lock-ups, contribution caps and moving-country rules apply.'},
+];
+function renderStrategies(){
+ const I=getI(),f=state.ui.stF;
+ document.querySelectorAll('#st-filter button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f));
+ const scope=f==='mine'?[...new Set([I.res,'CH','DK','NO','PL'])]:ORDER;
+ const items=[];
+ for(const s of STRATS){
+  if(s.when&&!s.when(I))continue;
+  const cs=s.c==='all'?scope:s.c.filter(c=>scope.includes(c));
+  if(!cs.length)continue;
+  if(s.id==='wrap'){for(const c of cs.filter(c=>c===I.res||SHORT.includes(c)))items.push({s,c:[c],t:`${COUNTRIES[c].n}: ${s.t.toLowerCase()}`,m:COUNTRIES[c].wrap,v:null});continue;}
+  let v=null,x='';
+  if(s.est){const tc=s.c==='all'?(cs.includes(I.res)?I.res:cs[0]):(cs.includes(I.res)?I.res:cs[0]);const e=s.est(I,tc);v=e.v;x=e.x+(s.c!=='all'&&cs.length>1?` · ${COUNTRIES[tc].n}`:'');}
+  items.push({s,c:cs,t:s.t,m:s.m,v,x});
+ }
+ items.sort((a,b)=>(b.v??-1)-(a.v??-1)||b.s.imp-a.s.imp);
+ const lvl=n=>['','Low','Low','Medium','High','Very high'][n];
+ $('#st-list').innerHTML=items.map(it=>`<article class="card st"><header><h3>${esc(it.t)}</h3>${it.s.avoid?'<span class="pill bad">Avoid</span>':it.v!=null&&it.v>0.5?`<span class="save">${eur(it.v)}</span>`:`<span class="save na">${it.v!=null?'No gain on current inputs':'Qualitative'}</span>`}</header>
+ ${it.x&&it.v>0.5?`<div class="sm muted">${esc(it.x)}</div>`:''}<p>${esc(it.m)}</p>
+ <div class="tags">${(it.c.length>6?it.c.slice(0,6):it.c).map(c=>`<span class="cc">${c}</span>`).join('')}${it.c.length>6?`<span class="pill">+${it.c.length-6}</span>`:''}<span class="pill">Impact ${lvl(it.s.imp)}</span><span class="pill">Effort ${lvl(it.s.eff)}</span></div>
+ <div class="risk"><b>Limits:</b> ${esc(it.s.r)}</div></article>`).join('');
+}
+
+/* ---------- 05 OPTIONS LAB ---------- */
+function ncdf(x){const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911,s=x<0?-1:1,z=Math.abs(x)/Math.SQRT2,t=1/(1+p*z),y=1-((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-z*z);return .5*(1+s*y);}
+function bsm(type,S,K,T,r,q,v){if(T<=0||v<=0){const f=S*Math.exp(-q*Math.max(T,0)),k=K*Math.exp(-r*Math.max(T,0));return Math.max(0,type==='call'?f-k:k-f);}
+ const sq=v*Math.sqrt(T),d1=(Math.log(S/K)+(r-q+v*v/2)*T)/sq,d2=d1-sq;
+ return type==='call'?S*Math.exp(-q*T)*ncdf(d1)-K*Math.exp(-r*T)*ncdf(d2):K*Math.exp(-r*T)*ncdf(-d2)-S*Math.exp(-q*T)*ncdf(-d1);}
+function crr1(type,S,K,T,r,q,v,n){const dt=T/n,u=Math.exp(v*Math.sqrt(dt)),d=1/u,disc=Math.exp(-r*dt),p=(Math.exp((r-q)*dt)-d)/(u-d);
+ if(!(p>0&&p<1))return bsm(type,S,K,T,r,q,v);const V=new Float64Array(n+1),cs=type==='call'?1:-1,d2=d*d;
+ let st=S*Math.pow(u,n);for(let i=0;i<=n;i++){V[i]=Math.max(0,cs*(st-K));st*=d2;}
+ for(let j=n-1;j>=0;j--){st=S*Math.pow(u,j);for(let i=0;i<=j;i++){const c=disc*(p*V[i]+(1-p)*V[i+1]),e=cs*(st-K);V[i]=c>e?c:e;st*=d2;}}return V[0];}
+function crr(type,S,K,T,r,q,v,n){if(T<=0)return Math.max(0,type==='call'?S-K:K-S);return(crr1(type,S,K,T,r,q,v,n)+crr1(type,S,K,T,r,q,v,n+1))/2;}
+function optVal(type,S,K,T,r,q,v,amer,n){if(T<=0)return Math.max(0,type==='call'?S-K:K-S);v=Math.max(.005,v);
+ if(amer&&(type==='put'||q>0))return crr(type,S,K,T,r,q,v,n||100);return bsm(type,S,K,T,r,q,v);}
+function solveIV(type,price,S,K,T,r,q,amer){if(!(T>0)||!(price>0))return null;const f=v=>optVal(type,S,K,T,r,q,v,amer,80);
+ if(price<f(.005)-1e-6||price>f(5))return null;
+ if(!amer||(type==='call'&&q===0)){let v=Math.sqrt(2*Math.PI/T)*price/S;if(!(v>.02&&v<3))v=.3;
+  for(let i=0;i<40;i++){const p=bsm(type,S,K,T,r,q,v),sq=Math.sqrt(T),d1=(Math.log(S/K)+(r-q+v*v/2)*T)/(v*sq),vg=S*Math.exp(-q*T)*Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI)*sq,df=p-price;if(Math.abs(df)<1e-7)return v;if(vg<1e-8)break;v-=df/vg;if(!(v>.005&&v<5))break;}}
+ let lo=.005,hi=5;for(let i=0;i<55;i++){const m=(lo+hi)/2;if(f(m)>price)hi=m;else lo=m;}return(lo+hi)/2;}
+
+const OCUR=['USD','EUR','GBP','CHF'];
+const PRESETS={long_call:'Long call',long_put:'Long put',covered_call:'Covered call',csp:'Cash-secured put',bull_call:'Bull call spread',bear_put:'Bear put spread',bull_put:'Bull put credit spread',bear_call:'Bear call credit spread',iron_condor:'Iron condor',butterfly:'Long call butterfly',straddle:'Long straddle',strangle:'Long strangle',short_strangle:'Short strangle',calendar:'Call calendar',pmcc:'Poor man\'s covered call',collar:'Collar',custom:'Custom (blank)'};
+function stepOf(S){return S<25?.5:S<100?1:S<250?2.5:S<1000?5:10;}
+function buildPreset(name,S,dte,iv){
+ const st=stepOf(S),atm=Math.round(S/st)*st,w=st*Math.max(1,Math.round(S*.05/st)),L=(side,type,K,qty=1,d=dte)=>({side,type,K:+K.toFixed(2),qty,dte:d,iv:iv,price:0});
+ const sk={qty:100,side:'buy',type:'stock',K:0,dte:0,iv:0,price:S};
+ const m={long_call:[L('buy','call',atm)],long_put:[L('buy','put',atm)],covered_call:[sk,L('sell','call',atm+w)],csp:[L('sell','put',atm-w)],
+  bull_call:[L('buy','call',atm),L('sell','call',atm+w)],bear_put:[L('buy','put',atm),L('sell','put',atm-w)],
+  bull_put:[L('sell','put',atm-w),L('buy','put',atm-2*w)],bear_call:[L('sell','call',atm+w),L('buy','call',atm+2*w)],
+  iron_condor:[L('buy','put',atm-2*w),L('sell','put',atm-w),L('sell','call',atm+w),L('buy','call',atm+2*w)],
+  butterfly:[L('buy','call',atm-w),L('sell','call',atm,2),L('buy','call',atm+w)],straddle:[L('buy','call',atm),L('buy','put',atm)],
+  strangle:[L('buy','call',atm+w),L('buy','put',atm-w)],short_strangle:[L('sell','call',atm+w),L('sell','put',atm-w)],
+  calendar:[L('sell','call',atm,1,dte),L('buy','call',atm,1,dte+28)],pmcc:[L('buy','call',atm-3*w,1,Math.max(180,dte*4)),L('sell','call',atm+w)],
+  collar:[sk,L('buy','put',atm-w),L('sell','call',atm+w)],custom:[L('buy','call',atm)]}[name];
+ return m.map(l=>({...l}));
+}
+function olDefault(){return{sym:'XYZ',S:185,r:4.0,q:0.4,style:'american',cur:'USD',comm:0.65,preset:'bull_call',dte:35,iv:32,shift:0,day:0,range:'auto',lo:'',hi:'',target:'',rows:21,view:'pnl',drift:'rn',risk:'',legs:[]};}
+if(!state.o){state.o=olDefault();state.o.legs=buildPreset('bull_call',185,35,32);}
+const O=()=>state.o;
+function legPriceFromIV(l){const o=O();if(l.type==='stock')return;l.price=+optVal(l.type,+o.S,+l.K,(+l.dte)/365,o.r/100,o.q/100,l.iv/100,o.style==='american',150).toFixed(2);}
+if(state.o.legs.some(l=>l.type!=='stock'&&!(l.price>0)))state.o.legs.forEach(legPriceFromIV);
+
+function olModel(){
+ const o=O(),S=+o.S||0,r=(+o.r||0)/100,q=(+o.q||0)/100,amer=o.style==='american',sh=(+o.shift||0)/100;
+ const legs=o.legs.filter(l=>+l.qty>0).map(l=>({...l,sg:l.side==='buy'?1:-1,qty:+l.qty,K:+l.K,dte:Math.max(0,+l.dte||0),price:+l.price||0,iv:(+l.iv||0)/100}));
+ const opts=legs.filter(l=>l.type!=='stock');
+ const front=opts.length?Math.min(...opts.map(l=>l.dte)):30,maxD=opts.length?Math.max(...opts.map(l=>l.dte)):30;
+ const mult=100,comm=(+o.comm||0)*opts.reduce((s,l)=>s+l.qty,0);
+ const pnl=(Sx,day,n)=>{let t=-comm;for(const l of legs){if(l.type==='stock'){t+=l.sg*l.qty*(Sx-l.price);continue;}
+  const T=Math.max(0,l.dte-day)/365;t+=l.sg*l.qty*mult*(optVal(l.type,Sx,l.K,T,r,q,l.iv+sh,amer,n||80)-l.price);}return t;};
+ const cost=legs.reduce((s,l)=>s+l.sg*l.qty*(l.type==='stock'?l.price:l.price*mult),0)+comm;
+ const sig=opts.length?opts.reduce((s,l)=>s+(l.iv+sh)*l.qty,0)/opts.reduce((s,l)=>s+l.qty,0):.3;
+ return{o,S,r,q,amer,sh,legs,opts,front,maxD,mult,comm,pnl,cost,sig};
+}
+function olAnalyse(M){
+ const {S,front,sig,pnl,o}=M,tau=Math.max(front,0.5)/365,mu=o.drift==='rn'?M.r-M.q:0,sd=Math.max(.01,sig)*Math.sqrt(tau);
+ const hasLater=M.opts.some(l=>l.dte>front),nP=hasLater?50:80,N=hasLater?500:1200;
+ let pop=0,ev=0;const pts=[];
+ for(let i=0;i<=N;i++){const z=-6+12*i/N,ST=S*Math.exp((mu-sig*sig/2)*tau+sd*z),w=Math.exp(-z*z/2)/Math.sqrt(2*Math.PI)*(12/N),v=pnl(ST,front,nP);pts.push([ST,v]);if(v>0)pop+=w;ev+=w*v;}
+ const bes=[];for(let i=1;i<pts.length;i++){const[a,va]=pts[i-1],[b,vb]=pts[i];if((va<=0&&vb>0)||(va>0&&vb<=0)){let lo=a,hi=b,flo=va;for(let k=0;k<30;k++){const m=(lo+hi)/2,fm=pnl(m,front,nP);if((fm>0)===(flo>0)){lo=m;flo=fm;}else hi=m;}bes.push((lo+hi)/2);}}
+ const vals=pts.map(p=>p[1]),v0=pnl(0.0001,front,nP),hi1=pnl(S*5,front,nP),hi2=pnl(S*10,front,nP);
+ let maxP=Math.max(...vals,v0,hi2),maxL=Math.min(...vals,v0,hi2);
+ const unlP=hi2-hi1>Math.abs(hi1)*.02+1,unlL=hi1-hi2>Math.abs(hi1)*.02+1;
+ const eps=1e-3*S,g=(Sx)=>pnl(Sx,0,100),delta=(g(S+eps)-g(S-eps))/(2*eps),gamma=(g(S+eps)-2*g(S)+g(S-eps))/(eps*eps);
+ const theta=pnl(S,1,100)-g(S);const vegaM={...M};const vega=(()=>{let t=0;for(const l of M.legs){if(l.type==='stock')continue;const T=l.dte/365;t+=l.sg*l.qty*M.mult*(optVal(l.type,S,l.K,T,M.r,M.q,l.iv+M.sh+.01,M.amer,100)-optVal(l.type,S,l.K,T,M.r,M.q,l.iv+M.sh,M.amer,100));}return t;})();
+ const risk=+o.risk>0?+o.risk:unlL?NaN:Math.abs(Math.min(0,maxL));
+ const em=S*sig*Math.sqrt(tau);
+ return{pop,ev,bes,maxP,maxL,unlP,unlL,delta,gamma,theta,vega,risk,em,tau,hasLater};
+}
+function afterTax(profitCur){const I=getI(),pe=profitCur/(FX[O().cur]||1);const b=runCountry(I.res,I).tax,a=runCountry(I.res,{...I,opt:I.opt+pe}).tax;return{eur:pe,tax:a-b};}
+function niceTicks(lo,hi,n){const span=hi-lo||1,step0=span/n,mag=Math.pow(10,Math.floor(Math.log10(step0))),err=step0/mag,step=(err>=7.5?10:err>=3.5?5:err>=1.5?2:1)*mag,out=[];for(let v=Math.ceil(lo/step)*step;v<=hi+1e-9;v+=step)out.push(+v.toFixed(10));return out;}
+function olChart(M,A,lo,hi){
+ const W=680,H=280,pl=58,pr=14,pt=14,pb=30,n=120,day=Math.min(+M.o.day||0,M.front);
+ const xs=[...Array(n+1)].map((_,i)=>lo+(hi-lo)*i/n),e=xs.map(x=>M.pnl(x,M.front,60)),d=xs.map(x=>M.pnl(x,day,60));
+ let ymin=Math.min(...e,...d),ymax=Math.max(...e,...d);if(ymin===ymax){ymin-=1;ymax+=1;}const pad=(ymax-ymin)*.08;ymin-=pad;ymax+=pad;
+ const X=x=>pl+(x-lo)/(hi-lo)*(W-pl-pr),Y=y=>pt+(ymax-y)/(ymax-ymin)*(H-pt-pb);
+ const path=a=>a.map((y,i)=>(i?'L':'M')+X(xs[i]).toFixed(1)+' '+Y(y).toFixed(1)).join('');
+ const yt=niceTicks(ymin,ymax,5),xt=niceTicks(lo,hi,6),c=M.o.cur;
+ const b1=Math.max(lo,M.S-A.em),b2=Math.min(hi,M.S+A.em);
+ return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Profit and loss by underlying price">
+ <rect class="band" x="${X(b1)}" y="${pt}" width="${Math.max(0,X(b2)-X(b1))}" height="${H-pt-pb}"/>
+ ${yt.map(v=>`<line class="ax" x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="tick" x="${pl-6}" y="${Y(v)+3}" text-anchor="end">${money(v,c)}</text>`).join('')}
+ ${xt.map(v=>`<text class="tick" x="${X(v)}" y="${H-10}" text-anchor="middle">${nf2.format(v).replace(/,00$/,'')}</text>`).join('')}
+ ${ymin<0&&ymax>0?`<line class="zero" x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}"/>`:''}
+ <line class="spot" x1="${X(M.S)}" x2="${X(M.S)}" y1="${pt}" y2="${H-pb}"/>
+ ${(+M.o.target>0&&+M.o.target>=lo&&+M.o.target<=hi)?`<line class="tgt" x1="${X(+M.o.target)}" x2="${X(+M.o.target)}" y1="${pt}" y2="${H-pb}"/><text class="tick" x="${X(+M.o.target)+4}" y="${pt+10}">target</text>`:''}
+ <path class="now" d="${path(d)}"/><path class="exp" d="${path(e)}"/>
+ ${A.bes.filter(b=>b>lo&&b<hi).map(b=>`<circle class="be" cx="${X(b)}" cy="${Y(0)}" r="4"/>`).join('')}
+ </svg>`;
+}
+function olMatrix(M,lo,hi){
+ const o=M.o,c=o.cur,rows=+o.rows||21,cols=[],tg=+o.target||0;
+ if(M.maxD<=14){for(let d=0;d<=M.maxD;d++)cols.push(d);}else{for(let i=0;i<10;i++)cols.push(Math.round(i*M.front/9));if(M.maxD>M.front)cols.push(Math.round((M.front+M.maxD)/2),M.maxD);}
+ const uniq=[...new Set(cols)].sort((a,b)=>a-b);
+ let prices=[...Array(rows)].map((_,i)=>hi-(hi-lo)*i/(rows-1));
+ if(tg>0&&tg>=lo&&tg<=hi&&!prices.some(p=>Math.abs(p-tg)<1e-9)){prices.push(tg);prices.sort((a,b)=>b-a);}
+ const ti=tg>0?prices.findIndex(p=>Math.abs(p-tg)<1e-9):-1;
+ const si=prices.reduce((b,p,i)=>Math.abs(p-M.S)<Math.abs(prices[b]-M.S)?i:b,0);
+ const vals=prices.map(p=>uniq.map(d=>M.pnl(p,d,70)));
+ const flat=vals.flat(),mx=Math.max(1,...flat.map(Math.abs));
+ const sel=uniq.reduce((b,d,i)=>Math.abs(d-(+o.day||0))<Math.abs(uniq[b]-(+o.day||0))?i:b,0);
+ const risk=+o.risk>0?+o.risk:null;
+ const lab=d=>{const t=new Date(TODAY.getTime()+d*864e5);return t.toLocaleDateString('en-GB',{day:'numeric',month:'short'});};
+ const cell=v=>{const a=Math.round(12+68*Math.min(1,Math.abs(v)/mx)),col=v>=0?'var(--gain)':'var(--loss)';const txt=o.view==='pct'&&risk?pc(v/risk,0):money(v,c);return `<td style="background:color-mix(in srgb,${col} ${a}%,var(--surface));color:${a>52?'var(--paper)':'var(--ink)'}">${txt}</td>`;};
+ return `<table class="mx"><thead><tr><th class="px">Price</th>${uniq.map((d,i)=>`<th>${lab(d)}<br><span style="opacity:.7">${d}d</span></th>`).join('')}</tr></thead><tbody>
+ ${prices.map((p,i)=>`<tr class="${i===si?'spot':''}${i===ti?' tgt':''}"><th class="px">${i===ti?'<span class="tgl">target</span> ':''}${nf2.format(p)}</th>${vals[i].map((v,j)=>cell(v).replace('<td',j===sel?'<td class="sel"':'<td')).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function renderOLShell(){
+ const o=O();
+ $('#ol').innerHTML=`
+ <div class="card"><h2><span class="n">A</span>Underlying & market</h2><div class="ol-top">
+  <label class="f"><span class="fl">Symbol</span><span class="fi"><input id="o-sym" data-o="sym" type="text" autocomplete="off" spellcheck="false" value="${esc(o.sym)}"><button type="button" class="qbtn" id="o-fetch" hidden title="Fetch the last price from Yahoo Finance">Fetch</button></span></label>
+  <label class="f"><span class="fl">Price</span><span class="fi"><input id="o-S" data-o="S" type="number" step="any" inputmode="decimal" value="${o.S}"></span></label>
+  <label class="f"><span class="fl">Risk-free r</span><span class="fi"><input id="o-r" data-o="r" type="number" step="0.05" value="${o.r}"><em>%</em></span></label>
+  <label class="f"><span class="fl">Dividend yield q</span><span class="fi"><input id="o-q" data-o="q" type="number" step="0.05" value="${o.q}"><em>%</em></span></label>
+  <label class="f"><span class="fl">Exercise style</span><span class="fi"><select id="o-style" data-o="style"><option value="american"${o.style==='american'?' selected':''}>American (CRR tree)</option><option value="european"${o.style==='european'?' selected':''}>European (BSM)</option></select></span></label>
+  <label class="f"><span class="fl">Currency</span><span class="fi"><select id="o-cur" data-o="cur">${OCUR.map(c=>`<option${o.cur===c?' selected':''}>${c}</option>`).join('')}</select></span></label>
+  <label class="f"><span class="fl">Commission / contract</span><span class="fi"><input id="o-comm" data-o="comm" type="number" step="0.05" value="${o.comm}"></span></label>
+ </div><p class="sm muted" id="o-links" style="margin:10px 0 0"></p></div>
+ <div class="card"><h2><span class="n">B</span>Strategy & legs</h2>
+  <div class="row" style="margin-bottom:10px">
+   <label class="f" style="min-width:210px;flex:1 1 210px"><span class="fl">Template</span><span class="fi"><select id="o-preset" data-o="preset">${Object.entries(PRESETS).map(([k,v])=>`<option value="${k}"${o.preset===k?' selected':''}>${v}</option>`).join('')}</select></span></label>
+   <label class="f" style="width:110px"><span class="fl">Days to expiry</span><span class="fi"><input id="o-dte" data-o="dte" type="number" step="1" value="${o.dte}"></span></label>
+   <label class="f" style="width:110px"><span class="fl">Base IV</span><span class="fi"><input id="o-iv" data-o="iv" type="number" step="0.5" value="${o.iv}"><em>%</em></span></label>
+   <button class="btn pri" id="o-build" style="align-self:flex-end">Build at market</button>
+   <button class="btn" id="o-add" style="align-self:flex-end">Add leg</button>
+  </div>
+  <div class="tw" id="o-legs"></div>
+  <p class="sm muted" style="margin:8px 0 0">Type the option mid from IBKR into Price and the implied volatility is solved for you. Edit IV instead and the model price updates. Stock legs use quantity in shares.</p>
+ </div>
+ <div class="metrics" id="o-metrics"></div>
+ <div class="card"><h2><span class="n">C</span>Scenario controls</h2><div class="stack" style="gap:10px">
+  <div class="range"><span class="fl" style="width:120px">IV shift</span><input type="range" id="o-shift" data-o="shift" min="-40" max="40" step="1" value="${o.shift}"><output id="o-shift-v"></output></div>
+  <div class="range"><span class="fl" style="width:120px">Valuation date</span><input type="range" id="o-day" data-o="day" min="0" max="60" step="1" value="${o.day}"><output id="o-day-v"></output></div>
+  <div class="row"><span class="fl">Price range</span><div class="seg" id="o-range">${['auto','10','20','35','50','100','custom'].map(v=>`<button data-v="${v}">${v==='auto'?'Auto':v==='custom'?'Custom':'±'+v+' %'}</button>`).join('')}</div>
+   <span class="fl" style="margin-left:8px">Probability drift</span><div class="seg" id="o-drift"><button data-v="rn">Risk-neutral</button><button data-v="zero">Zero drift</button></div>
+   <span class="fl" style="margin-left:8px">Rows</span><div class="seg" id="o-rows">${[21,31,41].map(v=>`<button data-v="${v}">${v}</button>`).join('')}</div>
+   <span class="fl" style="margin-left:8px">Matrix</span><div class="seg" id="o-view"><button data-v="pnl">P&L</button><button data-v="pct">% of risk</button></div></div>
+  <div class="row" style="align-items:flex-end">
+   <label class="f" style="width:140px"><span class="fl">From price</span><span class="fi"><input id="o-lo" data-o="lo" type="number" step="any" inputmode="decimal" min="0" value="${o.lo??''}" placeholder="min"></span></label>
+   <label class="f" style="width:140px"><span class="fl">To price</span><span class="fi"><input id="o-hi" data-o="hi" type="number" step="any" inputmode="decimal" value="${o.hi??''}" placeholder="max"></span></label>
+   <label class="f" style="width:150px"><span class="fl">Target price</span><span class="fi"><input id="o-target" data-o="target" type="number" step="any" inputmode="decimal" value="${o.target??''}" placeholder="expected"></span></label>
+   <small class="sm muted" style="flex:1 1 220px">Typing a From or To price switches the range to Custom, with no limit (50 to 400 on a 185 stock works). The target gets its own row in the matrix and its own P&L figures.</small>
+  </div>
+  <label class="f" style="max-width:260px"><span class="fl">Capital at risk override (margin)</span><span class="fi"><input id="o-risk" data-o="risk" type="number" step="any" value="${o.risk}" placeholder="auto"></span><small>For naked positions, enter IBKR's margin requirement.</small></label>
+ </div></div>
+ <div class="card chart"><h2>Profit & loss by price</h2><div class="legend"><span><i></i>At expiry <span id="o-exp-lbl"></span></span><span><i class="d"></i>On valuation date</span><span>Shaded: ±1σ expected move · dots: breakevens · dotted: target</span></div><div id="o-chart"></div></div>
+ <div class="card"><h2>Profit matrix · price × date</h2><div class="tw" id="o-matrix" style="max-height:620px"></div></div>
+ <div class="card"><h2>Method</h2><ul class="notes">
+  <li>European legs use Black-Scholes-Merton with a continuous dividend yield. American puts, and calls with q above 0, use a Cox-Ross-Rubinstein tree (average of n and n+1 steps) so that early exercise is priced.</li>
+  <li>Implied volatility is solved per leg by Newton-Raphson, with bisection as a fallback, after a no-arbitrage bounds check. Keeping each leg's own IV preserves the skew (sticky-strike). The slider then moves all legs in parallel, which is how optionsprofitcalculator.com works.</li>
+  <li>Probability of profit integrates the P&L at front expiry over a lognormal distribution using the quantity-weighted IV. Risk-neutral drift is r − q; zero drift is a more neutral real-world view.</li>
+  <li>Calendars and diagonals are valued at front expiry, with the back leg still priced by the model. Commissions count on opening only, so double them if you close before expiry.</li>
+  <li>Price auto-fill reads Yahoo Finance's public chart data through the Claude desktop app's built-in browser. That works only when this page is open in the desktop app, and the app asks your permission on first use. Elsewhere, use the Yahoo and TradingView links. US quotes during market hours are delayed about 15 minutes; outside hours you get the last close.</li>
+  <li class="warn">Not modelled: changes in skew, IV crush after earnings beyond the slider, discrete dividends, early assignment risk on short calls before an ex-date, or bid/ask spread. Use mid prices.</li>
+ </ul></div>`;
+ renderLegs();
+}
+function renderLegs(){
+ const o=O();
+ $('#o-legs').innerHTML=`<table class="legs"><thead><tr><th>Side</th><th>Type</th><th>Qty</th><th>Strike</th><th>DTE</th><th>Expiry</th><th>Price</th><th>IV %</th><th></th></tr></thead><tbody>
+ ${o.legs.map((l,i)=>{const st=l.type==='stock',ex=new Date(TODAY.getTime()+(+l.dte||0)*864e5).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'2-digit'});return `<tr class="${l._err?'err':''}">
+ <td><select data-leg="${i}" data-lk="side"><option value="buy"${l.side==='buy'?' selected':''}>Buy</option><option value="sell"${l.side==='sell'?' selected':''}>Sell</option></select></td>
+ <td><select data-leg="${i}" data-lk="type">${['call','put','stock'].map(t=>`<option value="${t}"${l.type===t?' selected':''}>${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}</select></td>
+ <td><input data-leg="${i}" data-lk="qty" type="number" step="1" min="0" value="${l.qty}"></td>
+ <td><input data-leg="${i}" data-lk="K" type="number" step="any" value="${l.K}"${st?' disabled':''}></td>
+ <td><input data-leg="${i}" data-lk="dte" type="number" step="1" value="${l.dte}"${st?' disabled':''}></td>
+ <td class="sm muted" style="white-space:nowrap">${st?'—':ex}</td>
+ <td><input data-leg="${i}" data-lk="price" type="number" step="0.01" value="${l.price}"></td>
+ <td><input data-leg="${i}" data-lk="iv" type="number" step="0.1" value="${st?'':(+l.iv).toFixed(1)}"${st?' disabled':''}></td>
+ <td><button class="x" data-del="${i}" aria-label="Remove leg">×</button></td></tr>`;}).join('')}</tbody></table>`;
+}
+let olRaf=0;function olQueue(){cancelAnimationFrame(olRaf);olRaf=requestAnimationFrame(renderOLOut);}
+function renderOLOut(){
+ const M=olModel(),o=M.o;if(!M.legs.length){$('#o-metrics').innerHTML='<div><div class="k">No legs</div><div class="v">Add a leg</div></div>';$('#o-chart').innerHTML='';$('#o-matrix').innerHTML='';return;}
+ const A=olAnalyse(M),c=o.cur;
+ const dayEl=$('#o-day');dayEl.max=Math.max(1,M.maxD);if(+o.day>M.maxD){o.day=M.maxD;dayEl.value=o.day;}
+ $('#o-shift-v').textContent=(o.shift>0?'+':'')+o.shift+' vol pts';
+ const dd=new Date(TODAY.getTime()+(+o.day)*864e5);$('#o-day-v').textContent=dd.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+` · ${o.day}d`;
+ document.querySelectorAll('#o-range button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===String(o.range)));
+ document.querySelectorAll('#o-drift button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===o.drift));
+ document.querySelectorAll('#o-view button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===o.view));
+ let lo,hi;const cl=+o.lo,chh=+o.hi,tg=+o.target||0;
+ if(o.range==='custom'&&o.lo!==''&&o.hi!==''&&cl>=0&&chh>cl){lo=Math.max(.01,cl);hi=chh;}
+ else{const R=(o.range==='auto'||o.range==='custom')?Math.min(.6,Math.max(.06,2.2*M.sig*Math.sqrt(Math.max(M.maxD,1)/365))):+o.range/100;lo=Math.max(.01,M.S*(1-R));hi=M.S*(1+R);}
+ if(tg>0){if(tg<lo)lo=Math.max(.01,tg*.95);if(tg>hi)hi=tg*1.05;}
+ document.querySelectorAll('#o-rows button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===(+o.rows||21)));
+ renderQuote();
+ const ror=A.risk>0?A.maxP/A.risk:NaN,ann=isFinite(ror)&&M.front>0&&ror>-1?Math.pow(1+ror,365/Math.max(1,M.front))-1:NaN;
+ const at=!A.unlP&&A.maxP>0?afterTax(A.maxP):null,I=getI();
+ let tgCards=[];if(tg>0){const vd=Math.min(+o.day||0,M.maxD),pv=M.pnl(tg,vd,100),pe=M.pnl(tg,M.front,100),ate=pe>0?afterTax(pe):null;
+  tgCards=[[`At ${nf2.format(tg)} · ${vd}d`,money(pv,c),`${pc(tg/M.S-1)} vs spot · valuation date`],[`At ${nf2.format(tg)} · expiry`,money(pe,c),A.risk>0?`${pc(pe/A.risk)} return on risk`:''],['After-tax at target',ate?eur(ate.eur-ate.tax):'—',ate?`tax ${eur(ate.tax)} in ${COUNTRIES[I.res].n}`:pe<0?'a loss offsets other gains':'']];}
+ const deb=M.cost>0?`Debit ${money(M.cost,c)}`:`Credit ${money(-M.cost,c)}`;
+ $('#o-metrics').innerHTML=[...tgCards,
+  ['Entry',deb,`incl. ${money(M.comm,c,2)} commission`],
+  ['Max profit',A.unlP?'Unlimited':money(A.maxP,c),A.hasLater?'at front expiry':'at expiry'],
+  ['Max loss',A.unlL?'Unlimited':money(A.maxL,c),A.unlL?'margin applies':''],
+  ['Breakeven',A.bes.length?A.bes.map(b=>nf2.format(b)).join(' / '):'—',A.bes.length===1?`${pc(A.bes[0]/M.S-1)} from spot`:''],
+  ['Prob. of profit',pc(A.pop),o.drift==='rn'?'risk-neutral, lognormal':'zero drift, lognormal'],
+  ['Expected move ±1σ',money(A.em,c,2),`${nf2.format(M.S-A.em)} – ${nf2.format(M.S+A.em)} by ${M.front}d`],
+  ['Return on risk',pc(ror),isFinite(ann)?`${pc(ann,0)} annualised`:''],
+  ['Model EV',money(A.ev,c),'expected P&L at front expiry'],
+  ['Delta',nf2.format(A.delta),'share-equivalents'],
+  ['Gamma',A.gamma.toFixed(3),'per 1 move in price'],
+  ['Theta',money(A.theta,c,2),'per calendar day'],
+  ['Vega',money(A.vega,c,2),'per +1 vol point'],
+  ['Tax on max profit',at?eur(at.tax):'—',at?`${COUNTRIES[I.res].n}: ${pc(at.tax/Math.max(1e-9,at.eur))} marginal`:''],
+  ['After-tax max profit',at?eur(at.eur-at.tax):'—',at?'in euros, after your other results':''],
+ ].map(([k,v,s],i)=>`<div${i<tgCards.length?' class="tg"':''}><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+ $('#o-exp-lbl').textContent=A.hasLater?'(front leg)':'';
+ $('#o-chart').innerHTML=olChart(M,A,lo,hi);
+ $('#o-matrix').innerHTML=olMatrix(M,lo,hi);
+}
+
+/* ---------- live quote via the desktop app's browser ---------- */
+const QF={mcp:null,ok:false,tab:null,busy:false,msg:'',err:false};
+const QH='host:claude_browser';
+(async()=>{try{const m=window.claude&&window.claude.use?await window.claude.use('mcp'):null;if(!m)return;QF.mcp=m;
+ const l=await m.listTools(QH).catch(()=>null);QF.ok=!!(l&&l.servers&&l.servers.some(x=>x.server===QH));}catch(e){}renderQuote();})();
+function renderQuote(){
+ const el=$('#o-links'),b=$('#o-fetch');if(!el)return;
+ if(b){b.hidden=!QF.ok;b.disabled=QF.busy;b.textContent=QF.busy?'Fetching…':'Fetch';}
+ const o=O(),sy=encodeURIComponent(String(o.sym||'').trim().toUpperCase());
+ const st=QF.msg?`<span class="qs${QF.err?' err':QF.busy?' busy':''}">${QF.err?'':'<span class="dot"></span>'}${esc(QF.msg)}</span>`:'';
+ const links=sy?`${QF.ok?'Check':'Last price for <b>'+esc(o.sym)+'</b>:'} <a href="https://finance.yahoo.com/quote/${sy}" target="_blank" rel="noopener">Yahoo Finance</a> · <a href="https://www.tradingview.com/symbols/${sy}/" target="_blank" rel="noopener">TradingView</a>${QF.ok?' · the price fills in when you change the symbol or press Fetch.':' · then type it into Price. Open this page in the Claude desktop app to fill the price automatically.'}`:'';
+ el.innerHTML=st+links;
+}
+function quoteErr(e,sym){const c=e&&e.code;
+ if(c==='server_not_connected'){QF.ok=false;return 'Automatic price needs the Claude desktop app with its browser available. Use the links below for now.';}
+ if(c==='not_in_manifest'||c==='approval_required'||c==='blocked_by_policy')return 'Browser access is not allowed for this page. Turn it on from the artifact\'s Permissions menu, or use the links below.';
+ if(c==='cancelled')return 'Cancelled in the desktop app.';
+ if(c==='nosym')return `Yahoo Finance has no symbol "${sym}". Non-US listings need Yahoo's suffix: SAP.DE, MC.PA, NESN.SW, ASML.AS, VOD.L.`;
+ if(c==='noparse')return 'Yahoo answered without a price (consent page or rate limit). Open the Yahoo link once in the desktop browser, then press Fetch again.';
+ if(c==='tool_error')return 'The desktop browser could not load the quote: '+String(e.message||'').slice(0,140);
+ return `Could not reach the desktop browser (${c||'unknown error'}). Check that the Claude app is open, then press Fetch.`;}
+async function fetchQuote(){
+ const o=O(),sym=String(o.sym||'').trim().toUpperCase();if(!sym||!QF.mcp||QF.busy)return;
+ QF.busy=true;QF.err=false;QF.msg=`Fetching ${sym} from Yahoo Finance…`;renderQuote();
+ const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=1d`;
+ const txt=r=>!r?'':typeof r.payload==='string'?r.payload:(r.content||[]).filter(x=>x.type==='text').map(x=>x.text).join('\n');
+ try{
+  let opened=false;
+  if(QF.tab){try{await QF.mcp.callTool(QH,'navigate',{url,tabId:QF.tab},{cache:false});opened=true;}catch(e){if(!e||e.code!=='tool_error')throw e;QF.tab=null;}}
+  if(!opened){const r=await QF.mcp.callTool(QH,'preview_start',{url},{cache:false});const m=txt(r).match(/tabId\s+([\w-]+)/);QF.tab=m?m[1]:null;}
+  let meta=null,nf=null;
+  for(let i=0;i<6&&!meta&&!nf;i++){
+   if(i)await new Promise(res=>setTimeout(res,500+i*300));
+   const t=txt(await QF.mcp.callTool(QH,'get_page_text',QF.tab?{tabId:QF.tab,max_chars:8000}:{max_chars:8000},{cache:false}));
+   const j=t.indexOf('{"chart"');if(j<0)continue;
+   const line=t.slice(j).split('\n')[0];
+   try{const d=JSON.parse(line);if(d.chart.error)nf=d.chart.error.description||'not found';else meta=d.chart.result[0].meta;}
+   catch(e){const m=line.match(/"regularMarketPrice":([\d.]+)/);if(m)meta={regularMarketPrice:+m[1],symbol:sym};}
+  }
+  if(nf)throw{code:'nosym'};
+  if(!meta||!(meta.regularMarketPrice>0))throw{code:'noparse'};
+  applyQuote(meta,sym);
+ }catch(e){QF.err=true;QF.msg=quoteErr(e,sym);}
+ QF.busy=false;renderQuote();
+}
+function applyQuote(m,sym){
+ const o=O();let px=+m.regularMarketPrice,cur=String(m.currency||o.cur);
+ if(cur==='GBp'||cur==='GBX'){px/=100;cur='GBP';}cur=cur.toUpperCase();
+ const S=+px.toFixed(Math.max(2,m.priceHint||2));
+ o.S=S;let curNote='';if(OCUR.includes(cur))o.cur=cur;else curNote=` · quoted in ${cur}; currency left at ${o.cur}`;
+ const opts=o.legs.filter(l=>l.type!=='stock'),far=!opts.length||opts.every(l=>Math.abs(+l.K/S-1)>.35);
+ if(far){o.legs=buildPreset(o.preset==='custom'?'long_call':o.preset,S,Math.max(1,+o.dte||30),+o.iv||30);o.legs.forEach(legPriceFromIV);}
+ else o.legs.forEach(l=>{if(l.type!=='stock')legPriceFromIV(l);});
+ if(o.range==='custom'&&!(+o.lo<S&&+o.hi>S)){o.range='auto';o.lo='';o.hi='';}
+ if(+o.target>0&&(o.target<S/5||o.target>S*5))o.target='';
+ const reg=m.currentTradingPeriod&&m.currentTradingPeriod.regular,now=Date.now()/1000;
+ const when=m.regularMarketTime?new Date(m.regularMarketTime*1000).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+ const kind=reg&&now>=reg.start&&now<reg.end?'intraday, delayed':'last close';
+ QF.msg=`${m.symbol||sym} ${nf2.format(S)} ${cur} · ${m.fullExchangeName||m.exchangeName||'Yahoo'} · ${kind}${when?' '+when:''}${far?' · strikes re-centred on '+PRESETS[o.preset==='custom'?'long_call':o.preset]:''}${curNote}`;
+ save();
+ const set=(id,v)=>{const e=$(id);if(e)e.value=v;};set('#o-S',S);set('#o-cur',o.cur);set('#o-lo',o.lo);set('#o-hi',o.hi);set('#o-target',o.target);
+ renderLegs();olQueue();toast(`${m.symbol||sym} ${nf2.format(S)} ${cur} loaded`);
+}
+
+/* ---------- 06 IBKR ---------- */
+const IB={text:'',funds:'VWCE,VWRL,VWRA,IWDA,EUNL,SXR8,CSPX,VUAA,VUSA,EQQQ,SXRV,IUSQ,XDWD,SPYI,SPY,QQQ,VOO,VTI,VT,IWM,DIA,EEM,TLT,GLD,XLK,XLF,SMH,SCHD,ARKK,AGG,BND',res:null};
+const IB_SAMPLE=`"AssetClass","Symbol","Description","CurrencyPrimary","FXRateToBase","TradeDate","Buy/Sell","Quantity","TradePrice","IBCommission","FifoPnlRealized","Put/Call","Strike","Multiplier"
+"STK","NVDA","NVIDIA CORP","USD","0.8621","20260212","SELL","-40","182.40","-1.00","1384.20","","","1"
+"STK","AMD","ADVANCED MICRO DEVICES","USD","0.8590","20260318","SELL","-60","141.10","-1.00","-412.50","","","1"
+"STK","TSLA","TESLA INC","USD","0.8655","20260505","SELL","-15","312.00","-1.00","655.00","","","1"
+"STK","META","META PLATFORMS","USD","0.8702","20260611","SELL","-10","688.00","-1.00","-290.00","","","1"
+"STK","VWCE","VANGUARD FTSE ALL-WORLD ACC","EUR","1","20260714","SELL","-30","142.60","-3.00","1250.00","","","1"
+"OPT","SPY 260320P00560000","SPY 20MAR26 560 P","USD","0.8590","20260320","SELL","-2","1.20","-1.30","-318.00","P","560","100"
+"OPT","AAPL 260417C00230000","AAPL 17APR26 230 C","USD","0.8611","20260410","SELL","-3","7.85","-1.95","940.00","C","230","100"
+"OPT","NVDA 260515P00150000","NVDA 15MAY26 150 P","USD","0.8640","20260515","BUY","2","0.00","0.00","612.00","P","150","100"
+"OPT","QQQ 260619C00600000","QQQ 19JUN26 600 C","USD","0.8680","20260619","BUY","1","0.05","-0.65","480.00","C","600","100"
+"FUT","MESU6","MICRO E-MINI S&P SEP26","USD","0.8700","20260801","SELL","-1","6420.00","-0.62","350.00","","","5"
+
+"CurrencyPrimary","FXRateToBase","Date","Type","Description","Amount"
+"USD","0.8650","20260515","Dividends","MSFT CASH DIVIDEND USD 0.91","220.00"
+"USD","0.8650","20260515","Withholding Tax","MSFT US TAX","-33.00"
+"USD","0.8700","20260930","Broker Interest Received","USD CREDIT INT","64.00"`;
+function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}else if(ch==='"')q=true;else if(ch===','){row.push(f);f='';}else if(ch==='\n'){row.push(f);rows.push(row);row=[];f='';}else if(ch!=='\r')f+=ch;}if(f!==''||row.length){row.push(f);rows.push(row);}return rows.filter(r=>r.some(x=>x.trim()!==''));}
+function ibParse(text){
+ const rows=parseCSV(text),funds=new Set(IB.funds.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean));
+ const out={trades:[],cash:[],fmt:null,warn:[]};let th=null,ch=null,mode=null;
+ const asFx={};
+ for(const r of rows){if(r[0]==='Base Currency Exchange Rate'&&r[1]==='Data'){asFx[r[2]]=+r[3];}}
+ let asH=null,divH=null,whtH=null,intH=null;
+ for(const r of rows){
+  const low=r.map(x=>x.trim());
+  if(low.includes('AssetClass')&&(low.includes('FifoPnlRealized')||low.includes('FifoPnlRealized'))){th=low;mode='flexT';out.fmt='Flex Query';continue;}
+  if(low.includes('Type')&&low.includes('Amount')&&!low.includes('AssetClass')&&r[0]!=='Trades'){ch=low;mode='flexC';continue;}
+  if(r[0]==='Trades'&&r[1]==='Header'){asH=low;out.fmt='Activity Statement';continue;}
+  if(r[0]==='Dividends'&&r[1]==='Header'){divH=low;continue;}if(r[0]==='Withholding Tax'&&r[1]==='Header'){whtH=low;continue;}if(r[0]==='Interest'&&r[1]==='Header'){intH=low;continue;}
+  if(r[0]==='Trades'&&r[1]==='Data'&&asH&&r[2]==='Order'){const g=k=>r[asH.indexOf(k)];const cur=g('Currency'),fx=asFx[cur]||(cur==='EUR'?1:1/(FX[cur]||1));out.trades.push({cls:g('Asset Category'),sym:(g('Symbol')||'').toUpperCase(),cur,fx,pnl:+String(g('Realized P/L')).replace(/,/g,'')||0});continue;}
+  const cashRow=(H,type)=>{if(!H)return;const g=k=>r[H.indexOf(k)];const cur=g('Currency');if(!cur||/^Total/.test(cur))return;const fx=asFx[cur]||(cur==='EUR'?1:1/(FX[cur]||1));out.cash.push({type,cur,fx,amt:+String(g('Amount')).replace(/,/g,'')||0});};
+  if(r[0]==='Dividends'&&r[1]==='Data'){cashRow(divH,'Dividends');continue;}if(r[0]==='Withholding Tax'&&r[1]==='Data'){cashRow(whtH,'Withholding Tax');continue;}if(r[0]==='Interest'&&r[1]==='Data'){cashRow(intH,'Interest');continue;}
+  if(mode==='flexT'&&th&&r.length>=th.length-2){const g=k=>{const i=th.indexOf(k);return i<0?'':r[i];};const fx=+g('FXRateToBase')||(g('CurrencyPrimary')==='EUR'?1:1/(FX[g('CurrencyPrimary')]||1));out.trades.push({cls:g('AssetClass'),sym:(g('Symbol')||'').split(' ')[0].toUpperCase(),cur:g('CurrencyPrimary'),fx,pnl:+g('FifoPnlRealized')||0});continue;}
+  if(mode==='flexC'&&ch){const g=k=>{const i=ch.indexOf(k);return i<0?'':r[i];};const t=g('Type');const fx=+g('FXRateToBase')||1;let type=/Withholding/i.test(t)?'Withholding Tax':/Dividend|Lieu/i.test(t)?'Dividends':/Interest/i.test(t)?'Interest':null;if(type)out.cash.push({type,cur:g('CurrencyPrimary'),fx,amt:+g('Amount')||0});}
+ }
+ const b={stocks:{pos:0,neg:0,n:0},funds:{pos:0,neg:0,n:0},options:{pos:0,neg:0,n:0},futures:{pos:0,neg:0,n:0},fx:{pos:0,neg:0,n:0},other:{pos:0,neg:0,n:0}},bySym={};
+ for(const t of out.trades){if(!t.pnl)continue;const e=t.pnl*t.fx;let k=t.cls==='STK'?(funds.has(t.sym)?'funds':'stocks'):t.cls==='OPT'||t.cls==='FOP'?'options':t.cls==='FUT'?'futures':t.cls==='CASH'?'fx':'other';
+  if(t.cls==='Stocks')k=funds.has(t.sym)?'funds':'stocks';if(t.cls==='Equity and Index Options')k='options';if(t.cls==='Futures')k='futures';if(t.cls==='Forex')k='fx';
+  b[k][e>=0?'pos':'neg']+=e;b[k].n++;const key=k+'|'+t.sym;bySym[key]=(bySym[key]||0)+e;}
+ const cash={div:0,wht:0,int:0};for(const c of out.cash){const e=c.amt*c.fx;if(c.type==='Dividends')cash.div+=e;else if(c.type==='Withholding Tax')cash.wht+=e;else cash.int+=e;}
+ if(!out.fmt)out.warn.push('No IBKR header found. Export a Flex Query (Trades + Cash Transactions) as CSV, or an Activity Statement CSV.');
+ return{...out,b,cash,bySym};
+}
+function renderIBIn(){
+ $('#ib-in').innerHTML=`<div class="card"><h2><span class="n">A</span>Statement</h2>
+  <div class="drop" id="ib-drop">Drop a .csv here, or <label style="color:var(--petrol);cursor:pointer;text-decoration:underline">choose a file<input type="file" id="ib-file" accept=".csv,text/csv" hidden></label></div>
+  <textarea class="csv" id="ib-text" placeholder="…or paste the CSV here" style="margin-top:10px">${esc(IB.text)}</textarea>
+  <div class="row" style="margin-top:10px"><button class="btn pri" id="ib-run">Analyse</button><button class="btn" id="ib-sample">Load sample statement</button></div></div>
+ <div class="card"><h2><span class="n">B</span>Fund tickers</h2><label class="f"><span class="fl">Treated as investment funds (Teilfreistellung, KAP-INV)</span><textarea class="csv" id="ib-funds" style="min-height:70px">${esc(IB.funds)}</textarea><small>IBKR reports ETFs as STK. Add your fund tickers so they leave the share pot.</small></label></div>
+ <div class="card"><h2>How to export from IBKR</h2><ul class="notes">
+  <li>Performance &amp; Reports → Flex Queries → Activity Flex Query. Add the <b>Trades</b> section (AssetClass, Symbol, CurrencyPrimary, FXRateToBase, TradeDate, Quantity, FifoPnlRealized, Put/Call) and <b>Cash Transactions</b> (Type, Amount, FXRateToBase).</li>
+  <li>Set the account base currency to EUR, so FXRateToBase converts each line at the IBKR rate for its date.</li>
+  <li>Period: the tax year (1 Jan – 31 Dec). Format: CSV. Run it and download.</li>
+  <li class="warn">Strict German practice converts the cost at the purchase date and the proceeds at the sale date. FIFO P&L × the closing-date rate leaves out that FX component on long holdings. Treat the result as a close estimate and check large positions.</li>
+ </ul></div>`;
+ const run=()=>{IB.text=$('#ib-text').value;IB.funds=$('#ib-funds').value;IB.res=ibParse(IB.text);renderIBOut();};
+ $('#ib-run').onclick=run;$('#ib-sample').onclick=()=>{$('#ib-text').value=IB_SAMPLE;run();toast('Sample statement loaded');};
+ $('#ib-file').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{$('#ib-text').value=rd.result;run();};rd.readAsText(f);};
+ const dz=$('#ib-drop');['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('on');}));['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('on');}));
+ dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{$('#ib-text').value=rd.result;run();};rd.readAsText(f);});
+}
+function renderIBOut(){
+ const R=IB.res;
+ if(!R){$('#ib-out').innerHTML=`<div class="card"><h2>Waiting for a statement</h2><p class="muted" style="margin:0">Load the sample statement to see the full output, including the German Anlage KAP mapping. Paste your own export when ready.</p></div>`;return;}
+ const b=R.b,net=k=>b[k].pos+b[k].neg,c=R.cash,whtPct=c.div>0?Math.min(60,Math.abs(c.wht)/c.div*100):0;
+ const tot=net('stocks')+net('funds')+net('options')+net('futures')+net('fx')+net('other');
+ const syms=Object.entries(R.bySym).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,12);
+ const res=state.p.res;
+ const kap=res==='DE'?`<div class="card"><h2>Anlage KAP / KAP-INV mapping · Germany</h2><div class="tw"><table class="t"><tbody>
+  <tr><td>Foreign capital income, net (KAP, foreign income line)</td><td class="r">${eur(net('stocks')+net('options')+net('futures')+c.div+c.int+net('other'))}</td></tr>
+  <tr><td class="muted">… of which share-sale gains</td><td class="r">${eur(b.stocks.pos)}</td></tr>
+  <tr><td class="muted">… of which option premiums & derivative gains</td><td class="r">${eur(b.options.pos+b.futures.pos)}</td></tr>
+  <tr><td class="muted">… of which losses excluding shares</td><td class="r">${eur(-(b.options.neg+b.futures.neg+b.other.neg))}</td></tr>
+  <tr><td class="muted">… of which share-sale losses</td><td class="r">${eur(-b.stocks.neg)}</td></tr>
+  <tr><td>Creditable foreign tax</td><td class="r">${eur(Math.abs(c.wht))}</td></tr>
+  <tr><td>Fund sale gains, before Teilfreistellung (KAP-INV)</td><td class="r">${eur(net('funds'))}</td></tr>
+ </tbody></table></div><p class="sm muted" style="margin:8px 0 0">On recent forms these are lines 19–23 and 41 of Anlage KAP; check the numbering on the 2026 form. Add any Vorabpauschale for accumulating funds to KAP-INV yourself. Premiums on short options still open on 31 Dec are taxable now, but are missing from FIFO realised P&L.</p></div>`:'';
+ $('#ib-out').innerHTML=`
+ ${R.warn.map(w=>`<div class="card"><ul class="notes"><li class="warn">${esc(w)}</li></ul></div>`).join('')}
+ <div class="hero"><div class="lead"><div class="k">Realised P&L, € base</div><div class="v">${eur(tot)}</div><div class="s">${R.trades.length} trades · ${esc(R.fmt||'?')}</div></div>
+  <div><div class="k">Options & futures</div><div class="v">${eur(net('options')+net('futures'))}</div><div class="s">${b.options.n+b.futures.n} closes</div></div>
+  <div><div class="k">Shares</div><div class="v">${eur(net('stocks'))}</div><div class="s">funds ${eur(net('funds'))}</div></div>
+  <div><div class="k">Dividends</div><div class="v">${eur(c.div)}</div><div class="s">withheld ${eur(Math.abs(c.wht))} (${whtPct.toFixed(0)} %)</div></div></div>
+ <div class="card"><h2>Baskets</h2><div class="tw"><table class="t"><thead><tr><th>Basket</th><th class="r">Gains</th><th class="r">Losses</th><th class="r">Net</th><th class="r">Lines</th></tr></thead><tbody>
+  ${[['stocks','Shares (Aktientopf in DE)'],['funds','Funds / ETFs'],['options','Options'],['futures','Futures'],['fx','Forex'],['other','Other']].filter(([k])=>b[k].n).map(([k,l])=>`<tr><td>${l}</td><td class="r pos">${eur(b[k].pos)}</td><td class="r neg">${eur(b[k].neg)}</td><td class="r"><b>${eur(net(k))}</b></td><td class="r">${b[k].n}</td></tr>`).join('')}
+  <tr><td>Interest</td><td></td><td></td><td class="r">${eur(c.int)}</td><td></td></tr></tbody></table></div>
+  <div class="row" style="margin-top:12px"><button class="btn pri" id="ib-apply">Send to Tax desk</button><span class="sm muted">Shares → swing P&L, options + futures → options P&L, funds → investing gain, dividends + interest → dividends.</span></div></div>
+ ${kap}
+ <div class="card"><h2>Largest contributors</h2><div class="tw"><table class="t"><tbody>${syms.map(([k,v])=>{const[bk,s]=k.split('|');return `<tr><td><span class="cc">${esc(s)}</span><span class="muted sm">${bk}</span></td><td class="r ${v>=0?'pos':'neg'}">${eur(v)}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+ $('#ib-apply').onclick=()=>{const p=state.p;p.swing=Math.round(net('stocks'));p.opt=Math.round(net('options')+net('futures')+net('other'));if(b.funds.n){p.gain=Math.round(net('funds'));p.veh='eqETF';}p.div=Math.round(c.div+Math.max(0,c.int));p.wht=Math.round(c.div>0?Math.abs(c.wht)/(c.div+Math.max(0,c.int))*100:p.wht);p.trades=R.trades.length||p.trades;save();renderDeskIn();location.hash='#desk';toast('Statement applied to the Tax desk');};
+}
+
+/* ---------- 07 RULES ---------- */
+let rulesQ='';
+function renderRules(){
+ const rows=ORDER.filter(c=>{const C=COUNTRIES[c];return !rulesQ||(C.n+' '+c+' '+Object.values(C.r).join(' ')).toLowerCase().includes(rulesQ.toLowerCase());});
+ const host=$('#rules');
+ if(!host.dataset.built){host.dataset.built=1;host.innerHTML=`
+ <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Parameter table · 2026</h2><label class="fi" style="max-width:260px;flex:1"><input id="rules-q" type="search" placeholder="Filter: country, rule, keyword"></label></div><div class="tw" id="rules-t"></div></div>
+ <div class="split">
+  <div class="card"><h2>Reform watchlist</h2><div class="tw"><table class="t"><tbody>
+   <tr><td><span class="cc">DE</span>Altersvorsorgedepot replaces Riester</td><td>1 Jan 2027</td><td><span class="pill ok">Enacted</span></td></tr>
+   <tr><td><span class="cc">DE</span>Frühstart-Rente (€10/month per child)</td><td>2027</td><td><span class="pill w">Bundesrat pending</span></td></tr>
+   <tr><td><span class="cc">IE</span>Exit tax 38 % → 35 %</td><td>1 Jan 2027</td><td><span class="pill ok">Budget 2027</span></td></tr>
+   <tr><td><span class="cc">IE</span>Investment Account, 1 % yearly above €50k</td><td>1 Jul 2027</td><td><span class="pill w">Announced</span></td></tr>
+   <tr><td><span class="cc">PL</span>OKI account, PLN 100k tax-free</td><td>1 Jan 2027</td><td><span class="pill ok">Signed</span></td></tr>
+   <tr><td><span class="cc">DK</span>ASK cap to DKK 500k; 27 % band to DKK 110k</td><td>Bill Feb 2027</td><td><span class="pill w">Announced</span></td></tr>
+   <tr><td><span class="cc">NL</span>Box 3 actual-return regime</td><td>2028</td><td><span class="pill w">Senate postponed</span></td></tr>
+   <tr><td><span class="cc">FR</span>20 % tax on luxury assets in holdings</td><td>FY 2026</td><td><span class="pill ok">Law 19 Feb 2026</span></td></tr>
+   <tr><td><span class="cc">EU</span>DAC8 crypto reporting</td><td>From 2026 data</td><td><span class="pill ok">In force</span></td></tr>
+  </tbody></table></div></div>
+  <div class="card"><h2>FX · units per €1 (indicative)</h2><div class="fgrid" id="fx-grid">${Object.keys(FX).filter(k=>k!=='EUR').map(k=>`<label class="f"><span class="fl">${k}</span><span class="fi"><input type="number" step="any" data-fx="${k}" value="${FX[k]}"></span></label>`).join('')}</div><div class="row" style="margin-top:10px"><button class="btn" id="fx-reset">Reset rates</button></div></div>
+ </div>
+ <div class="card"><h2>Yearly maintenance calendar</h2><div class="cal">
+  <div><b>January</b>DE Basiszins (BMF letter) for the Vorabpauschale; NO skjermingsrente for the prior year; ES, PT, DK thresholds; IT INPS-style indexations; UK nothing (April).</div>
+  <div><b>April</b>UK CGT, ISA and dividend bands (6 April); CH pillar 3a limit announcement for the next year.</div>
+  <div><b>Mid-year</b>NO wealth-tax thresholds in the revised budget; PL IKE/IKZE limits; NL Box 3 provisional deemed returns.</div>
+  <div><b>October</b>IE budget (CGT and exit-tax rates); DK finance bill; FR PLF/PLFSS (PFU and social levies); DE Jahressteuergesetz.</div>
+  <div><b>15 December</b>DE: request a Verlustbescheinigung at domestic banks (not needed for IBKR); harvest losses; fill the Sparerpauschbetrag.</div>
+  <div><b>31 December</b>Check open short options (DE: premium already taxable); confirm KS 36 metrics if CH-resident.</div>
+ </div></div>
+ <div class="card"><h2>Method & limits</h2><ul class="notes">
+  <li>One tax year, resident individual, listed securities. Progressive schedules for non-priority countries use simplified national brackets (single filer); Switzerland uses Zurich city, Canada uses Ontario, the US is federal only.</li>
+  <li>Investing vs trading is measured by attribution. Investing tax is the tax with trading set to zero; trading tax is the extra tax once trading is added. That captures cross-basket loss offsets, such as German option losses offsetting fund gains.</li>
+  <li>Dividends: foreign withholding is credited up to the domestic rate and shown as a separate line, because leakage above the credit is a real cost.</li>
+  <li>Not modelled: crypto, severance, inheritance and gift tax, social-security charges outside CH and FR, exact holding-company structures, the Danish ABIS list per ETF, or minimum-tax rules for very high incomes.</li>
+  <li class="warn">Cells marked "To verify" come from established rules or secondary sources. Check the primary source linked in the table before you file or move.</li>
+ </ul></div>`;
+  $('#rules-q').addEventListener('input',e=>{rulesQ=e.target.value;renderRules();});
+  host.addEventListener('input',e=>{const k=e.target.dataset.fx;if(k){const v=+e.target.value;if(v>0){FX[k]=v;save();}}});
+  $('#fx-reset').onclick=()=>{try{localStorage.setItem('gg.v1',JSON.stringify({...state}));}catch(e){}location.reload();};
+ }
+ $('#rules-t').innerHTML=`<table class="t"><thead><tr><th>Country</th><th>Shares & ETFs</th><th>Options & short-term</th><th>Allowance / wrapper</th><th>Holding period</th><th>Losses & wash sales</th><th>Wealth tax</th><th>Status</th></tr></thead><tbody>
+ ${rows.map(c=>{const C=COUNTRIES[c];return `<tr class="${c===state.p.res?'me':''}"><td style="white-space:nowrap"><span class="cc">${c}</span><a href="${C.src}" target="_blank" rel="noopener">${C.n}</a><div class="sm muted">${esc(C.srcN)}</div></td><td>${esc(C.r.sh)}</td><td>${esc(C.r.op)}</td><td>${esc(C.r.al)}</td><td>${esc(C.r.hp)}</td><td>${esc(C.r.ls)}</td><td>${esc(C.r.wt)}</td><td>${stamp(C.conf)}</td></tr>`;}).join('')}</tbody></table>`;
+}
+
+/* ---------- routing & events ---------- */
+const VIEWS=['desk','compare','move','strategies','options','ibkr','rules'];
+let active='desk';
+function renderActive(){
+ if(active==='desk')renderDeskOut();else if(active==='compare')renderCompare();else if(active==='move')renderMoveOut();else if(active==='strategies')renderStrategies();else if(active==='options')renderOLOut();else if(active==='ibkr')renderIBOut();else if(active==='rules')renderRules();
+}
+const built={};
+function route(){
+ const h=(location.hash||'').slice(1);active=VIEWS.includes(h)?h:'desk';
+ VIEWS.forEach(v=>{$('#v-'+v).hidden=v!==active;});
+ document.querySelectorAll('#tabs a').forEach(a=>a.setAttribute('aria-current',a.getAttribute('href')==='#'+active?'page':'false'));
+ if(!built[active]){built[active]=1;if(active==='desk')renderDeskIn();if(active==='move')renderMoveIn();if(active==='options')renderOLShell();if(active==='ibkr')renderIBIn();}
+ renderActive();
+ const t=document.querySelector('#tabs a[aria-current="page"]');if(t)t.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function syncHeader(){$('#g-res').innerHTML=ORDER.map(c=>`<option value="${c}"${state.p.res===c?' selected':''}>${COUNTRIES[c].n}</option>`).join('');$('#g-broker').value=state.p.broker;$('#g-filing').value=state.p.filing;}
+function onField(e){
+ const t=e.target;
+ if(t.dataset.s){const s=t.dataset.s,k=t.dataset.k;state[s][k]=t.type==='checkbox'?t.checked:t.value;save();
+  if(k==='res'){built.desk=0;built.ibkr=0;if(active==='desk'){built.desk=1;renderDeskIn();}if(active==='rules')renderRules();}
+  if(k==='hold'&&t.closest('.f')){const sm=t.closest('.f').querySelector('small');if(sm)sm.textContent=dur(+t.value||0);}
+  if(s==='m'&&e.type==='change'&&k==='dest'){}
+  renderActive();return;}
+ if(t.dataset.o){const o=O(),k=t.dataset.o;o[k]=t.type==='number'||t.type==='range'?(t.value===''?'':+t.value):t.value;
+  if(k==='S'||k==='r'||k==='q'||k==='style'){o.legs.forEach(l=>{if(l.type!=='stock')legPriceFromIV(l);});renderLegs();}
+  if((k==='lo'||k==='hi')&&t.value!=='')o.range='custom';
+  save();if(['preset','dte','iv'].includes(k))return;olQueue();return;}
+ if(t.dataset.leg!=null){const o=O(),l=o.legs[+t.dataset.leg],k=t.dataset.lk;
+  if(k==='side'||k==='type'){l[k]=t.value;if(l.type==='stock'){l.qty=Math.max(l.qty,100);l.price=+o.S;}else{if(!(l.K>0))l.K=Math.round(o.S);if(!(l.dte>0))l.dte=o.dte;if(!(l.iv>0))l.iv=o.iv;legPriceFromIV(l);}renderLegs();}
+  else{l[k]=t.value===''?'':+t.value;
+   if(k==='price'&&l.type!=='stock'){const iv=solveIV(l.type,+l.price,+o.S,+l.K,(+l.dte)/365,o.r/100,o.q/100,o.style==='american');if(iv){l.iv=+(iv*100).toFixed(2);l._err=0;const ivEl=t.closest('tr').querySelector('[data-lk="iv"]');if(ivEl)ivEl.value=l.iv.toFixed(1);t.closest('tr').classList.remove('err');}else{l._err=1;t.closest('tr').classList.add('err');}}
+   if((k==='iv'||k==='K'||k==='dte')&&l.type!=='stock'){legPriceFromIV(l);const pEl=t.closest('tr').querySelector('[data-lk="price"]');if(pEl&&document.activeElement!==pEl)pEl.value=l.price;}}
+  save();olQueue();return;}
+}
+document.addEventListener('input',e=>{if(e.target.tagName==='SELECT'||e.target.type==='checkbox')return;onField(e);});
+document.addEventListener('change',e=>{if(e.target.tagName==='SELECT'||e.target.type==='checkbox')onField(e);});
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;
+ const seg=b.closest('.seg');
+ if(seg&&b.dataset.v!=null){const id=seg.id;
+  if(id==='cmp-filter'){state.ui.cmpF=b.dataset.v;save();renderCompare();}
+  else if(id==='cmp-sort'){state.ui.cmpS=b.dataset.v;save();renderCompare();}
+  else if(id==='st-filter'){state.ui.stF=b.dataset.v;save();renderStrategies();}
+  else if(id==='o-range'){O().range=b.dataset.v;save();olQueue();}
+  else if(id==='o-drift'){O().drift=b.dataset.v;save();olQueue();}
+  else if(id==='o-view'){O().view=b.dataset.v;save();olQueue();}
+  else if(id==='o-rows'){O().rows=+b.dataset.v;save();olQueue();}
+  return;}
+ if(b.id==='o-fetch'){e.preventDefault();fetchQuote();return;}
+ if(b.id==='o-build'){const o=O();o.legs=buildPreset(o.preset,+o.S,Math.max(1,+o.dte||30),+o.iv||30);o.legs.forEach(legPriceFromIV);o.day=0;$('#o-day').value=0;save();renderLegs();olQueue();toast(PRESETS[o.preset]+' built at model prices');}
+ if(b.id==='o-add'){const o=O();const l={side:'buy',type:'call',qty:1,K:Math.round(+o.S),dte:+o.dte||30,iv:+o.iv||30,price:0};legPriceFromIV(l);o.legs.push(l);save();renderLegs();olQueue();}
+ if(b.dataset.del!=null){O().legs.splice(+b.dataset.del,1);save();renderLegs();olQueue();}
+});
+document.addEventListener('change',e=>{if(e.target.id==='o-sym'&&QF.ok)fetchQuote();});
+document.addEventListener('keydown',e=>{if(e.target.id==='o-sym'&&e.key==='Enter'){e.preventDefault();e.target.blur();}});
+window.addEventListener('hashchange',route);
+syncHeader();route();
+</script>
+
+</body></html>

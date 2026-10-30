@@ -1,0 +1,1739 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Safety Net"><meta name="theme-color" content="#eef1f2">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
+<script src="../cloud.js"></script><script>Cloud.mirror("safety-net", "safetyNetScore.v1");</script>
+</head><body>
+<title>Safety Net Score</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,650&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #eef1f2;
+  --surface: #fcfcfb;
+  --surface-2: #f5f7f7;
+  --ink: #0e1b24;
+  --ink-2: #445561;
+  --muted: #74828c;
+  --line: #dce2e5;
+  --line-2: #c9d2d6;
+  --accent: #256abf;
+  --accent-ink: #1c5cab;
+  --accent-wash: rgba(42,120,214,0.09);
+  --s-a: #2a78d6;
+  --s-b: #eb6834;
+  --lv-0: #c3c2b7;
+  --lv-1: #86b6ef;
+  --lv-2: #3987e5;
+  --lv-3: #1c5cab;
+  --lv-4: #0d366b;
+  --good-ink: #006300;
+  --crit: #d03b3b;
+  --warn-wash: rgba(235,104,52,0.10);
+  --shadow: 0 1px 2px rgba(14,27,36,0.06), 0 8px 24px rgba(14,27,36,0.05);
+  --f-display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+  --f-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e1318; --surface: #161c22; --surface-2: #1b232a; --ink: #eef2f5; --ink-2: #b6c1c9; --muted: #8995a0;
+    --line: #26313a; --line-2: #33404b; --accent: #6da7ec; --accent-ink: #86b6ef; --accent-wash: rgba(57,135,229,0.14);
+    --s-a: #3987e5; --s-b: #d95926; --lv-0: #3b4148; --lv-1: #256abf; --lv-2: #3987e5; --lv-3: #6da7ec; --lv-4: #b7d3f6;
+    --good-ink: #0ca30c; --crit: #e66767; --warn-wash: rgba(217,89,38,0.16);
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.25);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1318; --surface: #161c22; --surface-2: #1b232a; --ink: #eef2f5; --ink-2: #b6c1c9; --muted: #8995a0;
+  --line: #26313a; --line-2: #33404b; --accent: #6da7ec; --accent-ink: #86b6ef; --accent-wash: rgba(57,135,229,0.14);
+  --s-a: #3987e5; --s-b: #d95926; --lv-0: #3b4148; --lv-1: #256abf; --lv-2: #3987e5; --lv-3: #6da7ec; --lv-4: #b7d3f6;
+  --good-ink: #0ca30c; --crit: #e66767; --warn-wash: rgba(217,89,38,0.16);
+  --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.25);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.5; margin: 0; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 24px 64px; }
+@media (max-width: 520px) { .wrap { padding-inline: 16px; padding-block: 16px 48px; } }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 650; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.05; }
+h2 { font-size: 21px; line-height: 1.2; }
+h3 { font-size: 16px; line-height: 1.3; }
+p { margin: 0; }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.01em; }
+.muted { color: var(--muted); }
+.ink2 { color: var(--ink-2); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 20px; }
+.brand { display: grid; gap: 8px; max-width: 720px; }
+.brand p { color: var(--ink-2); font-size: 15.5px; max-width: 62ch; }
+.asof { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--ink-2); background: var(--surface); white-space: nowrap; }
+.chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line-2); margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+.tabs button { appearance: none; border: 0; background: none; font: inherit; font-weight: 600; font-size: 14.5px; color: var(--muted); padding: 10px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.tabs button:hover { color: var(--ink); }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* layout */
+.grid { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.pad { padding: 20px; }
+@media (max-width: 520px) { .pad { padding: 16px; } }
+.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
+
+/* inputs */
+.inputs { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 900px) { .inputs { position: static; } }
+.inputs h2 { font-size: 17px; }
+.fields { display: grid; gap: 14px; margin-top: 14px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: end; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field label, .lbl { font-size: 12px; font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; }
+.field .hint { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.inp { position: relative; display: flex; align-items: center; }
+.inp input, select, .inp select { width: 100%; font: inherit; font-size: 15px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 9px; padding: 8px 10px; min-width: 0; }
+.inp input { padding-right: 46px; font-variant-numeric: tabular-nums; }
+.inp .unit { position: absolute; right: 10px; font-size: 12px; color: var(--muted); pointer-events: none; font-family: var(--f-mono); }
+.inp input.nounit { padding-right: 10px; }
+select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+.country-select { font-family: var(--f-display); font-size: 18px; font-weight: 650; padding-block: 9px; }
+details.adv { border-top: 1px solid var(--line); padding-top: 12px; }
+details.adv summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--ink-2); list-style: none; display: flex; justify-content: space-between; }
+details.adv summary::-webkit-details-marker { display: none; }
+details.adv summary::after { content: "+"; font-family: var(--f-mono); color: var(--muted); }
+details.adv[open] summary::after { content: "–"; }
+.note { font-size: 12.5px; color: var(--ink-2); background: var(--accent-wash); border-radius: 9px; padding: 9px 11px; line-height: 1.45; }
+.note.warn { background: var(--warn-wash); }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { appearance: none; font: inherit; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 7px 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); cursor: pointer; }
+.btn:hover { border-color: var(--ink-2); }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
+.seg button { appearance: none; border: 0; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+/* hero result */
+.hero { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: center; }
+@media (max-width: 640px) { .hero { grid-template-columns: minmax(0, 1fr); text-align: center; } .ring { justify-self: center; width: 200px; } }
+.ring { width: 220px; max-width: 100%; aspect-ratio: 1; position: relative; }
+.ring svg { width: 100%; height: 100%; display: block; }
+.ring .center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 2px; }
+.ring .score { font-family: var(--f-ui); font-weight: 600; font-size: 56px; line-height: 1; letter-spacing: -0.02em; }
+.ring .band { font-weight: 600; font-size: 15px; }
+.ring .of { font-size: 11.5px; color: var(--muted); }
+.verdict { display: grid; gap: 12px; }
+.verdict .kicker { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.verdict .headline { font-family: var(--f-display); font-size: clamp(20px, 2.4vw, 26px); font-weight: 650; line-height: 1.2; text-wrap: balance; }
+.bandscale { display: flex; gap: 3px; margin-top: 4px; text-align: left; }
+.bandscale > div { flex: var(--w) 1 0; min-width: 58px; }
+.bandscale .bar { height: 6px; border-radius: 3px; background: var(--c); opacity: 0.35; }
+.bandscale .on .bar { opacity: 1; }
+.bandscale .t { font-size: 11px; color: var(--ink-2); margin-top: 5px; white-space: nowrap; line-height: 1.25; }
+.bandscale .t span { display: block; color: var(--muted); font-size: 10.5px; }
+.bandscale .on .t { color: var(--ink); font-weight: 600; }
+
+/* tiles */
+.tiles { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tile { flex: 1 1 150px; background: var(--surface); padding: 12px 14px; display: grid; gap: 3px; align-content: start; }
+.tile .k { font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+.tile .v { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.tile .s { font-size: 12px; color: var(--ink-2); line-height: 1.35; }
+.tile.alert .v { color: var(--crit); }
+
+/* ladder */
+.ladder { display: grid; }
+.lrow { display: grid; grid-template-columns: 18px minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 2fr); gap: 8px 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.lrow:first-child { border-top: 0; }
+.lrow .sw { width: 14px; height: 14px; border-radius: 4px; background: var(--c); }
+.lrow .name { font-weight: 600; }
+.lrow .name small { display: block; font-weight: 500; font-size: 11.5px; color: var(--muted); }
+.lrow .amt { text-align: right; font-variant-numeric: tabular-nums; }
+.lrow .amt b { font-weight: 600; font-size: 16px; display: block; }
+.lrow .amt span { font-size: 12px; color: var(--muted); }
+.lrow .why { font-size: 13px; color: var(--ink-2); line-height: 1.4; }
+.lrow .st { font-size: 12px; font-weight: 600; margin-top: 3px; }
+.lrow .st.ok { color: var(--good-ink); }
+.lrow .st.todo { color: var(--ink-2); }
+.lrow.cur { background: linear-gradient(90deg, var(--accent-wash), transparent 70%); border-radius: 8px; }
+@media (max-width: 640px) {
+  .lrow { grid-template-columns: 18px minmax(0, 1fr) auto; }
+  .lrow .why { grid-column: 2 / -1; }
+}
+.progress { position: relative; height: 10px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); margin: 6px 0 4px; overflow: hidden; }
+.progress .fill { position: absolute; inset: 0 auto 0 0; background: var(--ink); border-radius: 5px; }
+.progress .tick { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--surface); }
+.plegend { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+
+/* chart */
+.cardhead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; margin-bottom: 12px; }
+.cardhead p { font-size: 13px; color: var(--ink-2); max-width: 64ch; margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { display: inline-block; width: 16px; height: 2px; border-radius: 1px; background: var(--c); }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); height: 2px; }
+.chartbox { position: relative; width: 100%; }
+.chartbox svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chartbox .axis text, .chartbox text { font-family: var(--f-ui); font-size: 11px; fill: var(--muted); }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; box-shadow: var(--shadow); padding: 9px 11px; font-size: 12px; min-width: 190px; z-index: 5; }
+.tip .h { font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+.tip .r { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; color: var(--ink-2); margin-top: 3px; }
+.tip .r b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.tip .r i { display: block; width: 12px; height: 2px; background: var(--c); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: right; padding: 7px 9px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; position: sticky; top: 0; background: var(--surface); }
+tbody tr:hover { background: var(--surface-2); }
+details.tv { margin-top: 10px; }
+details.tv summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+
+/* compare */
+.chartbox .cmp-rowlabel { font-size: 12.5px; fill: var(--ink-2); }
+tr.active td { background: var(--accent-wash); }
+tr.click { cursor: pointer; }
+.pill { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line-2); color: var(--ink-2); }
+.pill.none { color: var(--crit); border-color: currentColor; }
+
+/* rules */
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.rcard { padding: 18px; display: grid; gap: 12px; align-content: start; }
+.rcard header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.code { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); border: 1px solid var(--line-2); border-radius: 5px; padding: 1px 6px; }
+dl.facts { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 7px 12px; margin: 0; font-size: 13px; }
+dl.facts dt { color: var(--muted); font-weight: 600; font-size: 12px; padding-top: 1px; }
+dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
+@media (max-width: 480px) { dl.facts { grid-template-columns: minmax(0, 1fr); } dl.facts dd { margin-bottom: 4px; } }
+.srcs { display: flex; flex-wrap: wrap; gap: 6px; }
+.srcs a { font-size: 12px; border: 1px solid var(--line-2); border-radius: 6px; padding: 2px 8px; text-decoration: none; color: var(--ink-2); }
+.srcs a:hover { border-color: var(--accent); color: var(--accent-ink); }
+.jump { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+
+/* method */
+.prose { max-width: 72ch; display: grid; gap: 14px; font-size: 15px; color: var(--ink); }
+.prose h2 { margin-top: 10px; }
+.prose ul, .prose ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.prose code { font-family: var(--f-mono); font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.formula { font-family: var(--f-mono); font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; line-height: 1.7; overflow-x: auto; white-space: pre; }
+[hidden] { display: none !important; }
+.foot { margin-top: 28px; font-size: 12px; color: var(--muted); max-width: 90ch; }
+@media (prefers-reduced-motion: no-preference) { .ring .arc { transition: stroke-dasharray 400ms ease; } .progress .fill { transition: width 400ms ease; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Safety Net Score</h1>
+      <p>How much cash you need across 16 European countries, sized to the gap unemployment insurance leaves: waiting days, caps, step-downs, expiry and the penalty for resigning.</p>
+    </div>
+    <div class="asof">
+      <span class="chip"><span class="dot"></span>Rules as of 26 Sep 2026</span>
+      <span class="chip">FX: ECB, 25 Sep 2026</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-score" aria-controls="p-score" aria-selected="true" data-tab="score">My score</button>
+    <button role="tab" id="tab-compare" aria-controls="p-compare" aria-selected="false" data-tab="compare">Compare countries</button>
+    <button role="tab" id="tab-rules" aria-controls="p-rules" aria-selected="false" data-tab="rules">Rules &amp; sources</button>
+    <button role="tab" id="tab-method" aria-controls="p-method" aria-selected="false" data-tab="method">Method</button>
+  </nav>
+
+  <!-- ================= MY SCORE ================= -->
+  <section id="p-score" role="tabpanel" aria-labelledby="tab-score">
+    <div class="grid">
+      <aside class="panel pad inputs" aria-label="Your situation">
+        <div class="field">
+          <label for="country">Country you work in</label>
+          <select id="country" class="country-select"></select>
+        </div>
+        <div id="convNote" class="note warn" style="margin-top:12px" hidden></div>
+        <div id="exNote" class="note" style="margin-top:12px" hidden>Example profile: a finance controller in Munich. Replace these numbers with yours. They stay in this browser only.</div>
+        <div class="fields">
+          <div class="row2">
+            <div class="field"><label for="grossAnnual">Gross pay per year</label><div class="inp"><input id="grossAnnual" type="number" inputmode="decimal" min="0" step="1000"><span class="unit" data-cur></span></div></div>
+            <div class="field"><label for="netMonthly">Net pay per month</label><div class="inp"><input id="netMonthly" type="number" inputmode="decimal" min="0" step="100"><span class="unit" data-cur></span></div></div>
+          </div>
+          <p class="hint muted" style="font-size:11.5px;margin-top:-6px">Gross includes 13th/14th month and regular bonus. Net = yearly take-home ÷ 12.</p>
+          <div class="field"><label for="essential">Essential spending per month</label><div class="inp"><input id="essential" type="number" inputmode="decimal" min="0" step="50"><span class="unit" data-cur></span></div>
+            <span class="hint">Your crisis budget: rent, utilities, insurance, food, transport, debt payments and the minimum of everything else.</span></div>
+          <div class="field"><label for="otherIncome">Household income that keeps coming</label><div class="inp"><input id="otherIncome" type="number" inputmode="decimal" min="0" step="50"><span class="unit" data-cur></span></div>
+            <span class="hint">For example, your partner's contribution to the essentials above.</span></div>
+          <div class="row2">
+            <div class="field"><label for="savings">Cash savings now</label><div class="inp"><input id="savings" type="number" inputmode="decimal" min="0" step="500"><span class="unit" data-cur></span></div></div>
+            <div class="field"><label for="monthlySaving">You save per month</label><div class="inp"><input id="monthlySaving" type="number" inputmode="decimal" min="0" step="50"><span class="unit" data-cur></span></div></div>
+          </div>
+          <div class="row3">
+            <div class="field"><label for="age">Age</label><div class="inp"><input id="age" class="nounit" type="number" min="16" max="70" step="1"></div></div>
+            <div class="field"><label for="years">Years insured</label><div class="inp"><input id="years" class="nounit" type="number" min="0" max="45" step="0.5"></div></div>
+            <div class="field"><label for="children">Children</label><select id="children"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3+</option></select></div>
+          </div>
+          <div id="cs-DE" class="field cs" hidden><label for="deTaxClass">Tax class (Steuerklasse)</label>
+            <select id="deTaxClass"><option value="1">I or IV</option><option value="2">II (single parent)</option><option value="3">III</option></select>
+            <span class="hint">Class V: ask the Agentur für Arbeit, it lowers the benefit.</span></div>
+          <div id="cs-DK" class="field cs" hidden><label for="dkMemberYears">A-kasse membership (years)</label><div class="inp"><input id="dkMemberYears" class="nounit" type="number" min="0" max="40" step="1"></div>
+            <span class="hint">You need at least 1 year of membership for dagpenge, and 4 years for the higher rate in the first 3 months.</span></div>
+          <div id="cs-SE" class="field cs" hidden><label for="seMemberMonths">A-kassa membership (months)</label><div class="inp"><input id="seMemberMonths" class="nounit" type="number" min="0" max="480" step="1"></div>
+            <span class="hint">12+ months gives 80 %, 6–11 months 60 %, less than that 50 %.</span></div>
+          <div id="cs-BE" class="field cs" hidden><label for="beCategory">Household status</label>
+            <select id="beCategory"><option value="isole">Living alone (isolé)</option><option value="chef">Head of household (chef de ménage)</option><option value="cohabitant">Cohabiting (cohabitant)</option></select></div>
+
+          <details class="adv" id="advanced">
+            <summary>Assumptions</summary>
+            <div class="fields">
+              <div class="row2">
+                <div class="field"><label for="taxOverride">Tax on benefit</label><div class="inp"><input id="taxOverride" type="number" min="0" max="60" step="1"><span class="unit">%</span></div><span class="hint" id="taxHint"></span></div>
+                <div class="field"><label for="netBenefitOverride">Known net benefit</label><div class="inp"><input id="netBenefitOverride" type="number" min="0" step="10" placeholder="auto"><span class="unit" data-cur></span></div><span class="hint">Replaces the estimate, e.g. from an official letter.</span></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="a-typ">Typical search</label><div class="inp"><input id="a-typ" type="number" min="1" max="24" step="1"><span class="unit">mo</span></div></div>
+                <div class="field"><label for="a-long">Long search</label><div class="inp"><input id="a-long" type="number" min="3" max="24" step="1"><span class="unit">mo</span></div></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="a-shock">Surprise bill</label><div class="inp"><input id="a-shock" type="number" min="0" max="6" step="0.25"><span class="unit">mo</span></div><span class="hint">In months of essential spending.</span></div>
+                <div class="field"><label for="a-lag">First-payment delay</label><div class="inp"><input id="a-lag" type="number" min="0" max="90" step="1"><span class="unit">days</span></div><span class="hint">It is back-paid, but you must bridge it.</span></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="a-step">Minimum step between levels</label><div class="inp"><input id="a-step" type="number" min="0" max="3" step="0.25"><span class="unit">mo</span></div></div>
+                <div class="field"><label for="a-spread">Return given up on idle cash</label><div class="inp"><input id="a-spread" type="number" min="0" max="15" step="0.5"><span class="unit">%/yr</span></div></div>
+              </div>
+              <div class="btnrow"><button class="btn" id="resetAsm" type="button">Reset assumptions</button><button class="btn" id="resetAll" type="button">Clear my data</button></div>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <div class="stack">
+        <div class="panel pad">
+          <div class="hero">
+            <div class="ring" id="ring" role="img" aria-label="Safety net score"></div>
+            <div class="verdict">
+              <div class="kicker" id="kicker"></div>
+              <div class="headline" id="headline"></div>
+              <p class="ink2" id="subline" style="font-size:14px"></p>
+              <div class="bandscale" id="bandscale" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tiles" id="tiles" aria-label="If you lost your job today"></div>
+
+        <div class="panel pad">
+          <div class="cardhead">
+            <div><h2>Your levels</h2><p id="ladderSub"></p></div>
+          </div>
+          <div class="progress" id="progress" aria-hidden="true"><div class="fill"></div></div>
+          <div class="plegend" id="plegend"></div>
+          <div class="ladder" id="ladder" style="margin-top:8px"></div>
+          <p class="note" id="nextNote" style="margin-top:12px"></p>
+        </div>
+
+        <div class="panel pad">
+          <div class="cardhead">
+            <div><h2>Stress test</h2><p>Cash drawn from savings, day by day, for two ways of losing your salary. The highest point of each line is the amount you would have needed.</p></div>
+            <div class="seg" role="group" aria-label="Time span"><button type="button" data-span="12" aria-pressed="true">12 months</button><button type="button" data-span="24" aria-pressed="false">24 months</button></div>
+          </div>
+          <div class="legend" id="legendA"></div>
+          <div class="chartbox" id="chart"></div>
+          <details class="tv"><summary>Show as table</summary><div class="tablewrap" id="chartTable"></div></details>
+        </div>
+
+        <div class="panel pad" id="countryNote"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPARE ================= -->
+  <section id="p-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+    <div class="stack">
+      <div class="panel pad">
+        <div class="cardhead">
+          <div><h2>Levels in months of essential spending</h2><p id="cmpBasis"></p></div>
+          <div class="seg" role="group" aria-label="Profile basis"><button type="button" data-basis="saved" aria-pressed="true">Use my country profiles</button><button type="button" data-basis="convert" aria-pressed="false">Convert current profile</button></div>
+        </div>
+        <div class="legend" id="legendC"></div>
+        <div class="chartbox" id="cmpChart"></div>
+      </div>
+      <div class="panel pad">
+        <div class="cardhead"><div><h2>Side by side</h2><p>Select a row to open that country in My score.</p></div></div>
+        <div class="tablewrap" id="cmpTable"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RULES ================= -->
+  <section id="p-rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
+    <div class="jump" id="jump"></div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- ================= METHOD ================= -->
+  <section id="p-method" role="tabpanel" aria-labelledby="tab-method" hidden>
+    <div class="panel pad">
+      <div class="prose">
+        <h2>Why not just "6 to 12 months"?</h2>
+        <p>That rule assumes nothing replaces your salary when you lose your job. In most of Europe, unemployment insurance replaces a large share of it for months, sometimes years. An emergency fund therefore only has to cover what the insurance does not: the days before benefits start, the gap between the benefit and your essential spending, the months after benefits run out, and the sanction if you resign.</p>
+        <h2>What the model does</h2>
+        <ol>
+          <li>It estimates your net benefit from each country's 2026 formula, caps, step-downs and duration. Germany uses a full 2026 wage-tax calculation (§ 153 SGB III); other countries apply a stated deduction and tax rate that you can change.</li>
+          <li>It simulates 365–730 days. Each day you spend your essential budget (minus household income that continues). Benefits accrue after the waiting days and arrive after the first-payment delay.</li>
+          <li>The highest cumulative drawdown within a horizon is the cash you would have needed. Scenario A is an involuntary job loss. Scenario B is a resignation, with that country's sanction (a delay, a cut, or no benefit at all).</li>
+        </ol>
+        <h2>The five levels</h2>
+        <div class="formula">Basic      = surprise bill + spending during (waiting days + first-payment delay)
+Good       = surprise bill + peak drawdown, job loss, typical search (6 mo)
+Very good  = surprise bill + peak drawdown, job loss, long search (12 mo)
+Excellent  = surprise bill + peak drawdown, resignation, long search (12 mo)
+Ceiling    = Excellent + a second surprise bill
+
+Each level is at least 0.5 month of essentials above the one before it.
+This leaves margin for friction the rules do not capture.</div>
+        <h2>The score</h2>
+        <p>The score runs from 0 to 100 and uses the same band cut-offs as Apple's Sleep Score since watchOS 26.2: <b>0–40, 41–60, 61–80, 81–95, 96–100</b>. Reaching Basic gives 41, Good 61, Very good 81, Excellent 96 and the Ceiling 100. Between two levels the score moves in a straight line. Above the Ceiling it stays at 100, and the page shows the idle cash with the return it gives up at your chosen rate. That figure is an illustration, not a forecast.</p>
+        <h2>What is not modelled</h2>
+        <ul>
+          <li>Long illness, disability, self-employment and fixed-term contract ends. Sick pay and disability cover are better handled with insurance than with cash.</li>
+          <li>Severance, notice periods and garden leave. They usually shorten the gap, so leaving them out makes the result more conservative. Italy's TFR and Austria's Abfertigung are mentioned in the rules.</li>
+          <li>Means-tested support after benefits end, such as Grundsicherung, bijstand or kontanthjælp. Your savings would have to be used up first, so the model counts it as zero. Austria's Notstandshilfe is included because it is not means-tested on partner income.</li>
+          <li>Exact tax. Germany and Austria pay tax-free benefits, and the other countries use the editable rate. Germany's Progressionsvorbehalt can still create a tax bill the following spring.</li>
+          <li>Special cases: the extensions for older workers apart from those listed, Belgian 55+ exemptions, frontier workers, and the Swiss extra allowances before retirement.</li>
+        </ul>
+        <h2>Moving countries</h2>
+        <p>Within the EU/EEA and Switzerland, insurance periods from your previous country generally count towards eligibility once you have started working in the new one (Regulation (EC) 883/2004, form PD U1). The benefit is then based on your new local pay. In Denmark it depends on a-kasse membership, so join on day one. The Compare tab converts your current profile at ECB rates. Open a country in My score and enter local pay and spending for a sharper answer. Results in months of spending hold up better than the amounts.</p>
+        <h2>Sources and limits</h2>
+        <p>Each country's parameters and links are listed under Rules &amp; sources, as of 26 September 2026. The engine is tested against the published maximums (for example CH CHF 8,645, FR 300.21 €/day, IT 1,584.70 €, NL ≈ 5,055 €). For Germany it is tested against the Federal Employment Agency's own worked example, which it matches to within a few cents a day. An Excel twin with the same rules gives identical results. This is a planning tool, not legal or financial advice. Your benefit office's decision is the one that counts.</p>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Built for planning. Official calculators and your benefit office take precedence. Your inputs are stored only in this browser.</p>
+</div>
+
+<script>
+/* Safety Net Score — country rule set (as of 26 Sep 2026).
+   Every number below is taken from the source listed with it. Amounts are in local currency. */
+(function (root) {
+  const ASOF = '2026-09-26';
+  const FX = { // units of local currency per 1 EUR — ECB reference rates, 25 Sep 2026
+    EUR: 1, CHF: 0.9445, SEK: 11.29, NOK: 10.84, DKK: 7.4755, PLN: 4.3718, GBP: 0.86045,
+    date: '2026-09-25', source: 'https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html'
+  };
+
+  const C = {};
+
+  C.DE = {
+    name: 'Germany', flag: 'DE', cur: 'EUR', locale: 'de-DE', scheme: 'Arbeitslosengeld I (SGB III)',
+    p: {
+      bbgRv: 101400, bbgKv: 69750, rv: 0.093, alv: 0.013, kv: 0.0845, pv: 0.018, vspCap: 1900,
+      anp: 1230, sap: 36, efa: 4260, soliFree: 20350, svFlat: 0.20, rate: 0.60, rateChild: 0.67,
+      table: [[12, 0, 6], [16, 0, 8], [20, 0, 10], [24, 0, 12], [30, 50, 15], [36, 55, 18], [48, 58, 24]],
+      sperrDays: 84, cutMin: 0.25
+    },
+    defaultTax: 0,
+    facts: {
+      formula: '60 % of a notional net wage (67 % with a child). The notional net is gross pay minus a 20 % social flat rate, wage tax and solidarity surcharge (§§ 149, 153 SGB III).',
+      cap: 'Gross pay counts up to 8,450 €/month (101,400 €/yr). Maximum ≈ 2,811 €/month in tax class I without a child (engine estimate).',
+      duration: '6–12 months with 12–24 months insured; 15 / 18 / 24 months from age 50 / 55 / 58 (§ 147).',
+      waiting: 'None. Register as a job-seeker 3 months before your job ends (or within 3 days of notice), otherwise there is a 1-week block.',
+      resign: '12-week Sperrzeit, and the entitlement is cut by at least a quarter (§§ 148, 159).',
+      eligibility: '12 months insured within the last 30 months.',
+      tax: 'Tax-free, but subject to the Progressionsvorbehalt: it raises the tax rate on your other income that year, so expect a tax bill the following year.',
+      watch: 'Bürgergeld is being replaced by Grundsicherungsgeld (passed 5 Mar 2026, in force from summer 2026) with stricter protected-asset rules. It is a means-tested last resort.'
+    },
+    sources: [
+      ['§ 153 SGB III (Leistungsentgelt)', 'https://lxgesetze.de/sgb-iii/153'],
+      ['§ 147 SGB III (Anspruchsdauer)', 'https://www.sozialgesetzbuch-sgb.de/sgbiii/147.html'],
+      ['SV-Rechengrößen 2026', 'https://marcusknispel.com/sozialversicherungswerte-2026/'],
+      ['§ 32a EStG 2026 tariff', 'https://www.finanz-tools.de/einkommensteuer/berechnung-formeln/2026'],
+      ['Vorsorgepauschale 2026 (Haufe)', 'https://www.haufe.de/steuern/finanzverwaltung/vorsorgepauschale-im-lohnsteuerabzugsverfahren-ab-2026_164_658714.html'],
+      ['Soli-Freigrenze 2026 (TK)', 'https://www.tk.de/firmenkunden/service/fachthemen/fachthema-beitraege/solidaritaetszuschlag-2075802'],
+      ['Sperrzeit rules', 'https://www.arbeitsamt.info/sperrzeit/'],
+      ['Grundsicherung reform (Bundestag)', 'https://www.bundestag.de/dokumente/textarchiv/2026/kw10-de-grundsicherung-1150460']
+    ]
+  };
+
+  C.AT = {
+    name: 'Austria', flag: 'AT', cur: 'EUR', locale: 'de-AT', scheme: 'Arbeitslosengeld + Notstandshilfe (AlVG)',
+    p: { rate: 0.55, maxDaily: 78.77, famDaily: 0.97, cap80: 0.80, resignDays: 28,
+         nh: 0.92, nhCapAfterDays: 182, nhCap20: 43.61, nhCap30: 50.87 },
+    defaultTax: 0,
+    facts: {
+      formula: '55 % of daily net income (Grundbetrag), plus 0.97 €/day per dependent child. The total cannot exceed 80 % of net.',
+      cap: 'Maximum Grundbetrag is 78.77 €/day in 2026 (≈ 2,396 €/month).',
+      duration: '20 weeks; 30 weeks with 3 years insured in the last 5; 39 weeks from age 40 (6 of the last 10 years); 52 weeks from age 50 (9 of the last 15 years).',
+      waiting: 'None. Paid monthly in arrears, around the 8th of the following month.',
+      resign: 'Resigning yourself triggers a 4-week Sperrfrist. Termination by mutual agreement triggers none.',
+      eligibility: '52 weeks insured in the last 24 months (first claim).',
+      tax: 'Tax-free (with a progression clause for part-year receipt).',
+      watch: 'After ALG ends, Notstandshilfe pays 92–95 % of it with no time limit (renewed every 52 weeks); partner income is ignored. It is capped after 6 months if your ALG lasted only 20 or 30 weeks. Since 1 Jan 2026, marginal side jobs are restricted.'
+    },
+    sources: [
+      ['oesterreich.gv.at — Höhe', 'https://www.oesterreich.gv.at/de/themen/steuern_und_finanzen/unterstuetzungen_beihilfen_und_foerderungen/unterstuetzungen_bzw_beihilfen_fuer_arbeitsuchende_sowie_arbeitgeber/1/1/Seite.3610013'],
+      ['AMS — Arbeitslosengeld', 'https://www.ams.at/arbeitsuchende/arbeitslos-was-tun/geld-vom-ams/arbeitslosengeld'],
+      ['sozialleistungen.at — max 78.77 €/day', 'https://www.sozialleistungen.at/b/Arbeitslosengeld'],
+      ['AK — Arbeitslosengeld', 'https://www.arbeiterkammer.at/beratung/arbeitundrecht/Arbeitslosigkeit/Arbeitslosengeld.html'],
+      ['AK — Notstandshilfe', 'https://www.arbeiterkammer.at/beratung/arbeitundrecht/Arbeitslosigkeit/Notstandshilfe.html'],
+      ['AMS — einvernehmliche Auflösung', 'https://www.ams.at/arbeitsuchende/topicliste/einvernehmliche-aufloesung']
+    ]
+  };
+
+  C.CH = {
+    name: 'Switzerland', flag: 'CH', cur: 'CHF', locale: 'de-CH', scheme: 'Arbeitslosenversicherung ALV / AVIG',
+    p: { maxMonthly: 12350, rate: 0.70, rateHigh: 0.80, lowEarn: 3797, dpm: 21.7, social: 0.0777, resignTaggelder: 60 },
+    defaultTax: 0.12,
+    facts: {
+      formula: '70 % of insured earnings. 80 % if you support children under 25 or earn ≤ CHF 3,797/month.',
+      cap: 'Insured earnings are capped at CHF 12,350/month (148,200/yr), so the maximum is ≈ CHF 8,645/month gross at 70 %.',
+      duration: '260 daily allowances with 12 months of contributions, 400 with 18 months, 520 from age 55 with 22 months, 200 if under 25 without children. There are 21.7 allowances per month.',
+      waiting: '0–20 waiting days, depending on insured earnings and children. Above CHF 125,000 without children it is 20 days.',
+      resign: 'Resigning without a new job counts as serious fault: 31–60 suspension days (the model uses 60).',
+      eligibility: '12 months of contributions within the last 2 years.',
+      tax: 'Taxable (source tax for B permits). About 7.8 % is deducted (AHV/IV/EO 5.3 % plus NBU accident insurance 2.47 %). Health-insurance premiums remain yours to pay.',
+      watch: 'Your pension-fund savings move to a vested-benefits account. The unemployment fund covers death and disability risk.'
+    },
+    sources: [
+      ['SECO fact sheet', 'https://www.seco.admin.ch/dam/seco/de/dokumente/Arbeit/ALV/Grundlagen/Faktenblatt_Die_Arbeitslosenversicherung.pdf.download.pdf/DE_Faktenblatt_Die_Arbeitslosenversicherung.pdf'],
+      ['arbeit.swiss guide 2026', 'https://www.arbeit.swiss/api/media/fileservice/sdweb-docs-prod-arbeitswiss-files/files/2026/05/29/8c285bb6-f9f4-4f95-9658-2a9e1f3d22e7.pdf'],
+      ['Waiting days & allowances (weka.ch)', 'https://www.weka.ch/themen/personal/sozialversicherungen/sozialversicherungsbeitraege/article/alv-leistungen-und-anspruch-im-ueberblick/'],
+      ['Kanton Zürich', 'https://www.zh.ch/de/wirtschaft-arbeit/stellensuche-arbeitslosigkeit/arbeitslosenentschaedigung.html'],
+      ['Suspension days (Beobachter)', 'http://www.beobachter.ch/arbeit-bildung/arbeitslosigkeit/artikel/einstelltage_selbstverschuldet-entlassen/'],
+      ['Suva — NBU premium 2.47 %', 'https://www.suva.ch/de-ch/versicherung/unfallversicherung/unfallversicherung-bei-arbeitslosigkeit/versicherungsschutz-fuer-arbeitslose']
+    ]
+  };
+
+  C.FR = {
+    name: 'France', flag: 'FR', cur: 'EUR', locale: 'fr-FR', scheme: 'ARE — assurance chômage (Unédic / France Travail)',
+    p: { fixe: 13.18, min: 32.13, r1: 0.404, r2: 0.57, r3: 0.75, sjrCapMonthly: 16020, degThr: 92.57, degFactor: 0.70,
+         degAfter: 182, degAge: 55, coef: 0.75, minDays: 182, csg: 0.067, csgBase: 0.9825, csgFloor: 61, ret: 0.03, wait: 7 },
+    defaultTax: 0.07,
+    facts: {
+      formula: 'The higher of 40.4 % of the daily reference wage (SJR) + 13.18 €, or 57 % of SJR. Capped at 75 % of SJR, with a minimum of 32.13 €/day. Not revalued on 1 Jul 2026.',
+      cap: 'SJR is capped at 4 × PASS (16,020 €/month). Maximum 300.21 €/day (≈ 9,131 €/month). From month 7, amounts above 92.57 €/day are cut by 30 % for claimants under 55, with a floor of 92.57 €/day.',
+      duration: '0.75 × days worked in the reference window. Minimum 182 days; maximum 548 days under 55, 685 days at 55–56, 822 days at 57+. After a rupture conventionnelle ending on or after 1 Sep 2026, the maximum is 15 months (20.5 months at 55+).',
+      waiting: '7-day waiting period. Deferrals also apply for paid-leave pay and above-legal severance, but you receive those payouts, so they do not create a cash gap.',
+      resign: 'No ARE after resignation, except for a "démission légitime", a validated retraining project, or a review after 121 days.',
+      eligibility: '130 days or 910 hours worked in the last 24 months (36 months at 55+).',
+      tax: 'Deducted: CSG 6.2 % + CRDS 0.5 % on 98.25 % of the allowance, and a 3 % pension contribution on SJR. The rest is taxable through withholding (PAS).',
+      watch: 'The rupture conventionnelle maximum drops to 15 months from 1 Sep 2026 (Loi 2026-470).'
+    },
+    sources: [
+      ['Unédic — Paramètres utiles avril 2026', 'https://www.unedic.org/storage/uploads/2026/05/27/unedic_parametres_utiles_avril2026_uid_6a17039e9f727.pdf'],
+      ['Unédic — no revaluation 1 Jul 2026', 'https://www.unedic.org/actualites/allocations-dassurance-chomage-pas-de-revalorisation-au-1er-juillet-2026'],
+      ['CDG67 — durée et montant 2026', 'https://www.cdg67.fr/wp-content/uploads/2026/04/2026_avril_ARE_3_duree_montant.pdf'],
+      ['Code du travail numérique — rupture conventionnelle', 'https://code.travail.gouv.fr/actualite/rupture-conventionnelle-et-chomage-les-nouvelles-durees-dindemnisation-a-partir-du-1er-septembre-2026']
+    ]
+  };
+
+  C.BE = {
+    name: 'Belgium', flag: 'BE', cur: 'EUR', locale: 'fr-BE', scheme: 'Allocations de chômage (ONEM/RVA) — rules for claims from 1 Mar 2026',
+    p: {
+      phases: [ // months (from, to), rate, max
+        { from: 0, to: 3, rate: 0.65, max: 2772.90 },
+        { from: 3, to: 6, rate: 0.60, max: 2406.56 },
+        { from: 6, to: 12, rate: 0.60, max: 1957.80 }
+      ],
+      mins: { isole: [1613.30, 1613.30, 1466.40], chef: [1990.30, 1990.30, 1809.34], cohabitant: [1522.72, 1433.12, 1302.86] },
+      flat: { isole: 1466.40, chef: 1809.80, cohabitant: 761.02 },
+      resignDays: 364
+    },
+    defaultTax: 0.10,
+    facts: {
+      formula: '65 % of wage (months 1–3), then 60 % (months 4–12), each with its own ceiling. From month 13 a flat amount applies by household status.',
+      cap: 'Maximums: 2,772.90 €/month (m1–3), 2,406.56 € (m4–6), 1,957.80 € (m7–12). Flat from m13: 1,466.40 € single, 1,809.80 € head of household, 761.02 € cohabitant.',
+      duration: 'Time-limited: 12 months plus 1 month per 4 months of work history beyond the first year. 24 months with 5+ years of career. Some 55+ long careers are exempt.',
+      waiting: 'None.',
+      resign: 'Warning or 4–52 weeks of exclusion (the model uses 52). The new "droit rebond" (≥ 3,120 work days, once per career) pays 6 months.',
+      eligibility: '312 work days in the last 36 months.',
+      tax: 'Taxable, with withholding. The model assumes 10 %.',
+      watch: 'Phased exclusion of long-term claimants runs Jan 2026 → Jul 2027.'
+    },
+    sources: [
+      ['Bruxelles-J — montants (claims from 1 Mar 2026)', 'https://www.bruxelles-j.be/droits-sociaux/tes-droits-au-chomage/quels-sont-les-montants-des-allocations-de-chomage/'],
+      ['Mutualité chrétienne — réforme', 'https://www.mc.be/en-marche/vos-droits/emploi/quelles-allocations-de-chomage-en-cas-de-licenciement'],
+      ['RTBF — limitation dans le temps', 'https://www.rtbf.be/article/limitation-dans-le-temps-des-allocations-de-chomage-qui-sera-exclu-et-quand-11623311'],
+      ['Bruxelles-J — sanctions', 'https://www.bruxelles-j.be/droits-sociaux/tes-droits-au-chomage/quelles-sont-les-sanctions-de-lonem/'],
+      ['Elegis — droit rebond', 'https://www.elegis.be/fr/nouvelle/le-nouveau-droit-rebond-une-revolution-en-cas-de-demission']
+    ]
+  };
+
+  C.NL = {
+    name: 'Netherlands', flag: 'NL', cur: 'EUR', locale: 'nl-NL', scheme: 'WW-uitkering (UWV)',
+    p: { maxDagloon: 309.91, dpm: 21.75, r1: 0.75, r2: 0.70, days: 261 },
+    defaultTax: 0.34,
+    facts: {
+      formula: '75 % of your WW monthly wage for 2 months, then 70 %.',
+      cap: 'Maximum day wage 309.91 € (21.75 days/month): ≈ 5,055 € gross/month at 75 %, then ≈ 4,718 € at 70 %.',
+      duration: '3 months (26 of the last 36 weeks worked). If you worked in 4 of the last 5 years: 1 month per year of work history, 0.5 per year beyond 10, up to 24 months.',
+      waiting: 'None, but a notional notice period applies if your notice period was cut short.',
+      resign: 'No WW after resigning or other culpable unemployment.',
+      eligibility: 'Worked in at least 26 of the last 36 weeks.',
+      tax: 'Gross amounts; wage tax is withheld. The model assumes 34 % (tax credits only, no labour credit).',
+      watch: 'A bill to cut the maximum from 24 to 18 months is planned for 1 Jan 2028.'
+    },
+    sources: [
+      ['UWV — hoogte WW', 'https://www.uwv.nl/nl/ww/hoogte-ww'],
+      ['UWV — hoelang WW', 'https://www.uwv.nl/nl/ww/hoelang-ww'],
+      ['Rendement — WW cut postponed to 2028', 'https://www.rendement.nl/ww/nieuws/verkorting-duur-ww-uitkering-uitgesteld-tot-2028.html'],
+      ['No WW after resigning', 'https://www.transitievergoeding.nl/ww-uitkering/geen-recht-op-ww/']
+    ]
+  };
+
+  C.LU = {
+    name: 'Luxembourg', flag: 'LU', cur: 'EUR', locale: 'fr-LU', scheme: 'Indemnité de chômage complet (ADEM)',
+    p: { rate: 0.80, rateChild: 0.85, ssm: 2771.33, c1: 2.5, c2: 2.0, c3: 1.5, social: 0.122 },
+    defaultTax: 0.18,
+    facts: {
+      formula: '80 % of your average gross wage over the last 3 months (85 % with a dependent child).',
+      cap: '2.5 × minimum wage = 6,928.33 €/month for the first 182 days, then 2 × = 5,542.66 €. In an extension period: 1.5 × (minimum wage 2,771.33 € since 1 Jun 2026).',
+      duration: 'Equal to your months worked in the last 12 months, maximum 12. Older workers with long careers can get +6/+9/+12 months.',
+      waiting: 'None. Register with ADEM and apply within 4 weeks.',
+      resign: 'No benefit after resignation or dismissal for gross misconduct.',
+      eligibility: '26 weeks (182 days) worked in the last 12 months, and you must live in Luxembourg.',
+      tax: 'Salary rules apply: social contributions (≈ 12.2 % assumed) plus income tax (18 % assumed).',
+      watch: 'Cross-border workers are paid by their country of residence, not by Luxembourg.'
+    },
+    sources: [
+      ['Guichet.lu — indemnité de chômage complet', 'https://guichet.public.lu/fr/citoyens/aides/travail/indemnites-chomage/residents/salarie.html'],
+      ['Salary.lu — SSM from 1 Jun 2026', 'https://salary.lu/en/tools/social-parameters/social-minimum-wage/2026'],
+      ['pixie.lu — 2026 ceilings', 'https://www.pixie.lu/corpus/rh/38-0034/quel-est-le-plafond-mensuel-de-l-allocation-de-chomage-au-luxembourg-en-2026/'],
+      ['LCGB — paramètres sociaux 2026', 'https://lcgb.lu/files/2025/05/2026-01-Parametres-Sociaux-FR.pdf']
+    ]
+  };
+
+  C.IT = {
+    name: 'Italy', flag: 'IT', cur: 'EUR', locale: 'it-IT', scheme: 'NASpI (INPS)',
+    p: { thr: 1456.72, max: 1584.70, r1: 0.75, r2: 0.25, decay: 0.97, decayStart: 6, decayStart55: 8, monthDays: 30, wait: 7 },
+    defaultTax: 0.13,
+    facts: {
+      formula: '75 % of average monthly pay up to 1,456.72 €, plus 25 % of the part above it.',
+      cap: 'Maximum 1,584.70 € gross/month (INPS Circ. 4/2026). It falls 3 % per month, compounding, from month 6 (month 8 if you are 55+).',
+      duration: 'Half of your contribution weeks in the last 4 years, up to 24 months.',
+      waiting: 'Paid from the 8th day after the job ends (apply within 68 days).',
+      resign: 'No NASpI after resignation, except for just cause or a consensual exit through the conciliation procedure.',
+      eligibility: '13 weeks of contributions in the last 4 years.',
+      tax: 'IRPEF is withheld by INPS. The model assumes 13 %.',
+      watch: 'Your TFR (≈ 6.9 % of each year\'s pay) is paid out when employment ends, unless it was moved to a pension fund.'
+    },
+    sources: [
+      ['Ministero del Lavoro — NASpI', 'https://www.lavoro.gov.it/temi-e-priorita/ammortizzatori-sociali/focus-on/indennita-disoccupazione/naspi/pagine/naspi'],
+      ['2026 amounts (INPS Circ. 4/2026)', 'https://www.dipendenti.it/guida/naspi-importi-2026'],
+      ['Decalage vs previous month', 'https://f24editabile.com/blog/calcolo-naspi-2026-formula-importo-durata-decalage/']
+    ]
+  };
+
+  C.ES = {
+    name: 'Spain', flag: 'ES', cur: 'EUR', locale: 'es-ES', scheme: 'Prestación contributiva por desempleo (SEPE)',
+    p: { r1: 0.70, r2: 0.60, stepDays: 180, max: [1225, 1400, 1575], min: [560, 749], brCap: 5101.20, ss: 0.0485 },
+    defaultTax: 0.02,
+    facts: {
+      formula: '70 % of your base reguladora (average contribution base over the last 180 days) for 180 days, then 60 % (art. 270.2 LGSS).',
+      cap: 'Maximum 1,225 € (no children), 1,400 € (1 child), 1,575 € (2+). Minimum 560 € / 749 €.',
+      duration: '120 days for 360 days contributed, +60 days per extra 180 days, up to 720 days (24 months) for 2,160+ days in the last 6 years.',
+      waiting: 'None. Apply within 15 working days.',
+      resign: 'No benefit after voluntary resignation.',
+      eligibility: '360 days contributed in the last 6 years.',
+      tax: 'SEPE deducts your social-security share (≈ 4.7 % + 0.15 % MEI) calculated on the base reguladora, not on the benefit. IRPF is withheld as applicable.',
+      watch: 'After exhaustion, a means-tested subsidio may follow.'
+    },
+    sources: [
+      ['Art. 270 LGSS (Iberley)', 'https://www.iberley.es/legislacion/articulo-270-tr-ley-general-seguridad-social-lgss'],
+      ['2026 limits (BBVA Mi jubilación)', 'https://www.bbvamijubilacion.es/blog/importe-y-requisitos-de-la-prestacion-por-desempleo-en-2025/'],
+      ['Duration table', 'https://www.andaluciainformacion.es/articulo/economia/paro-sepe-cuantos-meses-cobran-anos-trabajados-como-baja-70-60-base-reguladora/202609011300523465060.html'],
+      ['SEPE deductions (loentiendo)', 'https://loentiendo.com/cantidades-sepe-descuenta-del-paro/'],
+      ['Base máxima 2026', 'https://cisslaboral.laleynext.es/Content/Documento.aspx?params=H4sIAAAAAAAEAMtMSbH1czUwMDAyMrQwMjdTK0stKs7Mz7M1MjAyNTQyMAYJZKZVuuQnh1QWpNqmJeYUpwIAluTcgzUAAAA%3DWKE']
+    ]
+  };
+
+  C.PT = {
+    name: 'Portugal', flag: 'PT', cur: 'EUR', locale: 'pt-PT', scheme: 'Subsídio de desemprego (Segurança Social)',
+    p: { rate: 0.65, ias: 537.13, maxIas: 2.5, minIas: 1.0, minIasHigh: 1.15, minWage: 920, netCap: 0.75,
+         table: { u30: [150, 210, 330, 30], u40: [180, 330, 420, 30], u50: [210, 360, 540, 45], o50: [270, 480, 540, 60] } },
+    defaultTax: 0,
+    facts: {
+      formula: '65 % of your reference pay (12 months including holiday and Christmas pay, ÷ 360 per day).',
+      cap: 'The maximum is the lower of 2.5 × IAS (1,342.83 €) and 75 % of your net reference pay. The minimum is 537.13 € (617.70 € if you earned at least the minimum wage).',
+      duration: 'Depends on age and contribution months: 150–540 days, plus 30/45/60 days for every 5 years of contributions in the last 20 (≥ 24-month bracket).',
+      waiting: 'Paid from the date you apply.',
+      resign: 'No benefit after voluntary resignation. Termination by mutual agreement is covered within company quotas.',
+      eligibility: '360 days worked in the last 24 months.',
+      tax: 'Not subject to IRS and no contributions are deducted.',
+      watch: 'The old 10 % cut after 180 days was revoked (Lei 114/2017).'
+    },
+    sources: [
+      ['Segurança Social — Guia Prático', 'https://www.seg-social.pt/ptss/pssd/documento/cmc0debv9008agw2ys1kly9so?dswid=3488'],
+      ['DECO Proteste 2026', 'https://www.deco.proteste.pt/dinheiro/emprego/noticias/subsidio-desemprego-regras-prazos-valores'],
+      ['Duration table (fedfinance)', 'https://www.fedfinance.pt/noticias-conselhos/subsidio-de-desemprego-em-portugal-valores-duracao-e-como-pedir-sem-perder-dinheiro']
+    ]
+  };
+
+  C.DK = {
+    name: 'Denmark', flag: 'DK', cur: 'DKK', locale: 'da-DK', scheme: 'Dagpenge (voluntary a-kasse membership)',
+    p: { rate: 0.90, am: 0.08, max: 22041, maxSupp: 26198, suppMonths: 3, suppMinIncome: 31640, durMonths: 24, resignDays: 21 },
+    defaultTax: 0.29,
+    facts: {
+      formula: '90 % of your previous income after the 8 % AM contribution.',
+      cap: 'Maximum 22,041 DKK/month (2026). In the first 3 months it can be up to 26,198 DKK if you have 4+ years of membership and earned at least 31,640 DKK/month.',
+      duration: '2 years within a 3-year window.',
+      waiting: 'Your employer pays the first 2 days (G-days). No waiting gap is modelled.',
+      resign: '3-week quarantine (111 hours).',
+      eligibility: 'A-kasse member for at least 1 year, plus the income requirement (286,632 DKK over 3 years in 2026). No membership means only means-tested kontanthjælp.',
+      tax: 'Taxable, with no AM contribution. The model assumes 29 %. Include the a-kasse fee in your expenses (the state and ATP part alone is 414 DKK/month in 2026).',
+      watch: 'Join an a-kasse on day 1 after moving. EU insurance periods can be transferred (PD U1) if you join quickly.'
+    },
+    sources: [
+      ['3F — dagpengesatser 2026', 'https://www.3f.dk/find-svar/dagpenge/dagpengesatser'],
+      ['A-kasser.dk — 2026 satser', 'https://www.a-kasser.dk/blog/2026-satser-p%C3%A5-a-kasse-og-dagpenge-omr%C3%A5det/'],
+      ['Ase — karantæne', 'https://www.ase.dk/faa-svar/dagpenge/karantaene'],
+      ['Ase — G-dage', 'https://www.ase.dk/faa-svar/dagpenge/g-dage']
+    ]
+  };
+
+  C.SE = {
+    name: 'Sweden', flag: 'SE', cur: 'SEK', locale: 'sv-SE', scheme: 'Arbetslöshetsförsäkring (income-based since 1 Oct 2025)',
+    p: { maxIncome: 34000, rates: { m12: [0.80, 0.70, 0.65], m6: [0.60, 0.50, 0.45], m0: [0.50, 0.40, 0.35] },
+         steps: [100, 200, 300], dayFactor: 21.667 / 22, karens: 2, resignDays: 45 },
+    defaultTax: 0.30,
+    facts: {
+      formula: '80 % of your income (with 12+ months of membership). It drops 10 points after 100 days and another 5 after 200. Shorter membership pays 60 % or 50 %.',
+      cap: 'Income counts up to 34,000 SEK/month, so the maximum is ≈ 27,200 SEK/month (1,236 SEK/day).',
+      duration: '300 benefit days with income ≥ 11,000 SEK in 11–12 of the last 12 months (200 or 100 days for fewer months).',
+      waiting: '2 waiting days.',
+      resign: '45 benefit days of suspension if you quit without a valid reason.',
+      eligibility: 'At least 120,000 SEK of income, with ≥ 11,000 SEK in at least 4 months.',
+      tax: 'Taxable. The model assumes 30 %.',
+      watch: 'The extra 150 days for parents was abolished in the Oct 2025 reform.'
+    },
+    sources: [
+      ['IAF — new insurance 1 Oct 2025', 'https://www.iaf.se/lag-ratt/ny-arbetsloshetsforsakring-fran-1-oktober/'],
+      ['Akademikernas a-kassa — levels', 'https://www.akademikernasakassa.se/ersattningen/ersattning-och-utbetalning/ersattningsniva'],
+      ['Unionens a-kassa — period & waiting days', 'https://www.unionensakassa.se/nar-du-har-ersattning/din-ersattningsperiod/'],
+      ['FFAK — own resignation', 'https://ffakassan.se/ersattning/egen-uppsagning']
+    ]
+  };
+
+  C.NO = {
+    name: 'Norway', flag: 'NO', cur: 'NOK', locale: 'nb-NO', scheme: 'Dagpenger (NAV)',
+    p: { G: 136549, rate: 0.624, capG: 6, longG: 2, minG: 1.5, child: 38, wait: 3, resignDays: 126 },
+    defaultTax: 0.30,
+    facts: {
+      formula: '62.4 % of your income basis (last 12 months, or the 36-month average if higher).',
+      cap: 'Basis capped at 6G = 819,294 NOK (G = 136,549 from 1 May 2026), so the maximum is ≈ 42,600 NOK/month. There is a child supplement of 38 NOK/day per child.',
+      duration: '104 weeks if income ≥ 2G, otherwise 52 weeks.',
+      waiting: '3 waiting days.',
+      resign: '18 weeks of exclusion if you quit without reasonable cause.',
+      eligibility: 'Income ≥ 1.5G in the last 12 months, or ≥ 3G in the last 36 months.',
+      tax: 'Taxable. The model assumes 30 %.',
+      watch: 'G is adjusted every May.'
+    },
+    sources: [
+      ['NAV — G from 1 May 2026', 'https://www.nav.no/regulering-2026'],
+      ['Kalkulativ — dagpenger 2026', 'https://www.kalkulativ.no/blogg/dagpenger-2026-satser-guide']
+    ]
+  };
+
+  C.PL = {
+    name: 'Poland', flag: 'PL', cur: 'PLN', locale: 'pl-PL', scheme: 'Zasiłek dla bezrobotnych (Act of 2025)',
+    p: { b1: 1783.90, b2: 1400.90, firstDays: 90, senior: 1.2, seniorYears: 20, dur: 180, durLong: 365 },
+    defaultTax: 0.09,
+    facts: {
+      formula: 'A flat amount that does not depend on your salary: 1,783.90 PLN/month for the first 90 days, then 1,400.90 PLN (120 % with 20+ years of work).',
+      cap: 'Flat. Net ≈ 1,623 / 1,275 PLN (official).',
+      duration: '180 days. 365 days if you are 50+ with 20 years of work, a single parent, have an unemployed spouse and a child, have a disability, or hold a Large Family Card.',
+      waiting: 'None. Paid from the day you register.',
+      resign: 'No benefit if you resign by notice (art. 219). After termination by mutual agreement, only after 90 days (art. 220).',
+      eligibility: '365 days of work in the last 18 months (at least the minimum-wage base).',
+      tax: 'PIT is withheld (≈ 9 %, per official net figures).',
+      watch: 'Amounts are revalued each 1 June.'
+    },
+    sources: [
+      ['Zielona Linia — amounts from 1 Jun 2026', 'https://zielonalinia.gov.pl/zasilek-dla-bezrobotnych-wysokosc-swiadczenia-od-czerwca-2026-r/'],
+      ['psz.praca.gov.pl — rules', 'https://psz.praca.gov.pl/dla-bezrobotnych-i-poszukujacych-pracy/swiadczenia-pieniezne/zasilek-dla-osob-bezrobotnych'],
+      ['Infor — art. 219/220', 'https://kadry.infor.pl/kadry/ubezpieczenia/zasilki_i_inne_swiadczenia/7089833,zasilek-dla-bezrobotnych-2025-sposob-rozwiazania-umowy-o-prace-ma-zna.html']
+    ]
+  };
+
+  C.IE = {
+    name: 'Ireland', flag: 'IE', cur: 'EUR', locale: 'en-IE', scheme: "Jobseeker's Pay-Related Benefit (DSP)",
+    p: { bands5: [[13, 0.60, 450], [26, 0.55, 375], [39, 0.50, 300]], band2: [26, 0.50, 300], min: 125, wait: 3, resignDays: 63 },
+    defaultTax: 0.10,
+    facts: {
+      formula: 'With 5+ years of PRSI: 60 % of prior weekly earnings for weeks 1–13, 55 % for weeks 14–26, 50 % for weeks 27–39. With 2–5 years: 50 % for up to 26 weeks.',
+      cap: 'Weekly maximums 450 € / 375 € / 300 €, minimum 125 €/week.',
+      duration: '39 weeks (5+ years of PRSI) or 26 weeks (2–5 years).',
+      waiting: '3 waiting days.',
+      resign: 'Up to 9 weeks of disqualification if you leave voluntarily without good cause.',
+      eligibility: 'At least 2 years (104 weeks) of paid PRSI contributions.',
+      tax: 'Taxable. The model assumes 10 %.',
+      watch: "After that, only the means-tested Jobseeker's Allowance applies (savings count)."
+    },
+    sources: [
+      ["Citizens Information — Pay-Related Benefit", 'https://www.citizensinformation.ie/en/social-welfare/unemployed-people/jobseekers-pay-related-benefit/'],
+      ["Citizens Information — Jobseeker's Benefit", 'https://www.citizensinformation.ie/en/social-welfare/unemployed-people/jobseekers-benefit/']
+    ]
+  };
+
+  C.UK = {
+    name: 'United Kingdom', flag: 'GB', cur: 'GBP', locale: 'en-GB', scheme: "New Style Jobseeker's Allowance",
+    p: { wk25: 95.55, wkU25: 75.65, days: 182, wait: 7, resignDays: 91 },
+    defaultTax: 0,
+    facts: {
+      formula: 'A flat weekly amount that does not depend on your salary.',
+      cap: '£95.55/week at 25+ (£75.65 under 25) from 6 Apr 2026.',
+      duration: 'Up to 182 days.',
+      waiting: '7 waiting days.',
+      resign: '13-week sanction for leaving voluntarily without good reason (26 weeks for a repeat).',
+      eligibility: 'Class 1 NI contributions in the 2 relevant tax years.',
+      tax: 'Taxable, but usually within the personal allowance.',
+      watch: 'Universal Credit is means-tested; savings above £16,000 exclude you.'
+    },
+    sources: [
+      ['New Style JSA 2026/27', 'https://sorteduk.uk/jobseekers-allowance'],
+      ['Turn2us — JSA sanctions', 'https://www.turn2us.org.uk/get-support/information-for-your-situation/jobseeker-s-allowance-jsa-sanctions/how-long-will-a-jobseeker-s-allowance-jsa-sanction-last'],
+      ['7 waiting days', 'https://www.socialwelfaretraining.co.uk/news/7-day-waiting-period-esa-and-jsa']
+    ]
+  };
+
+  const ORDER = ['DE', 'AT', 'CH', 'FR', 'BE', 'NL', 'LU', 'IT', 'ES', 'PT', 'DK', 'SE', 'NO', 'PL', 'IE', 'UK'];
+  const APPLE = { source: 'https://support.apple.com/guide/watch/view-your-sleep-score-apded441a669/watchos',
+    bands: 'Very Low 0–40 · Low 41–60 · OK 61–80 · High 81–95 · Very High 96–100 (watchOS 26.2+)' };
+
+  const DATA = { ASOF, FX, C, ORDER, APPLE };
+  if (typeof module !== 'undefined' && module.exports) module.exports = DATA; else root.NETSCORE_DATA = DATA;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+/* Safety Net Score — calculation engine.
+   Works in the browser (window.NETSCORE) and in Node (module.exports).
+   Money in local currency per month unless stated. Time is simulated day by day. */
+(function (root) {
+  const D = (typeof module !== 'undefined' && module.exports) ? require('./data.js') : root.NETSCORE_DATA;
+  const DPM = 365 / 12; // average days per month (30.4167)
+
+  const r2 = x => Math.round((x + 1e-12) * 100) / 100;
+  const floor2 = x => Math.floor(x * 100 + 1e-7) / 100;
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+  // ---------- Germany: ALG I (§ 153 SGB III with PAP 2026 wage tax) ----------
+  function deTariff(x) {
+    x = Math.floor(x);
+    if (x <= 12348) return 0;
+    if (x <= 17799) { const y = (x - 12348) / 10000; return Math.floor((914.51 * y + 1400) * y); }
+    if (x <= 69878) { const z = (x - 17799) / 10000; return Math.floor((173.10 * z + 2397) * z + 1034.87); }
+    if (x <= 277825) return Math.floor(0.42 * x - 11135.63);
+    return Math.floor(0.45 * x - 19470.38);
+  }
+  function deAlg(grossAnnual, taxClass, hasChild) {
+    const P = D.C.DE.p;
+    const be = r2(Math.min(grossAnnual, P.bbgRv) / 365);        // daily Bemessungsentgelt
+    const zre4j = be * 360;                                      // PAP: daily wage x 360
+    const vspRv = P.rv * Math.min(zre4j, P.bbgRv);
+    const vspKvPv = (P.kv + P.pv) * Math.min(zre4j, P.bbgKv);
+    const vspAlv = Math.max(0, Math.min(P.alv * Math.min(zre4j, P.bbgRv), P.vspCap - vspKvPv));
+    const vsp = Math.ceil(vspRv + vspKvPv + vspAlv - 1e-9);
+    const ztabfb = P.anp + P.sap + (taxClass === '2' ? P.efa : 0);
+    const zve = Math.max(0, Math.floor(zre4j - ztabfb - vsp));
+    const st = taxClass === '3' ? 2 * deTariff(Math.floor(zve / 2)) : deTariff(zve);
+    const soliFree = P.soliFree * (taxClass === '3' ? 2 : 1);
+    const soli = st > soliFree ? Math.min(floor2(st * 0.055), floor2((st - soliFree) * 0.119)) : 0;
+    const lstD = floor2(st / 360), soliD = floor2(soli / 360);
+    const le = r2(be - r2(be * P.svFlat) - lstD - soliD);
+    const algD = r2(le * (hasChild ? P.rateChild : P.rate));
+    return { be, vsp, zve, st, soli, lstD, soliD, le, algD, monthly: r2(algD * 30) };
+  }
+
+  // ---------- Per-country benefit plans ----------
+  // A plan: eligible, waitDays, durDays, phases [{from,to (days since benefit start), gross, net}],
+  // decay (IT), resign {type:'none'|'delay', days, cut}
+  function plan(code, pr) {
+    const c = D.C[code], P = c.p;
+    const tax = (pr.taxOverride != null && pr.taxOverride !== '') ? Number(pr.taxOverride) : c.defaultTax;
+    const kids = Number(pr.children || 0), age = Number(pr.age || 0), yrs = Number(pr.years || 0);
+    const G = Number(pr.grossAnnual || 0), gm = G / 12;
+    const out = { code, eligible: true, why: '', waitDays: 0, durDays: 0, phases: [], decay: null,
+                  resign: { type: 'none', days: 0, cut: 0 }, tax, notes: [] };
+    const ph = (from, to, gross, net) => out.phases.push({ from, to, gross: r2(gross), net: r2(net) });
+    const netOf = g => g * (1 - tax);
+
+    switch (code) {
+      case 'DE': {
+        const tc = String(pr.deTaxClass || '1');
+        const a = deAlg(G, tc, kids > 0);
+        out.detail = a;
+        const months = (() => { const m = Math.min(60, Math.floor(yrs * 12 + 1e-9)); let best = 0;
+          for (const [mm, minAge, dur] of P.table) if (m >= mm && age >= minAge) best = Math.max(best, dur); return best; })();
+        if (months === 0) { out.eligible = false; out.why = 'Needs 12 months insured within 30 months.'; }
+        out.durDays = months * DPM;
+        ph(0, out.durDays, a.monthly, netOf(a.monthly));
+        out.resign = { type: 'delay', days: P.sperrDays, cut: Math.max(P.sperrDays, P.cutMin * out.durDays) };
+        break;
+      }
+      case 'AT': {
+        const netDaily = Number(pr.netMonthly || 0) * 12 / 365;
+        const gb = Math.min(P.maxDaily, P.rate * netDaily);
+        const fam = kids * P.famDaily;
+        const daily = Math.min(gb + fam, Math.max(gb, P.cap80 * netDaily));
+        let weeks = 0;
+        if (yrs >= 1) weeks = 20;
+        if (yrs >= 3) weeks = 30;
+        if (age >= 40 && yrs >= 6) weeks = 39;
+        if (age >= 50 && yrs >= 9) weeks = 52;
+        if (!weeks) { out.eligible = false; out.why = 'Needs 52 weeks insured in 24 months.'; }
+        out.durDays = weeks * 7;
+        const m = daily * DPM;
+        ph(0, out.durDays, m, netOf(m));
+        // Notstandshilfe (no time limit; capped after 6 months when ALG lasted 20 or 30 weeks)
+        const nhRate = gb <= P.nhCap20 ? 0.95 : P.nh;
+        const nhBase = nhRate * gb;
+        const nh1 = (nhBase + fam) * DPM;
+        const cap = weeks === 20 ? P.nhCap20 : weeks === 30 ? P.nhCap30 : Infinity;
+        const nh2 = (Math.min(nhBase, cap) + fam) * DPM;
+        if (weeks) {
+          ph(out.durDays, out.durDays + P.nhCapAfterDays, nh1, netOf(nh1));
+          ph(out.durDays + P.nhCapAfterDays, 99999, nh2, netOf(nh2));
+          out.durDays = 99999;
+          out.notes.push('Includes Notstandshilfe after ALG (92–95 % of ALG, no time limit).');
+        }
+        out.resign = { type: 'delay', days: P.resignDays, cut: 0 };
+        break;
+      }
+      case 'CH': {
+        const ie = Math.min(gm, P.maxMonthly);
+        const rate = (kids > 0 || ie <= P.lowEarn) ? P.rateHigh : P.rate;
+        const g = rate * ie;
+        let tg = 0;
+        if (yrs >= 1) tg = (age < 25 && kids === 0) ? 200 : 260;
+        if (yrs >= 1.5 && !(age < 25 && kids === 0)) tg = 400;
+        if (yrs >= 22 / 12 && age >= 55) tg = 520;
+        if (!tg) { out.eligible = false; out.why = 'Needs 12 months of contributions within 2 years.'; }
+        out.durDays = tg * 7 / 5;
+        const annual = ie * 12;
+        let wt;
+        if (kids > 0) wt = annual <= 60000 ? 0 : 5;
+        else wt = annual <= 36000 ? 0 : annual <= 60000 ? 5 : annual <= 90000 ? 10 : annual <= 125000 ? 15 : 20;
+        out.waitDays = wt * 7 / 5;
+        out.detail = { insured: ie, rate, taggelder: tg, wartetage: wt };
+        ph(0, out.durDays, g, g * (1 - P.social) * (1 - tax));
+        out.resign = { type: 'delay', days: P.resignTaggelder * 7 / 5, cut: P.resignTaggelder * 7 / 5 };
+        break;
+      }
+      case 'FR': {
+        const sjr = Math.min(G, 12 * P.sjrCapMonthly) / 365;
+        let a = Math.min(Math.max(P.r1 * sjr + P.fixe, P.r2 * sjr, P.min), P.r3 * sjr);
+        const netDay = x => { const ret = Math.min(P.ret * sjr, Math.max(0, x - P.min));
+          const csg = Math.min(P.csg * P.csgBase * x, Math.max(0, x - ret - P.csgFloor));
+          return (x - ret - csg) * (1 - tax); };
+        const window = age >= 55 ? 1095 : 730;
+        const maxD = age >= 57 ? 822 : age >= 55 ? 685 : 548;
+        let days = 0;
+        if (yrs >= 0.5) days = Math.min(maxD, Math.max(P.minDays, Math.round(P.coef * Math.min(yrs * 365, window))));
+        if (!days) { out.eligible = false; out.why = 'Needs 130 days worked in 24 months.'; }
+        out.durDays = days;
+        out.waitDays = P.wait;
+        const deg = age < P.degAge && a > P.degThr;
+        const a2 = deg ? Math.max(P.degThr, P.degFactor * a) : a;
+        out.detail = { sjr: r2(sjr), daily: r2(a), dailyAfter: r2(a2) };
+        ph(0, Math.min(P.degAfter, days), a * DPM, netDay(a) * DPM);
+        if (days > P.degAfter) ph(P.degAfter, days, a2 * DPM, netDay(a2) * DPM);
+        out.resign = { type: 'none', days: 0, cut: 0 };
+        break;
+      }
+      case 'BE': {
+        const cat = pr.beCategory || 'isole';
+        const S = G / 13.92; // 12 salaries + 13th month + double holiday pay
+        let months = 0;
+        if (yrs >= 1) months = yrs >= 5 ? 24 : Math.min(24, 12 + Math.floor((yrs - 1) * 3 + 1e-9));
+        if (!months) { out.eligible = false; out.why = 'Needs 312 work days in 36 months.'; }
+        out.durDays = months * DPM;
+        P.phases.forEach((f, i) => {
+          const g = Math.max(P.mins[cat][i], Math.min(f.rate * S, f.max));
+          ph(f.from * DPM, f.to * DPM, g, netOf(g));
+        });
+        ph(12 * DPM, 24 * DPM, P.flat[cat], netOf(P.flat[cat]));
+        out.resign = { type: 'delay', days: P.resignDays, cut: 0 };
+        break;
+      }
+      case 'NL': {
+        const dl = Math.min(G / P.days, P.maxDagloon);
+        const m1 = dl * P.dpm * P.r1, m2 = dl * P.dpm * P.r2;
+        let months = 0;
+        if (yrs >= 0.5) {
+          const y = Math.floor(yrs + 1e-9);
+          months = yrs >= 4 ? Math.max(3, Math.min(24, y <= 10 ? y : 10 + 0.5 * (y - 10))) : 3;
+        }
+        if (!months) { out.eligible = false; out.why = 'Needs 26 of the last 36 weeks worked.'; }
+        out.durDays = months * DPM;
+        ph(0, 2 * DPM, m1, netOf(m1));
+        ph(2 * DPM, out.durDays, m2, netOf(m2));
+        out.resign = { type: 'none', days: 0, cut: 0 };
+        break;
+      }
+      case 'LU': {
+        const rate = kids > 0 ? P.rateChild : P.rate;
+        const base = rate * gm;
+        const g1 = Math.min(base, P.c1 * P.ssm), g2 = Math.min(base, P.c2 * P.ssm), g3 = Math.min(base, P.c3 * P.ssm);
+        let months = yrs >= 0.5 ? Math.min(12, Math.floor(yrs * 12 + 1e-9)) : 0;
+        if (!months) { out.eligible = false; out.why = 'Needs 26 weeks worked in 12 months (resident).'; }
+        let ext = 0;
+        if (age >= 45 && yrs >= 20) ext = 6;
+        if (age >= 50 && yrs >= 25) ext = 9;
+        if (age >= 50 && yrs >= 30) ext = 12;
+        if (months < 12) ext = 0;
+        out.durDays = (months + ext) * DPM;
+        const n = g => g * (1 - P.social) * (1 - tax);
+        ph(0, 182, g1, n(g1));
+        ph(182, 12 * DPM, g2, n(g2));
+        if (ext) ph(12 * DPM, (12 + ext) * DPM, g3, n(g3));
+        out.resign = { type: 'none', days: 0, cut: 0 };
+        break;
+      }
+      case 'IT': {
+        const R = gm;
+        const g = Math.min(R <= P.thr ? P.r1 * R : P.r1 * P.thr + P.r2 * (R - P.thr), P.max);
+        const weeks = yrs >= 13 / 52 ? Math.min(208, yrs * 52) / 2 : 0;
+        if (!weeks) { out.eligible = false; out.why = 'Needs 13 weeks of contributions in 4 years.'; }
+        out.durDays = weeks * 7;
+        out.waitDays = P.wait;
+        out.decay = { factor: P.decay, start: age >= 55 ? P.decayStart55 : P.decayStart, monthDays: P.monthDays };
+        ph(0, out.durDays, g, netOf(g));
+        out.resign = { type: 'none', days: 0, cut: 0 };
+        break;
+      }
+      case 'ES': {
+        const br = Math.min(gm, P.brCap);
+        const mx = P.max[Math.min(kids, 2)], mn = kids > 0 ? P.min[1] : P.min[0];
+        const b1 = clamp(P.r1 * br, mn, mx), b2 = clamp(P.r2 * br, mn, mx);
+        const ss = P.ss * br;
+        const dc = Math.min(yrs * 365, 2190);
+        const days = dc >= 360 ? Math.min(720, 120 + 60 * Math.floor((Math.min(dc, 2160) - 360) / 180 + 1e-9)) : 0;
+        if (!days) { out.eligible = false; out.why = 'Needs 360 days contributed in 6 years.'; }
+        out.durDays = days * DPM / 30;
+        const step = P.stepDays * DPM / 30;
+        ph(0, Math.min(step, out.durDays), b1, netOf(Math.max(0, b1 - ss)));
+        if (out.durDays > step) ph(step, out.durDays, b2, netOf(Math.max(0, b2 - ss)));
+        out.resign = { type: 'none', days: 0, cut: 0 };
+        break;
+      }
+      case 'PT': {
+        const RR = gm;
+        const netRatio = (G > 0 && pr.netMonthly > 0) ? Math.min(1, pr.netMonthly * 12 / G) : 0.7;
+        let g = Math.min(P.rate * RR, P.maxIas * P.ias, P.netCap * RR * netRatio);
+        g = Math.max(g, RR >= P.minWage ? P.minIasHigh * P.ias : P.minIas * P.ias);
+        const band = age < 30 ? 'u30' : age < 40 ? 'u40' : age < 50 ? 'u50' : 'o50';
+        const t = P.table[band], m = yrs * 12;
+        let days = 0;
+        if (yrs >= 1) days = m < 15 ? t[0] : m < 24 ? t[1] : t[2] + t[3] * Math.floor(Math.min(yrs, 20) / 5 + 1e-9);
+        if (!days) { out.eligible = false; out.why = 'Needs 360 days worked in 24 months.'; }
+        out.durDays = days;
+        ph(0, days, g, netOf(g));
+        out.resign = { type: 'none', days: 0, cut: 0 };
+        break;
+      }
+      case 'DK': {
+        const base = P.rate * gm * (1 - P.am);
+        const member = Number(pr.dkMemberYears == null ? 1 : pr.dkMemberYears);
+        const supp = member >= 4 && yrs >= 2;
+        const m1 = Math.min(base, supp ? P.maxSupp : P.max), m2 = Math.min(base, P.max);
+        if (member < 1 || yrs < 1) { out.eligible = false; out.why = member < 1 ? 'Needs ≥ 1 year of a-kasse membership.' : 'Needs the income requirement (≈ 1 year of work).'; }
+        out.durDays = P.durMonths * DPM;
+        ph(0, P.suppMonths * DPM, m1, netOf(m1));
+        ph(P.suppMonths * DPM, out.durDays, m2, netOf(m2));
+        out.resign = { type: 'delay', days: P.resignDays, cut: 0 };
+        break;
+      }
+      case 'SE': {
+        const inc = Math.min(gm, P.maxIncome);
+        const mm = Number(pr.seMemberMonths == null ? 12 : pr.seMemberMonths);
+        const rates = mm >= 12 ? P.rates.m12 : mm >= 6 ? P.rates.m6 : P.rates.m0;
+        let days = 0;
+        if (G >= 120000) days = yrs >= 11 / 12 ? 300 : yrs >= 8 / 12 ? 200 : yrs >= 4 / 12 ? 100 : 0;
+        if (!days) { out.eligible = false; out.why = 'Needs ≥ 120,000 SEK income and ≥ 4 months ≥ 11,000 SEK.'; }
+        out.durDays = days * 7 / 5;
+        out.waitDays = P.karens * 7 / 5;
+        [0, 100, 200].forEach((s, i) => { const g = rates[i] * inc * P.dayFactor; ph(s * 7 / 5, (s + 100) * 7 / 5, g, netOf(g)); });
+        out.resign = { type: 'delay', days: P.resignDays * 7 / 5, cut: 0 };
+        break;
+      }
+      case 'NO': {
+        const Gv = P.G, basis = Math.min(G, P.capG * Gv);
+        const m = P.rate * basis / 12 + kids * P.child * 260 / 12;
+        if (G < P.minG * Gv) { out.eligible = false; out.why = 'Needs income ≥ 1.5 G (204,824 NOK) in 12 months.'; }
+        out.durDays = (basis >= P.longG * Gv ? 104 : 52) * 7;
+        out.waitDays = P.wait * 7 / 5;
+        ph(0, out.durDays, m, netOf(m));
+        out.resign = { type: 'delay', days: P.resignDays, cut: 0 };
+        break;
+      }
+      case 'PL': {
+        const mult = yrs >= P.seniorYears ? P.senior : 1;
+        if (yrs < 1) { out.eligible = false; out.why = 'Needs 365 days of work in 18 months.'; }
+        out.durDays = (age >= 50 && yrs >= 20) ? P.durLong : P.dur;
+        ph(0, Math.min(P.firstDays, out.durDays), P.b1 * mult, netOf(P.b1 * mult));
+        ph(P.firstDays, out.durDays, P.b2 * mult, netOf(P.b2 * mult));
+        out.resign = { type: 'none', days: 0, cut: 0 };
+        break;
+      }
+      case 'IE': {
+        const wk = G / 52;
+        const toM = w => w * 52 / 12;
+        if (yrs >= 5) {
+          let prev = 0;
+          P.bands5.forEach(([to, rate, mx]) => { const w = Math.max(P.min, Math.min(rate * wk, mx)); ph(prev * 7, to * 7, toM(w), netOf(toM(w))); prev = to; });
+          out.durDays = 39 * 7;
+        } else if (yrs >= 2) {
+          const [to, rate, mx] = P.band2; const w = Math.max(P.min, Math.min(rate * wk, mx));
+          ph(0, to * 7, toM(w), netOf(toM(w))); out.durDays = to * 7;
+        } else { out.eligible = false; out.why = 'Needs 2 years (104 weeks) of PRSI.'; }
+        out.waitDays = P.wait * 7 / 6;
+        out.resign = { type: 'delay', days: P.resignDays, cut: 0 };
+        break;
+      }
+      case 'UK': {
+        const w = age >= 25 ? P.wk25 : P.wkU25, m = w * 52 / 12;
+        if (yrs < 2) { out.eligible = false; out.why = 'Needs Class 1 NI contributions in the last 2 tax years.'; }
+        out.durDays = P.days;
+        out.waitDays = P.wait;
+        ph(0, P.days, m, netOf(m));
+        out.resign = { type: 'delay', days: P.resignDays, cut: 0 };
+        break;
+      }
+    }
+    // optional override of the first-phase net amount (scales every phase)
+    const ov = Number(pr.netBenefitOverride || 0);
+    if (ov > 0 && out.phases.length && out.phases[0].net > 0) {
+      const f = ov / out.phases[0].net;
+      out.phases.forEach(p => { p.net = r2(p.net * f); });
+    }
+    if (!out.eligible) { out.phases = []; out.durDays = 0; }
+    return out;
+  }
+
+  // ---------- Day-by-day stress test ----------
+  function simulate(pl, scenario, needMonthly, lagDays, horizon) {
+    const acc = new Array(horizon + 1).fill(0); // cumulative accrued net benefit at end of day d
+    let start = pl.waitDays, dur = pl.durDays;
+    let active = pl.eligible && pl.phases.length > 0;
+    if (scenario === 'B') {
+      if (pl.resign.type === 'none') active = false;
+      else { start += pl.resign.days; dur = Math.max(0, dur - pl.resign.cut); }
+    }
+    const daily = new Array(horizon + 1).fill(0);
+    if (active) {
+      for (let d = 1; d <= horizon; d++) {
+        let b = 0;
+        for (const p of pl.phases) {
+          const s = start + p.from, e = start + Math.min(p.to, dur);
+          const ov = Math.max(0, Math.min(d, e) - Math.max(d - 1, s));
+          if (ov > 0) b += p.net / DPM * ov;
+        }
+        if (pl.decay && b > 0) {
+          const t = Math.max(0, d - 1 - start);
+          const k = Math.floor(t / pl.decay.monthDays + 1e-9) + 1;
+          b *= Math.pow(pl.decay.factor, Math.max(0, k - pl.decay.start + 1));
+        }
+        daily[d] = b;
+      }
+    }
+    const dd = new Array(horizon + 1).fill(0);
+    let maxDD = 0;
+    for (let d = 1; d <= horizon; d++) {
+      acc[d] = acc[d - 1] + daily[d];
+      const rec = d - lagDays >= 1 ? acc[d - lagDays] : 0;
+      dd[d] = needMonthly * d / DPM - rec;
+      if (dd[d] > maxDD) maxDD = dd[d];
+    }
+    return { daily, acc, dd, maxDD, start: active ? start : null, end: active ? start + dur : null, active };
+  }
+
+  const ANCHORS = [41, 61, 81, 96, 100];
+  const BANDS = [
+    { key: 'exposed', name: 'Exposed', apple: 'Very Low', min: 0 },
+    { key: 'basic', name: 'Basic', apple: 'Low', min: 41 },
+    { key: 'good', name: 'Good', apple: 'OK', min: 61 },
+    { key: 'vgood', name: 'Very good', apple: 'High', min: 81 },
+    { key: 'excellent', name: 'Excellent', apple: 'Very High', min: 96 }
+  ];
+
+  function scoreOf(s, T) {
+    if (!(T[0] > 0)) return 100;
+    if (s < T[0]) return ANCHORS[0] * s / T[0];
+    for (let i = 0; i < T.length - 1; i++) {
+      if (s < T[i + 1]) return ANCHORS[i] + (ANCHORS[i + 1] - ANCHORS[i]) * (s - T[i]) / (T[i + 1] - T[i]);
+    }
+    return 100;
+  }
+  function bandOf(s, T) {
+    let i = 0;
+    for (let k = 0; k < 4; k++) if (s >= T[k]) i = k + 1;
+    return BANDS[i];
+  }
+
+  const DEFAULT_ASSUMPTIONS = { shockMonths: 1, lagDays: 15, typicalMonths: 6, longMonths: 12, minStep: 0.5, spread: 0.04 };
+
+  function compute(code, pr, asm) {
+    const A = Object.assign({}, DEFAULT_ASSUMPTIONS, asm || {});
+    const E = Math.max(0, Number(pr.essential || 0));
+    const H = Math.max(0, Number(pr.otherIncome || 0));
+    const need = Math.max(0, E - H);
+    const pl = plan(code, pr);
+    const lag = Math.max(0, Math.round(Number(A.lagDays)));
+    const hT = Math.round(A.typicalMonths * DPM), hL = Math.round(A.longMonths * DPM);
+    const horizon = Math.max(hL, Math.round(24 * DPM));
+    const simA = simulate(pl, 'A', need, lag, horizon);
+    const simB = simulate(pl, 'B', need, lag, horizon);
+    const maxTo = (sim, h) => { let m = 0; for (let d = 1; d <= h; d++) if (sim.dd[d] > m) m = sim.dd[d]; return m; };
+    const shock = A.shockMonths * E;
+    const raw = {
+      basic: shock + need * (pl.waitDays + lag) / DPM,
+      good: shock + maxTo(simA, hT),
+      vgood: shock + maxTo(simA, hL),
+      excellent: shock + maxTo(simB, hL)
+    };
+    const step = A.minStep * E;
+    const T = [];
+    T[0] = raw.basic;
+    T[1] = Math.max(raw.good, T[0] + step);
+    T[2] = Math.max(raw.vgood, T[1] + step);
+    T[3] = Math.max(raw.excellent, T[2] + step);
+    T[4] = T[3] + shock;
+    const s = Math.max(0, Number(pr.savings || 0));
+    const score = scoreOf(s, T);
+    const band = bandOf(s, T);
+    const first = pl.phases.length ? pl.phases[0] : { gross: 0, net: 0 };
+    const nextIdx = T.findIndex(t => s < t);
+    const save = Math.max(0, Number(pr.monthlySaving || 0));
+    const next = nextIdx === -1 ? null : { index: nextIdx, gap: T[nextIdx] - s, months: save > 0 ? (T[nextIdx] - s) / save : null };
+    const excess = Math.max(0, s - T[4]);
+    return {
+      code, plan: pl, sims: { A: simA, B: simB }, raw, T, months: T.map(t => E > 0 ? t / E : null),
+      score, scoreInt: Math.floor(score + 1e-9), band, next, excess, oppCost: excess * A.spread,
+      firstGross: first.gross, firstNet: first.net,
+      replNet: pr.netMonthly > 0 ? first.net / pr.netMonthly : null,
+      coverE: E > 0 ? first.net / E : null, E, H, need, A, hT, hL, lag
+    };
+  }
+
+  function convertProfile(pr, fromCur, toCur) {
+    const f = D.FX[toCur] / D.FX[fromCur];
+    const o = Object.assign({}, pr);
+    ['grossAnnual', 'netMonthly', 'essential', 'otherIncome', 'savings', 'monthlySaving'].forEach(k => { if (o[k] != null) o[k] = Math.round(Number(o[k]) * f); });
+    o.netBenefitOverride = null;
+    return o;
+  }
+
+  const API = { DPM, deAlg, deTariff, plan, simulate, compute, convertProfile, scoreOf, bandOf, BANDS, ANCHORS, DEFAULT_ASSUMPTIONS, DATA: D };
+  if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.NETSCORE = API;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const N = window.NETSCORE, D = N.DATA, C = D.C, ORDER = D.ORDER, DPM = N.DPM;
+  const KEY = 'safetyNetScore.v1';
+  const EXAMPLE = { grossAnnual: 85000, netMonthly: 4300, essential: 2800, otherIncome: 0, savings: 10000, monthlySaving: 1000,
+    age: 32, years: 6, children: 0, deTaxClass: '1', dkMemberYears: 1, seMemberMonths: 12, beCategory: 'isole',
+    taxOverride: null, netBenefitOverride: null, example: true };
+  const DEF_ASM = Object.assign({}, N.DEFAULT_ASSUMPTIONS);
+  const LEVELS = [
+    { name: 'Basic', c: '--lv-1' }, { name: 'Good', c: '--lv-2' }, { name: 'Very good', c: '--lv-3' },
+    { name: 'Excellent', c: '--lv-4' }, { name: 'Ceiling', c: '--ink' }
+  ];
+  const $ = id => document.getElementById(id);
+  const el = (tag, attrs, kids) => { const e = document.createElement(tag); if (attrs) for (const k in attrs) { if (k === 'text') e.textContent = attrs[k]; else if (k === 'html') e.innerHTML = attrs[k]; else e.setAttribute(k, attrs[k]); } (kids || []).forEach(k => k && e.appendChild(k)); return e; };
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const sv = (tag, attrs) => { const e = document.createElementNS(svgNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+  // ---------- state ----------
+  function fresh() { return { v: 1, active: 'DE', tab: 'score', basis: 'saved', span: 12, asm: Object.assign({}, DEF_ASM), profiles: { DE: Object.assign({}, EXAMPLE) } }; }
+  function load() {
+    try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && o.v === 1 && o.profiles && C[o.active]) { o.asm = Object.assign({}, DEF_ASM, o.asm || {}); return o; } } } catch (e) { /* storage unavailable */ }
+    return fresh();
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
+  let S = load();
+
+  function ensureProfile(code, from) {
+    if (!S.profiles[code]) {
+      const src = S.profiles[from] || EXAMPLE;
+      const p = N.convertProfile(src, C[from] ? C[from].cur : 'EUR', C[code].cur);
+      p.converted = from; p.example = !!src.example; p.taxOverride = null; p.netBenefitOverride = null;
+      S.profiles[code] = p;
+    }
+    return S.profiles[code];
+  }
+  const prof = () => ensureProfile(S.active, 'DE');
+
+  // ---------- formatting ----------
+  const nfCache = {};
+  function fmtC(x, code) {
+    const c = C[code], k = c.locale + c.cur;
+    if (!nfCache[k]) nfCache[k] = new Intl.NumberFormat(c.locale, { style: 'currency', currency: c.cur, maximumFractionDigits: 0 });
+    return nfCache[k].format(Math.round(x || 0));
+  }
+  const eurF = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  const fmtEUR = x => eurF.format(Math.round(x || 0));
+  const toEUR = (x, code) => x / D.FX[C[code].cur];
+  const mo = x => (x == null || !isFinite(x)) ? '–' : x.toFixed(1);
+  const pct = x => (x == null || !isFinite(x)) ? '–' : Math.round(x * 100) + ' %';
+  function compact(x, code) { return fmtC(x, code); }
+
+  // ---------- inputs ----------
+  const MONEY = ['grossAnnual', 'netMonthly', 'essential', 'otherIncome', 'savings', 'monthlySaving'];
+  const NUMS = ['age', 'years', 'dkMemberYears', 'seMemberMonths'];
+  const SELS = ['children', 'deTaxClass', 'beCategory'];
+  const ASM = { 'a-typ': 'typicalMonths', 'a-long': 'longMonths', 'a-shock': 'shockMonths', 'a-lag': 'lagDays', 'a-step': 'minStep', 'a-spread': 'spread' };
+
+  function fillCountrySelect() {
+    const s = $('country');
+    ORDER.forEach(code => { const o = el('option', { value: code, text: C[code].name }); s.appendChild(o); });
+  }
+  function writeInputs() {
+    const p = prof(), c = C[S.active];
+    $('country').value = S.active;
+    MONEY.concat(NUMS).forEach(k => { const e = $(k); if (e) e.value = p[k] == null ? '' : p[k]; });
+    SELS.forEach(k => { const e = $(k); if (e) e.value = p[k] == null ? e.options[0].value : String(p[k]); });
+    $('taxOverride').value = p.taxOverride == null ? '' : Math.round(p.taxOverride * 1000) / 10;
+    $('taxOverride').placeholder = String(Math.round(c.defaultTax * 1000) / 10);
+    $('taxHint').textContent = c.defaultTax === 0 ? 'Tax-free by default here. Leave empty for the default.' : 'Default here: ' + Math.round(c.defaultTax * 100) + ' %. Leave empty to use it.';
+    $('netBenefitOverride').value = p.netBenefitOverride || '';
+    document.querySelectorAll('[data-cur]').forEach(e => { e.textContent = c.cur; });
+    document.querySelectorAll('.cs').forEach(e => { e.hidden = e.id !== 'cs-' + S.active; });
+    Object.keys(ASM).forEach(id => { const k = ASM[id]; $(id).value = k === 'spread' ? Math.round(S.asm[k] * 1000) / 10 : S.asm[k]; });
+    const conv = $('convNote');
+    if (p.converted) {
+      conv.hidden = false;
+      conv.textContent = 'Converted from your ' + C[p.converted].name + ' profile at ECB rates. Enter local pay and spending for ' + c.name + ' to sharpen the result.';
+    } else conv.hidden = true;
+    $('exNote').hidden = !p.example || !!p.converted;
+  }
+  function readInputs(ev) {
+    const p = prof();
+    MONEY.forEach(k => { const v = $(k).value; p[k] = v === '' ? 0 : Math.max(0, Number(v)); });
+    NUMS.forEach(k => { const v = $(k).value; if (v !== '') p[k] = Number(v); });
+    SELS.forEach(k => { p[k] = k === 'children' ? Number($(k).value) : $(k).value; });
+    const t = $('taxOverride').value; p.taxOverride = t === '' ? null : Math.min(0.9, Math.max(0, Number(t) / 100));
+    const nb = $('netBenefitOverride').value; p.netBenefitOverride = nb === '' ? null : Math.max(0, Number(nb));
+    Object.keys(ASM).forEach(id => { const v = $(id).value; if (v !== '') S.asm[ASM[id]] = ASM[id] === 'spread' ? Number(v) / 100 : Number(v); });
+    S.asm.typicalMonths = Math.max(1, Math.min(24, S.asm.typicalMonths));
+    S.asm.longMonths = Math.max(S.asm.typicalMonths, Math.min(24, S.asm.longMonths));
+    if (ev && ev.target && ev.target.id !== 'country' && !(ev.target.id in ASM)) { p.converted = null; p.example = false; }
+    $('convNote').hidden = !p.converted;
+    $('exNote').hidden = !p.example || !!p.converted;
+    save();
+  }
+
+  // ---------- compute ----------
+  const res = () => N.compute(S.active, prof(), S.asm);
+
+  // ---------- score tab ----------
+  function renderRing(r) {
+    const box = $('ring'); box.textContent = '';
+    const size = 200, R = 84, sw = 15, cx = 100, cy = 100, circ = 2 * Math.PI * R, gap = 3.2;
+    const edges = [0, 41, 61, 81, 96, 100], cols = ['--lv-0', '--lv-1', '--lv-2', '--lv-3', '--lv-4'];
+    const svg = sv('svg', { viewBox: `0 0 ${size} ${size}`, 'aria-hidden': 'true' });
+    const g = sv('g', { transform: `rotate(-90 ${cx} ${cy})` });
+    const score = Math.min(100, r.score);
+    const bi = N.BANDS.indexOf(r.band), fillCol = bi <= 0 ? 'var(--muted)' : `var(${cols[bi]})`;
+    for (let i = 0; i < 5; i++) {
+      const a = edges[i] / 100 * circ, len = (edges[i + 1] - edges[i]) / 100 * circ - gap;
+      const col = `var(${cols[i]})`;
+      g.appendChild(sv('circle', { cx, cy, r: R, fill: 'none', stroke: col, 'stroke-opacity': i === 0 ? 0.55 : 0.2, 'stroke-width': sw, 'stroke-dasharray': `${len} ${circ}`, 'stroke-dashoffset': -a }));
+      if (score > edges[i]) {
+        const fl = Math.max(0, Math.min(len, (Math.min(score, edges[i + 1]) - edges[i]) / 100 * circ - (score >= edges[i + 1] ? gap : 0)));
+        if (fl > 0.5) g.appendChild(sv('circle', { class: 'arc', cx, cy, r: R, fill: 'none', stroke: fillCol, 'stroke-width': sw, 'stroke-linecap': 'butt', 'stroke-dasharray': `${fl} ${circ}`, 'stroke-dashoffset': -a }));
+      }
+    }
+    svg.appendChild(g);
+    box.appendChild(svg);
+    const center = el('div', { class: 'center' }, [
+      el('div', { class: 'score', text: String(r.scoreInt) }),
+      el('div', { class: 'band', text: r.band.name }),
+      el('div', { class: 'of', text: 'out of 100' })
+    ]);
+    box.appendChild(center);
+    box.setAttribute('aria-label', `Safety net score ${r.scoreInt} out of 100, band ${r.band.name}`);
+  }
+
+  function renderVerdict(r) {
+    const p = prof(), code = S.active, A = r.A;
+    $('kicker').textContent = C[code].name + ' · ' + C[code].scheme;
+    let h, sub;
+    const k = r.band.key;
+    if (r.excess > 0) h = `You hold ${fmtC(r.excess, code)} more than this safety net needs.`;
+    else if (k === 'exposed') h = 'Not yet covered: a surprise bill or a slow first benefit payment would push you into debt.';
+    else if (k === 'basic') h = 'You can absorb a surprise bill and bridge the wait for your first benefit payment.';
+    else if (k === 'good') h = `You can ride out a typical job loss with a ${A.typicalMonths}-month search.`;
+    else if (k === 'vgood') h = `You can ride out a long job search of ${A.longMonths} months.`;
+    else h = `You could resign without a job lined up and still search for ${A.longMonths} months.`;
+    if (r.excess > 0) sub = `At ${Math.round(A.spread * 1000) / 10} % a year, that idle cash gives up about ${fmtC(r.oppCost, code)} a year (illustration, not a forecast).`;
+    else if (r.next) {
+      const lv = LEVELS[r.next.index].name;
+      sub = `Next level: ${lv} at ${fmtC(r.T[r.next.index], code)}. ${fmtC(r.next.gap, code)} to go` + (r.next.months != null ? `, about ${Math.ceil(r.next.months)} month${Math.ceil(r.next.months) === 1 ? '' : 's'} at your saving rate.` : '.');
+    } else sub = 'You are at your ceiling. Money above it is doing no safety work.';
+    $('headline').textContent = h;
+    $('subline').textContent = sub;
+    const bs = $('bandscale'); bs.textContent = '';
+    const bands = [['Exposed', '0–40', 41, '--lv-0'], ['Basic', '41–60', 20, '--lv-1'], ['Good', '61–80', 20, '--lv-2'], ['Very good', '81–95', 15, '--lv-3'], ['Excellent', '96–100', 5, '--lv-4']];
+    bands.forEach((b, i) => {
+      const d = el('div', { class: r.band === N.BANDS[i] ? 'on' : '' });
+      d.style.setProperty('--w', Math.max(b[2], 9)); d.style.setProperty('--c', `var(${b[3]})`);
+      d.appendChild(el('div', { class: 'bar' }));
+      d.appendChild(el('div', { class: 't' }, [document.createTextNode(b[0]), el('span', { text: b[1] })]));
+      bs.appendChild(d);
+    });
+  }
+
+  function renderTiles(r) {
+    const code = S.active, pl = r.plan, t = $('tiles'); t.textContent = '';
+    const tile = (k, v, s, alert) => { const d = el('div', { class: 'tile' + (alert ? ' alert' : '') }, [el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }), s ? el('div', { class: 's', text: s }) : null]); t.appendChild(d); };
+    if (!pl.eligible) {
+      tile('Benefit, first month', 'Not eligible', pl.why, true);
+    } else {
+      tile('Benefit, first month', fmtC(r.firstNet, code), r.firstGross && Math.abs(r.firstGross - r.firstNet) > 1 ? `net · ${fmtC(r.firstGross, code)} gross` : 'net, tax-free');
+    }
+    tile('Covers essentials', pl.eligible ? pct(r.need > 0 ? r.firstNet / r.need : null) : '0 %', `of ${fmtC(r.need, code)} a month` + (r.replNet != null ? ` · ${pct(r.replNet)} of your net pay` : ''));
+    tile('Starts after', Math.round(pl.waitDays) + ' days', `waiting days, then ~${r.lag} days to the first payment`);
+    let lasts, lastsSub;
+    if (!pl.eligible) { lasts = '–'; lastsSub = 'no entitlement'; }
+    else if (code === 'AT') { lasts = 'No limit'; lastsSub = `ALG ${Math.round(pl.phases[0].to / 7)} weeks, then Notstandshilfe`; }
+    else { lasts = mo(pl.durDays / DPM) + ' mo'; lastsSub = pl.phases.length > 1 ? 'with step-downs, see chart' : 'flat amount'; }
+    tile('Lasts', lasts, lastsSub);
+    let rs, rsub;
+    if (pl.resign.type === 'none') { rs = 'No benefit'; rsub = 'after a unilateral resignation'; }
+    else {
+      const wk = Math.round(pl.resign.days / 7);
+      rs = wk >= 1 ? `${wk}-week block` : `${Math.round(pl.resign.days)}-day block`;
+      rsub = code === 'DE' ? 'entitlement cut by at least ¼' : code === 'CH' ? 'suspension days, deducted from entitlement' : code === 'BE' ? 'model uses the maximum; the range is 4–52 weeks' : 'before benefits start';
+    }
+    tile('If you resign', rs, rsub, pl.resign.type === 'none');
+  }
+
+  function renderLadder(r) {
+    const code = S.active, p = prof(), E = r.E, s = Math.max(0, p.savings || 0);
+    const why = [
+      'A surprise bill plus the days before your first benefit payment arrives.',
+      `A typical job loss: ${r.A.typicalMonths} months to land a new role, living on benefits and savings.`,
+      `A long search of ${r.A.longMonths} months, including benefit step-downs or expiry.`,
+      `Freedom to resign: quit with no job lined up, take the sanction, and search for ${r.A.longMonths} months.`,
+      'Excellent plus a second surprise bill. Cash beyond this line is idle.'
+    ];
+    $('ladderSub').textContent = `In ${C[code].cur} and in months of essential spending (${fmtC(E, code)}). Cash savings now: ${fmtC(s, code)}.`;
+    const lad = $('ladder'); lad.textContent = '';
+    const curIdx = r.T.findIndex(t => s < t); // first level not reached
+    r.T.forEach((t, i) => {
+      const reached = s >= t;
+      const row = el('div', { class: 'lrow' + ((i === curIdx) ? ' cur' : '') });
+      const sw = el('div', { class: 'sw' }); sw.style.setProperty('--c', `var(${LEVELS[i].c})`);
+      if (i === 4) { sw.style.background = 'transparent'; sw.style.border = '2px solid var(--ink)'; }
+      row.appendChild(sw);
+      row.appendChild(el('div', { class: 'name' }, [document.createTextNode(LEVELS[i].name), el('small', { text: i < 4 ? `score ${N.ANCHORS[i]}` : 'score 100' })]));
+      const amt = el('div', { class: 'amt' }, [el('b', { text: fmtC(t, code) }), el('span', { text: `${mo(r.months[i])} months` + (C[code].cur !== 'EUR' ? ` · ${fmtEUR(toEUR(t, code))}` : '') })]);
+      row.appendChild(amt);
+      const w = el('div', { class: 'why' }, [document.createTextNode(why[i])]);
+      w.appendChild(el('div', { class: 'st ' + (reached ? 'ok' : 'todo'), text: reached ? '✓ Reached' : `${fmtC(t - s, code)} to go` }));
+      row.appendChild(w);
+      lad.appendChild(row);
+    });
+    // progress
+    const pr = $('progress'), ceil = r.T[4];
+    pr.querySelectorAll('.tick').forEach(e => e.remove());
+    pr.querySelector('.fill').style.width = Math.min(100, s / ceil * 100) + '%';
+    r.T.slice(0, 4).forEach(t => { const k = el('div', { class: 'tick' }); k.style.left = `calc(${t / ceil * 100}% - 1px)`; pr.appendChild(k); });
+    const pl = $('plegend'); pl.textContent = '';
+    pl.appendChild(el('span', { text: `Savings ${fmtC(s, code)} (${Math.round(Math.min(1, s / ceil) * 100)} % of ceiling)` }));
+    pl.appendChild(el('span', { text: `Ceiling ${fmtC(ceil, code)}` }));
+    const nn = $('nextNote');
+    if (r.excess > 0) nn.textContent = `${fmtC(r.excess, code)} sits above your ceiling. Moving it into your long-term plan keeps the safety net intact.`;
+    else if (r.next) nn.textContent = `Keep cash for the levels in an instant-access account covered by deposit insurance (EU: €100,000 per person per bank; Switzerland: CHF 100,000). Build Basic first, then Good. Excellent is optional insurance for your freedom to leave.`;
+    else nn.textContent = 'You are exactly at your ceiling.';
+  }
+
+  // ---------- stress-test chart ----------
+  function niceStep(range, target) { const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+
+  function renderChart(r) {
+    const code = S.active, span = S.span, days = Math.round(span * DPM);
+    const A = r.sims.A, B = r.sims.B, s = Math.max(0, prof().savings || 0);
+    const box = $('chart'); box.textContent = '';
+    const W = Math.max(320, box.clientWidth || 760), H = W < 520 ? 260 : 300;
+    let lo = 0, hi = s;
+    for (let d = 0; d <= days; d++) { lo = Math.min(lo, A.dd[d] || 0, B.dd[d] || 0); hi = Math.max(hi, A.dd[d] || 0, B.dd[d] || 0); }
+    if (hi <= 0) hi = 1;
+    const step = niceStep(hi - lo, W < 520 ? 4 : 5); lo = Math.floor(lo / step) * step; hi = Math.ceil(hi * 1.06 / step) * step;
+    let longest = 0; for (let v = lo; v <= hi + 1e-6; v += step) longest = Math.max(longest, compact(v, code).length);
+    const m = { l: Math.max(48, Math.round(longest * 6.4 + 14)), r: 16, t: 16, b: 34 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const x = d => m.l + d / days * pw, y = v => m.t + (hi - v) / (hi - lo) * ph;
+    const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Cumulative cash drawn from savings over time for job loss and resignation' });
+    // grid + y ticks
+    for (let v = lo; v <= hi + 1e-6; v += step) {
+      svg.appendChild(sv('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: Math.abs(v) < 1e-6 ? 'var(--line-2)' : 'var(--line)', 'stroke-width': 1 }));
+      const tx = sv('text', { x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end' }); tx.textContent = compact(v, code); svg.appendChild(tx);
+    }
+    // x ticks (months)
+    const every = span > 12 ? 3 : 1;
+    for (let mth = 0; mth <= span; mth += every) {
+      const xx = x(mth * DPM);
+      svg.appendChild(sv('line', { x1: xx, x2: xx, y1: H - m.b, y2: H - m.b + 4, stroke: 'var(--line-2)' }));
+      const tx = sv('text', { x: xx, y: H - m.b + 17, 'text-anchor': 'middle' }); tx.textContent = mth === 0 ? '0' : String(mth); svg.appendChild(tx);
+    }
+    const xl = sv('text', { x: W - m.r, y: H - 2, 'text-anchor': 'end' }); xl.textContent = 'months without salary'; svg.appendChild(xl);
+    // savings line
+    if (s > 0 && s >= lo && s <= hi) {
+      svg.appendChild(sv('line', { x1: m.l, x2: W - m.r, y1: y(s), y2: y(s), stroke: 'var(--ink-2)', 'stroke-width': 1.5 }));
+      const t = sv('text', { x: m.l + 6, y: y(s) - 6, 'text-anchor': 'start' }); t.textContent = 'Your savings ' + fmtC(s, code); t.setAttribute('style', 'fill: var(--ink-2); font-weight:600'); svg.appendChild(t);
+    }
+    const series = [{ sim: B, c: 'var(--s-b)', name: 'Resignation (scenario B)' }, { sim: A, c: 'var(--s-a)', name: 'Job loss (scenario A)' }];
+    series.forEach(se => {
+      let dstr = '';
+      for (let d = 0; d <= days; d++) dstr += (d ? 'L' : 'M') + x(d).toFixed(1) + ',' + y(se.sim.dd[d] || 0).toFixed(1);
+      svg.appendChild(sv('path', { d: dstr + `L${x(days)},${y(0)}L${x(0)},${y(0)}Z`, fill: se.c, 'fill-opacity': 0.08, stroke: 'none' }));
+      svg.appendChild(sv('path', { d: dstr, fill: 'none', stroke: se.c, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    });
+    // peak markers + labels (selective)
+    const peaks = series.map(se => { let bd = 0, bv = -Infinity; for (let d = 0; d <= days; d++) if ((se.sim.dd[d] || 0) > bv) { bv = se.sim.dd[d] || 0; bd = d; } return { d: bd, v: bv, c: se.c }; });
+    peaks.forEach((pk, i) => {
+      if (pk.v <= 0) return;
+      svg.appendChild(sv('circle', { cx: x(pk.d), cy: y(pk.v), r: 5, fill: pk.c, stroke: 'var(--surface)', 'stroke-width': 2 }));
+      const right = x(pk.d) > W * 0.7;
+      const t = sv('text', { x: x(pk.d) + (right ? -9 : 9), y: y(pk.v) + (i === 0 ? -9 : 15), 'text-anchor': right ? 'end' : 'start' });
+      t.textContent = 'Peak ' + fmtC(pk.v, code); t.setAttribute('style', 'fill: var(--ink); font-weight:600'); svg.appendChild(t);
+    });
+    // crosshair
+    const cross = sv('line', { x1: 0, x2: 0, y1: m.t, y2: H - m.b, stroke: 'var(--ink-2)', 'stroke-width': 1, visibility: 'hidden' });
+    svg.appendChild(cross);
+    const hit = sv('rect', { x: m.l, y: m.t, width: pw, height: ph, fill: 'transparent', tabindex: '0', 'aria-label': 'Chart area. Use the arrow keys to move through the months.' });
+    svg.appendChild(hit);
+    box.appendChild(svg);
+    const tip = el('div', { class: 'tip', hidden: '' }); box.appendChild(tip);
+    const show = d => {
+      d = Math.max(0, Math.min(days, d));
+      cross.setAttribute('x1', x(d)); cross.setAttribute('x2', x(d)); cross.setAttribute('visibility', 'visible');
+      tip.textContent = '';
+      tip.appendChild(el('div', { class: 'h', text: `Month ${(d / DPM).toFixed(1)} (day ${d})` }));
+      const row = (c, label, val) => { const rr = el('div', { class: 'r' }, [el('i'), el('span', { text: label }), el('b', { text: val })]); rr.querySelector('i').style.setProperty('--c', c); tip.appendChild(rr); };
+      row('var(--s-a)', 'Drawn, job loss', fmtC(A.dd[d] || 0, code));
+      row('var(--s-b)', 'Drawn, resignation', fmtC(B.dd[d] || 0, code));
+      row('var(--s-a)', 'Benefit rate, job loss', fmtC((A.daily[d] || 0) * DPM, code) + '/mo');
+      row('var(--s-b)', 'Benefit rate, resignation', fmtC((B.daily[d] || 0) * DPM, code) + '/mo');
+      tip.hidden = false;
+      const bw = box.clientWidth, sc = bw / W, px = x(d) * sc, tw = tip.offsetWidth;
+      tip.style.left = Math.max(0, Math.min(bw - tw, px + 12 > bw - tw ? px - tw - 12 : px + 12)) + 'px';
+      tip.style.top = (m.t * sc) + 'px';
+      hit._d = d;
+    };
+    const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
+    hit.addEventListener('pointermove', ev => { const rect = svg.getBoundingClientRect(); const px = (ev.clientX - rect.left) / rect.width * W; show(Math.round((px - m.l) / pw * days)); });
+    hit.addEventListener('pointerleave', hide);
+    hit.addEventListener('focus', () => show(hit._d || Math.round(DPM)));
+    hit.addEventListener('blur', hide);
+    hit.addEventListener('keydown', ev => { if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { ev.preventDefault(); show((hit._d || 0) + (ev.key === 'ArrowRight' ? 1 : -1) * Math.round(DPM)); } });
+    // legend
+    const lg = $('legendA'); lg.textContent = '';
+    [['var(--s-a)', 'Job loss (scenario A)'], ['var(--s-b)', 'Resignation (scenario B)'], ['var(--ink-2)', 'Your savings']].forEach(([c, t]) => { const sp = el('span'); const i = el('i'); i.style.setProperty('--c', c); sp.appendChild(i); sp.appendChild(document.createTextNode(t)); lg.appendChild(sp); });
+    // table twin
+    const tw = $('chartTable'); tw.textContent = '';
+    const tb = el('table'); const thead = el('thead'); const trh = el('tr');
+    ['Month', 'Benefit A (net)', 'Drawn A', 'Benefit B (net)', 'Drawn B'].forEach(h => trh.appendChild(el('th', { text: h }))); thead.appendChild(trh); tb.appendChild(thead);
+    const tbody = el('tbody');
+    for (let mth = 1; mth <= span; mth++) {
+      const d1 = Math.round((mth - 1) * DPM), d2 = Math.round(mth * DPM);
+      const sumA = (A.acc[d2] || 0) - (A.acc[d1] || 0), sumB = (B.acc[d2] || 0) - (B.acc[d1] || 0);
+      const tr = el('tr');
+      [String(mth), fmtC(sumA, code), fmtC(A.dd[d2] || 0, code), fmtC(sumB, code), fmtC(B.dd[d2] || 0, code)].forEach(v => tr.appendChild(el('td', { text: v })));
+      tbody.appendChild(tr);
+    }
+    tb.appendChild(tbody); tw.appendChild(tb);
+  }
+
+  function renderCountryNote(r) {
+    const code = S.active, c = C[code], box = $('countryNote'); box.textContent = '';
+    box.appendChild(el('div', { class: 'cardhead' }, [el('div', {}, [el('h2', { text: c.name + ': what drives your result' }), el('p', { text: c.scheme + ' · rules as of 26 Sep 2026' })])]));
+    const dl = el('dl', { class: 'facts' });
+    [['Formula', c.facts.formula], ['Cap', c.facts.cap], ['Waiting', c.facts.waiting], ['If you resign', c.facts.resign], ['Tax', c.facts.tax], ['Watch', c.facts.watch]].forEach(([k, v]) => { dl.appendChild(el('dt', { text: k })); dl.appendChild(el('dd', { text: v })); });
+    box.appendChild(dl);
+    if (r.plan.notes.length) box.appendChild(el('p', { class: 'note', style: 'margin-top:12px', text: r.plan.notes.join(' ') }));
+    if (code === 'DE' && r.plan.detail) {
+      const d = r.plan.detail;
+      box.appendChild(el('p', { class: 'mono muted', style: 'margin-top:12px', text: `Engine check · Bemessungsentgelt ${d.be.toFixed(2)} €/day − 20 % (${(d.be * 0.2).toFixed(2)}) − wage tax ${d.lstD.toFixed(2)} − Soli ${d.soliD.toFixed(2)} = ${d.le.toFixed(2)} € → ALG ${d.algD.toFixed(2)} €/day × 30` }));
+    }
+    const srcs = el('div', { class: 'srcs', style: 'margin-top:12px' });
+    c.sources.forEach(([t, u]) => srcs.appendChild(el('a', { href: u, target: '_blank', rel: 'noopener', text: t })));
+    box.appendChild(srcs);
+  }
+
+  function renderScore() {
+    const r = res();
+    renderRing(r); renderVerdict(r); renderTiles(r); renderLadder(r); renderChart(r); renderCountryNote(r);
+    document.querySelectorAll('[data-span]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.span) === S.span)));
+  }
+
+  // ---------- compare ----------
+  function compareProfiles() {
+    const base = prof(), baseCur = C[S.active].cur;
+    return ORDER.map(code => {
+      let p, basis;
+      if (code === S.active) { p = base; basis = 'current'; }
+      else if (S.basis === 'saved' && S.profiles[code] && !S.profiles[code].converted) { p = S.profiles[code]; basis = 'saved'; }
+      else { p = N.convertProfile(base, baseCur, C[code].cur); p.taxOverride = null; basis = 'converted'; }
+      const r = N.compute(code, p, S.asm);
+      return { code, p, r, basis };
+    });
+  }
+  function renderCompare() {
+    const rows = compareProfiles();
+    const savedN = rows.filter(x => x.basis === 'saved').length;
+    $('cmpBasis').textContent = S.basis === 'saved'
+      ? (savedN === 0
+        ? `No other country profiles saved yet, so every other country uses your ${C[S.active].name} profile converted at ECB rates. Open a country in My score and enter local pay and spending to refine it. Months of spending hold up better across countries than the amounts.`
+        : `Uses your saved profile for ${savedN} ${savedN === 1 ? 'country' : 'countries'} (marked •) and converts your ${C[S.active].name} profile at ECB rates for the rest. Months of spending hold up better across countries than the amounts.`)
+      : `Converts your ${C[S.active].name} profile at ECB rates (25 Sep 2026) for every country. Months of spending hold up better across countries than the amounts.`;
+    document.querySelectorAll('[data-basis]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.basis === S.basis)));
+    rows.sort((a, b) => a.r.months[3] - b.r.months[3] || a.r.months[1] - b.r.months[1]);
+    // dot plot
+    const box = $('cmpChart'); box.textContent = '';
+    const W = Math.max(320, box.clientWidth || 760), rowH = 30, m = { l: W < 520 ? 104 : 132, r: 20, t: 8, b: 30 };
+    const H = m.t + m.b + rows.length * rowH, pw = W - m.l - m.r;
+    const maxM = Math.max(6, Math.ceil(Math.max(...rows.map(x => x.r.months[4] || 0)) / 2) * 2);
+    const x = v => m.l + Math.min(v, maxM) / maxM * pw;
+    const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Levels by country in months of essential spending' });
+    for (let v = 0; v <= maxM; v += 2) {
+      svg.appendChild(sv('line', { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b, stroke: v === 0 ? 'var(--line-2)' : 'var(--line)' }));
+      const t = sv('text', { x: x(v), y: H - m.b + 16, 'text-anchor': 'middle' }); t.textContent = String(v); svg.appendChild(t);
+    }
+    const xl = sv('text', { x: W - m.r, y: H - 2, 'text-anchor': 'end' }); xl.textContent = 'months of essential spending'; svg.appendChild(xl);
+    const tip = el('div', { class: 'tip', hidden: '' });
+    const cols = ['var(--lv-1)', 'var(--lv-2)', 'var(--lv-3)', 'var(--lv-4)'];
+    rows.forEach((row, i) => {
+      const cy = m.t + i * rowH + rowH / 2, mm = row.r.months;
+      const g = sv('g', { tabindex: '0', role: 'button', 'aria-label': `${C[row.code].name}: Good ${mo(mm[1])}, Excellent ${mo(mm[3])} months` , style: 'cursor:pointer' });
+      g.appendChild(sv('rect', { x: 0, y: cy - rowH / 2, width: W, height: rowH, fill: row.code === S.active ? 'var(--accent-wash)' : 'transparent' }));
+      const lbl = sv('text', { x: m.l - 10, y: cy + 4, 'text-anchor': 'end', class: 'cmp-rowlabel' });
+      lbl.textContent = C[row.code].name + (row.basis === 'saved' ? ' •' : '');
+      if (row.code === S.active) lbl.setAttribute('style', 'font-weight:700; fill: var(--ink)');
+      g.appendChild(lbl);
+      g.appendChild(sv('line', { x1: x(mm[0]), x2: x(mm[4]), y1: cy, y2: cy, stroke: 'var(--line-2)', 'stroke-width': 2 }));
+      g.appendChild(sv('line', { x1: x(mm[1]), x2: x(mm[3]), y1: cy, y2: cy, stroke: 'var(--lv-2)', 'stroke-width': 2, 'stroke-opacity': 0.5 }));
+      [0, 1, 2, 3].forEach(k => g.appendChild(sv('circle', { cx: x(mm[k]), cy, r: k === 1 || k === 3 ? 5.5 : 4, fill: cols[k], stroke: 'var(--surface)', 'stroke-width': 2 })));
+      g.appendChild(sv('line', { x1: x(mm[4]), x2: x(mm[4]), y1: cy - 7, y2: cy + 7, stroke: 'var(--ink)', 'stroke-width': 2 }));
+      const showTip = () => {
+        tip.textContent = '';
+        tip.appendChild(el('div', { class: 'h', text: C[row.code].name + (row.basis === 'converted' ? ' (converted profile)' : row.basis === 'saved' ? ' (your profile)' : ' (current)') }));
+        ['Basic', 'Good', 'Very good', 'Excellent', 'Ceiling'].forEach((n, k) => {
+          const rr = el('div', { class: 'r' }, [el('i'), el('span', { text: n }), el('b', { text: `${mo(mm[k])} mo · ${fmtEUR(toEUR(row.r.T[k], row.code))}` })]);
+          rr.querySelector('i').style.setProperty('--c', k < 4 ? cols[k] : 'var(--ink)'); tip.appendChild(rr);
+        });
+        tip.hidden = false;
+        const sc = box.clientWidth / W; tip.style.left = Math.min(box.clientWidth - tip.offsetWidth, x(mm[3]) * sc + 12) + 'px'; tip.style.top = Math.max(0, (cy - 20) * sc) + 'px';
+      };
+      g.addEventListener('pointerenter', showTip); g.addEventListener('focus', showTip);
+      g.addEventListener('pointerleave', () => { tip.hidden = true; }); g.addEventListener('blur', () => { tip.hidden = true; });
+      g.addEventListener('click', () => openCountry(row.code));
+      g.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openCountry(row.code); } });
+      svg.appendChild(g);
+    });
+    box.appendChild(svg); box.appendChild(tip);
+    const lg = $('legendC'); lg.textContent = '';
+    [['var(--lv-1)', 'Basic'], ['var(--lv-2)', 'Good'], ['var(--lv-3)', 'Very good'], ['var(--lv-4)', 'Excellent'], ['var(--ink)', 'Ceiling (tick)']].forEach(([c, t]) => { const sp = el('span'); const i = el('i'); i.style.cssText = `--c:${c};width:10px;height:10px;border-radius:50%`; if (t.startsWith('Ceiling')) i.style.cssText = `--c:${c};width:2px;height:12px;border-radius:1px`; sp.appendChild(i); sp.appendChild(document.createTextNode(t)); lg.appendChild(sp); });
+    lg.appendChild(el('span', { class: 'muted', text: '• = your saved profile' }));
+    // table
+    const tw = $('cmpTable'); tw.textContent = '';
+    const tb = el('table'), thead = el('thead'), trh = el('tr');
+    ['Country', 'Benefit / month (net)', '≈ EUR', 'Covers essentials', 'Lasts', 'If you resign', 'Basic', 'Good', 'Very good', 'Excellent', 'Ceiling', 'Excellent (EUR)'].forEach(h => trh.appendChild(el('th', { text: h })));
+    thead.appendChild(trh); tb.appendChild(thead);
+    const tbody = el('tbody');
+    rows.forEach(row => {
+      const r = row.r, pl = r.plan;
+      const tr = el('tr', { class: 'click' + (row.code === S.active ? ' active' : ''), tabindex: '0' });
+      const lasts = !pl.eligible ? '–' : row.code === 'AT' ? 'no limit' : mo(pl.durDays / DPM) + ' mo';
+      const rs = pl.resign.type === 'none' ? el('span', { class: 'pill none', text: 'no benefit' }) : el('span', { class: 'pill', text: `${Math.round(pl.resign.days / 7)} wk` });
+      const cells = [C[row.code].name + (row.basis === 'saved' ? ' •' : ''), pl.eligible ? fmtC(r.firstNet, row.code) : 'not eligible', fmtEUR(toEUR(r.firstNet, row.code)), pl.eligible ? pct(r.need > 0 ? r.firstNet / r.need : null) : '0 %', lasts, rs, mo(r.months[0]), mo(r.months[1]), mo(r.months[2]), mo(r.months[3]), mo(r.months[4]), fmtEUR(toEUR(r.T[3], row.code))];
+      cells.forEach((v, k) => { const td = el('td'); if (typeof v === 'string') td.textContent = v; else td.appendChild(v); if (k === 0 && row.code === S.active) td.style.fontWeight = '700'; tr.appendChild(td); });
+      tr.addEventListener('click', () => openCountry(row.code));
+      tr.addEventListener('keydown', ev => { if (ev.key === 'Enter') openCountry(row.code); });
+      tbody.appendChild(tr);
+    });
+    tb.appendChild(tbody); tw.appendChild(tb);
+  }
+
+  // ---------- rules ----------
+  function renderRules() {
+    const jump = $('jump'), cards = $('cards');
+    if (cards.childElementCount) return;
+    ORDER.forEach(code => {
+      const c = C[code];
+      const a = el('a', { href: '#r-' + code, class: 'chip', text: c.name });
+      a.addEventListener('click', ev => { ev.preventDefault(); $('r-' + code).scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      jump.appendChild(a);
+      const card = el('article', { class: 'panel rcard', id: 'r-' + code });
+      card.appendChild(el('header', {}, [el('div', {}, [el('h3', { text: c.name }), el('div', { class: 'muted', style: 'font-size:12.5px', text: c.scheme })]), el('span', { class: 'code', text: c.cur })]));
+      const dl = el('dl', { class: 'facts' });
+      [['Formula', c.facts.formula], ['Cap', c.facts.cap], ['Duration', c.facts.duration], ['Waiting', c.facts.waiting], ['If you resign', c.facts.resign], ['Eligibility', c.facts.eligibility], ['Tax', c.facts.tax], ['Watch', c.facts.watch]].forEach(([k, v]) => { dl.appendChild(el('dt', { text: k })); dl.appendChild(el('dd', { text: v })); });
+      card.appendChild(dl);
+      const srcs = el('div', { class: 'srcs' });
+      c.sources.forEach(([t, u]) => srcs.appendChild(el('a', { href: u, target: '_blank', rel: 'noopener', text: t })));
+      card.appendChild(srcs);
+      cards.appendChild(card);
+    });
+    const fx = el('article', { class: 'panel rcard' });
+    fx.appendChild(el('header', {}, [el('h3', { text: 'Exchange rates and score bands' })]));
+    const dl = el('dl', { class: 'facts' });
+    [['FX', `1 EUR = ${D.FX.CHF} CHF · ${D.FX.DKK} DKK · ${D.FX.SEK} SEK · ${D.FX.NOK} NOK · ${D.FX.PLN} PLN · ${D.FX.GBP} GBP (ECB reference rates, 25 Sep 2026)`], ['Score bands', 'Apple Sleep Score since watchOS 26.2: Very Low 0–40, Low 41–60, OK 61–80, High 81–95, Very High 96–100. Here they are named Exposed, Basic, Good, Very good and Excellent.']].forEach(([k, v]) => { dl.appendChild(el('dt', { text: k })); dl.appendChild(el('dd', { text: v })); });
+    fx.appendChild(dl);
+    const s2 = el('div', { class: 'srcs' });
+    [['ECB reference rates', D.FX.source], ['Apple — Sleep Score', D.APPLE.source]].forEach(([t, u]) => s2.appendChild(el('a', { href: u, target: '_blank', rel: 'noopener', text: t })));
+    fx.appendChild(s2); cards.appendChild(fx);
+  }
+
+  // ---------- navigation ----------
+  function setTab(tab) {
+    S.tab = tab; save();
+    document.querySelectorAll('[role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+    ['score', 'compare', 'rules', 'method'].forEach(t => { $('p-' + t).hidden = t !== tab; });
+    try { if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab); } catch (e) { /* ignore */ }
+    renderTab();
+  }
+  function renderTab() {
+    if (S.tab === 'score') renderScore();
+    else if (S.tab === 'compare') renderCompare();
+    else if (S.tab === 'rules') renderRules();
+  }
+  function openCountry(code) {
+    const from = S.active; S.active = code; ensureProfile(code, from); save(); writeInputs(); setTab('score');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---------- wire up ----------
+  fillCountrySelect();
+  writeInputs();
+  let timer = null;
+  const onInput = ev => { readInputs(ev); clearTimeout(timer); timer = setTimeout(renderTab, 90); };
+  document.querySelectorAll('.inputs input, .inputs select:not(#country)').forEach(e => { e.addEventListener('input', onInput); e.addEventListener('change', onInput); });
+  $('country').addEventListener('change', ev => { const from = S.active; S.active = ev.target.value; ensureProfile(S.active, from); save(); writeInputs(); renderTab(); });
+  $('resetAsm').addEventListener('click', () => { S.asm = Object.assign({}, DEF_ASM); prof().taxOverride = null; prof().netBenefitOverride = null; save(); writeInputs(); renderTab(); });
+  $('resetAll').addEventListener('click', () => { S = fresh(); save(); writeInputs(); setTab('score'); });
+  document.querySelectorAll('[role="tab"]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  document.querySelectorAll('[data-span]').forEach(b => b.addEventListener('click', () => { S.span = Number(b.dataset.span); save(); renderScore(); }));
+  document.querySelectorAll('[data-basis]').forEach(b => b.addEventListener('click', () => { S.basis = b.dataset.basis; save(); renderCompare(); }));
+  let rz = null; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderTab, 150); });
+  const h = (location.hash || '').replace('#', '');
+  setTab(['score', 'compare', 'rules', 'method'].includes(h) ? h : (S.tab || 'score'));
+})();
+
+</script>
+
+</body></html>

@@ -1,0 +1,21 @@
+{
+  "name": "Gains & Greeks",
+  "short_name": "Gains & Greeks",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fafcfb",
+  "theme_color": "#fafcfb",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
