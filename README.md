@@ -1,18 +1,28 @@
+# Our apps
+
+**All apps on one page:** https://thrugg.github.io/Thrugg-/apps/
+
+| App | What it does | Link | Sync |
+|---|---|---|---|
+| Cordée | Hikes in the Alps: 3D map, weather, dog filter, logbook | https://thrugg.github.io/Thrugg-/ | Yes |
+| Safety Net Score | Emergency fund sized to unemployment insurance in 16 countries | https://thrugg.github.io/Thrugg-/safety-net/ | Yes |
+| Gains & Greeks | Investor tax desk, country comparison, options lab | https://thrugg.github.io/Thrugg-/gains-greeks/ | Yes |
+| Forkcast | Snap a meal, get the nutrition (opens in Claude) | https://claude.ai/artifact/5wenBM41wM6kANsCCpzwRN | In Claude |
+| Prüfstand | German car market analyst (opens in Claude) | https://claude.ai/artifact/EsViuZGJAHhRTYqBgBnQSu | In Claude |
+
+**On the iPhone:** open a link in Safari, tap Share, then **Add to Home Screen**. It opens full-screen like an app. On a Mac, bookmark it (or in Safari, File → Add to Dock).
+
+**Adding an app later:** put it in its own folder (like `safety-net/`), add a row to the table above and a card to `apps/index.html`. For an app copied from a claude.ai artifact, `tools/port_apps.py` adds the Home Screen icon and cloud sync.
+
 # Cordée
 
 A hiking app for mountain and lake hikes in Bavaria, Austria, Switzerland and the Dolomites: a 3D map, the weather at the trailhead and at the top of every hike, a dog filter, and a shared logbook of the hikes you've done.
 
-**Open it:** https://thrugg.github.io/Thrugg-/
+## Saving and syncing (all apps)
 
-## On the iPhone
+Everything you enter is saved automatically on the device. Sign in once on each device (Cordée: Settings → Sync; other apps: the "Sign in to sync" button at the bottom left) and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once. The sync runs on Supabase (`tools/supabase-setup.sql`, settings in `cloud.js`).
 
-Open the address in Safari, tap Share, then **Add to Home Screen**. It opens full-screen like an app. On a Mac, just bookmark it (or in Safari, File → Add to Dock).
-
-## Saving and syncing
-
-Everything you enter (names, the dog, home base, hikes done, the bucket list) is saved automatically on the device. Once the shared Supabase account is set up (`tools/supabase-setup.sql`, keys in `cloud.js`), sign in once on each device and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once.
-
-Your logbook, names and settings live in your browser and your own Supabase project, never in this repository.
+Your logbook, names, settings and inputs live in your browser and your own Supabase project, never in this repository.
 
 ## New hikes every week
 
