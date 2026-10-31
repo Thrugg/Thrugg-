@@ -3,7 +3,7 @@ import { today } from './calc.js';
 
 export const KEY = 'forge.v1';
 const DEF = () => ({
-  v: 1,
+  v: 2,
   profile: { lang: (navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en', units: 'metric', name: '', sex: null, dob: null, cm: null, variant: 'classic', onboarded: false },
   safety: { under18: false, preg: false, ed: false, med: false },
   activity: { stepsAvg: 8000, stepsInc: true, flights: 0, strideCm: null, occupation: 'desk', sleepH: 7.5, years: 0, workouts: [] },
@@ -23,6 +23,8 @@ function merge(base, x) {
 }
 export function load() {
   try { const raw = localStorage.getItem(KEY); S = raw ? merge(DEF(), JSON.parse(raw)) : DEF(); } catch (e) { S = DEF(); }
+  // v2: weight-training intensity now reads "typical session" (3.5 MET) for what was "moderate — can talk" (5.0 MET)
+  if ((S.v || 1) < 2) { for (const w of S.activity.workouts || []) if (w.type === 'strength' && w.intensity === 'moderate') w.intensity = 'light'; S.v = 2; }
   return S;
 }
 let timer = null;

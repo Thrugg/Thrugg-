@@ -1,5 +1,5 @@
 /* Forge — calculation engine. Pure functions, no DOM, metric units. Tested in test/calc.test.mjs. */
-import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION } from './data.js';
+import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION, REPS, ERG, VJ, VJ_P, DOMAINS, DOMAIN_AGG } from './data.js';
 
 export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 export const sum = a => a.reduce((s, x) => s + (x || 0), 0);
@@ -56,13 +56,19 @@ export function rmrEquations({ sex, kg, cm, age, ffm }) {
   if (ffm > 0) Object.assign(r, { katch: 370 + 21.6 * ffm, cunningham: 500 + 22 * ffm, tinsleyFFM: 25.9 * ffm + 284, tenHaafFFM: 22.771 * ffm + 484.264 });
   return r;
 }
+/* bfSd: 1-SD of the body-fat estimate. When it only rests on a smart scale or a guess (SD > 4 points), the lean-mass
+   equations get half their weight, because a ±6-point body fat moves fat-free mass by ±5–6 kg. */
 export function rmrEnsemble(p) {
   const e = rmrEquations(p);
+  const ffmSet = p.trained ? [['mifflin', 0.25], ['tinsleyFFM', 0.25], ['tenHaafFFM', 0.25], ['cunningham', 0.25]] : [['mifflin', 0.5], ['katch', 0.5]];
+  const bwSet = p.trained ? [['mifflin', 0.5], ['tinsleyBW', 0.25], ['tenHaafBW', 0.25]] : [['mifflin', 1]];
   let parts;
-  if (p.ffm > 0 && p.trained) parts = [['mifflin', 0.25], ['tinsleyFFM', 0.25], ['tenHaafFFM', 0.25], ['cunningham', 0.25]];
-  else if (p.ffm > 0) parts = [['mifflin', 0.5], ['katch', 0.5]];
-  else if (p.trained) parts = [['mifflin', 0.5], ['tinsleyBW', 0.25], ['tenHaafBW', 0.25]];
-  else parts = [['mifflin', 1]];
+  if (p.ffm > 0) {
+    const wF = p.bfSd > 4 ? 0.5 : 1, acc = {};
+    for (const [k, w] of ffmSet) acc[k] = (acc[k] || 0) + w * wF;
+    if (wF < 1) for (const [k, w] of bwSet) acc[k] = (acc[k] || 0) + w * (1 - wF);
+    parts = Object.entries(acc);
+  } else parts = bwSet;
   const value = sum(parts.map(([k, w]) => w * e[k]));
   return { value, eq: e, parts, sd: 0.10 * value };
 }
@@ -88,7 +94,7 @@ export function workoutEnergy(w, kg, CF) {
   else { session = (met - 1) * CF * kg * (min / 60); method = 'met'; }
   const week = session * per;
   const epoc = (w.intensity === 'light' ? 0 : 0.05) * week;
-  return { type: w.type, met, code, method, session, kcalDay: week / 7, epocDay: epoc / 7, hoursDay: min * per / 60 / 7, stepsDay: (c.cadence || 0) * min * per / 7 };
+  return { type: w.type, met, code, method, session, kcalDay: week / 7, epocDay: epoc / 7, hoursDay: min * per / 60 / 7, stepsDay: (w.spm ?? c.cadence ?? 0) * min * per / 7, watch: w.watchKcal || null };
 }
 
 /* Predicted maintenance (component model). Returns every component and a 1-SD band. */
@@ -291,6 +297,18 @@ const c2Meters = (secs, sex) => {
   for (const p of Object.keys(a)) { const k = Math.log(b[p] / a[p]) / Math.log(5); out[p] = 100 * (secs / a[p]) ** (1 / k); }
   return out;
 };
+/* Daniels & Gilbert: oxygen cost of running at velocity v (m/min) and the share of VO2max sustainable for t minutes. */
+export function vdot(dist, secs) {
+  const t = secs / 60, v = dist / t;
+  const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+  const pct = 0.8 + 0.1894393 * Math.exp(-0.012778 * t) + 0.2989558 * Math.exp(-0.1932605 * t);
+  return vo2 / pct;
+}
+export function raceTime(dist, target) { // bisection: time whose VDOT equals target
+  let lo = dist / 1000 * 100, hi = dist / 1000 * 1200; // 1:40 to 20:00 per km
+  for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (vdot(dist, mid) > target) lo = mid; else hi = mid; }
+  return (lo + hi) / 2;
+}
 export function sprintFactor(age, sex) { return age > 35 ? Math.max(0.5, 1 - SPRINT.slope[sex === 'm' ? 'm' : 'f'] * (age - 35)) : 1; }
 export function anchorsFor(id, { sex, bw, age }) {
   const ev = EVENTS[id], s = sex === 'm' ? 'm' : 'f';
@@ -311,9 +329,24 @@ export function anchorsFor(id, { sex, bw, age }) {
     const M = c2Meters(ev.secs, s);
     return { A: Object.keys(M).map(Number).sort((a, b) => a - b).map(p => ({ p, v: M[p] })), enc: x => x, dec: v => v, unit: 'm' };
   }
-  if (ev.kind === 'vo2') {
+  if (ev.kind === 'vo2' || ev.kind === 'race') {
     const band = clamp(Math.floor((age || 30) / 10) * 10, 20, 80);
-    return { A: FRIEND_P.map((p, i) => ({ p, v: FRIEND[s][band][i] })), enc: x => x, dec: v => v, unit: 'ml/kg/min', band };
+    const A = FRIEND_P.map((p, i) => ({ p, v: FRIEND[s][band][i] }));
+    if (ev.kind === 'vo2') return { A, enc: x => x, dec: v => v, unit: 'ml/kg/min', band };
+    return { A, enc: t => vdot(ev.dist, t), dec: v => raceTime(ev.dist, v), unit: 's', lowerBetter: true, band };
+  }
+  if (ev.kind === 'erg') {
+    const T = ERG[id][s].t;
+    return { A: Object.keys(T).map(Number).sort((a, b) => a - b).map(p => ({ p, v: -Math.log(T[p]) })), enc: t => -Math.log(t), dec: v => Math.exp(-v), unit: 's', lowerBetter: true };
+  }
+  if (ev.kind === 'jump') {
+    const band = (age || 30) < 20 ? 18 : clamp(Math.floor((age || 30) / 5) * 5, 20, 65);
+    return { A: VJ_P.map((p, i) => ({ p, v: VJ[s][band][i] })), enc: x => x, dec: v => v, unit: 'cm', band, beyond: (age || 30) > 69 };
+  }
+  if (ev.kind === 'reps') {
+    const t = REPS[id][s], row = interpRows(bw || (s === 'm' ? 80 : 60), t.bw, t.rows);
+    const A = []; SL_P.forEach((p, i) => { if (A.length && row[i] <= A[A.length - 1].v) A[A.length - 1] = { p, v: A[A.length - 1].v }; else A.push({ p, v: row[i] }); }); // "< 1" up to Novice: 0 reps still at that percentile
+    return { A, enc: x => x, dec: v => v, unit: 'reps', clampedBw: bw < t.bw[0] || bw > t.bw[t.bw.length - 1] };
   }
   throw new Error('unknown event ' + id);
 }
@@ -353,7 +386,10 @@ export function prValue(pr) {
     const t = +pr.time + (pr.timing === 'hand' ? SPRINT.hand[ev.dist] : 0);
     return { value: t, rankable: t > 0, note: pr.timing === 'hand' ? 'hand' : (pr.wind > 2 ? 'wind' : null) };
   }
-  if (ev.kind === 'row') return { value: +pr.time, rankable: +pr.time > 0 };
+  if (ev.kind === 'row' || ev.kind === 'erg') return { value: +pr.time, rankable: +pr.time > 0 };
+  if (ev.kind === 'race') return { value: +pr.time, rankable: +pr.time > 0, note: 'vdot' };
+  if (ev.kind === 'jump') return { value: +pr.cm, rankable: +pr.cm > 0, note: pr.method === 'reach' ? 'reach' : null };
+  if (ev.kind === 'reps') return { value: +pr.reps, rankable: +pr.reps >= 1 };
   if (ev.kind === 'rowtime') return { value: +pr.meters, rankable: +pr.meters > 0 };
   if (ev.kind === 'vo2') {
     const v = pr.method === 'cooper' ? (+pr.meters - 504.9) / 44.73 : +pr.value;
@@ -383,11 +419,10 @@ export function arena(prs, who, leanP) {
   const domains = {};
   for (const [id, b] of Object.entries(best)) (domains[EVENTS[id].domain] ||= []).push(b.score);
   const dom = {};
-  for (const [d, xs] of Object.entries(domains)) { xs.sort((a, b) => b - a); dom[d] = mean(xs.slice(0, 3)); }
-  if (leanP != null) dom.lean = 100 * leanP;
-  const vals = Object.values(dom).filter(x => x > 0);
+  for (const [d, xs] of Object.entries(domains)) { xs.sort((a, b) => b - a); dom[d] = DOMAIN_AGG[d] === 'max' ? xs[0] : mean(xs.slice(0, 3)); }
+  const vals = DOMAINS.map(d => dom[d]).filter(x => x > 0); // performance domains only
   const sorted = [...vals].sort((a, b) => b - a);
   const peak = sorted.length >= 2 ? mean(sorted.slice(0, 2)) : null;
   const balance = vals.length >= 3 ? Math.exp(mean(vals.map(v => Math.log(Math.max(1, v))))) : null;
-  return { best, dom, peak, balance };
+  return { best, dom, peak, balance, lean: leanP != null ? 100 * leanP : null, nDom: vals.length };
 }

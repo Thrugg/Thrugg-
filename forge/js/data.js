@@ -2,7 +2,7 @@
    Every number here comes from a source listed in SOURCES. Values marked `modelled` or `est`
    are derived by Forge from those sources; the method is described in MAINTAINING-forge.md. */
 
-export const DATA_VERSION = '2026.10';
+export const DATA_VERSION = '2026.10b';
 
 export const SOURCES = {
   sl: { name: 'Strength Level standards (1RM, by bodyweight)', url: 'https://strengthlevel.com/strength-standards', pop: { en: 'Lifters who log lifts on Strength Level (self-selected gym-goers)', fr: 'Pratiquants qui enregistrent leurs charges sur Strength Level (public de salle)' }, date: '03/2026', conf: 'medium' },
@@ -12,6 +12,10 @@ export const SOURCES = {
   nhanes: { name: 'NHANES 1999–2004 whole-body DXA (Hologic), pooled US adults, n = 13,091', url: 'https://fitnessnorms.pages.dev/body-composition/body-fat/', pop: { en: 'US adults 20+, all ethnic groups', fr: 'Adultes américains de 20 ans et plus, toutes origines' }, date: '1999–2004', conf: 'high' },
   sprint: { name: 'Forge sprint ladder: age-graded % of the world record', url: 'https://worldathletics.org/records/by-category/world-records', pop: { en: 'Expert-set bands from beginner to world class, age-adjusted with masters records', fr: 'Paliers fixés par expertise, du débutant au niveau mondial, ajustés à l’âge via les records masters' }, date: '2026', conf: 'low' },
   compendium: { name: '2024 Adult Compendium of Physical Activities (Herrmann et al.)', url: 'https://pacompendium.com/adult-compendium/', date: '2024', conf: 'high' },
+  slr: { name: 'Strength Level bodyweight standards (max reps, by bodyweight)', url: 'https://strengthlevel.com/strength-standards/pull-ups', pop: { en: 'People who log reps on Strength Level (self-selected gym-goers)', fr: 'Pratiquants qui enregistrent leurs répétitions sur Strength Level (public de salle)' }, date: '03/2026', conf: 'medium' },
+  c2x: { name: 'Concept2 Online Ranking, 2024 season (BikeErg 1,000 m, SkiErg 500 m)', url: 'https://log.concept2.com/rankings', pop: { en: 'People who rank results on that machine; small samples for women (n ≈ 140)', fr: 'Utilisateurs classés sur cette machine ; petits effectifs chez les femmes (n ≈ 140)' }, date: '2024', conf: 'low' },
+  chms: { name: 'Canadian Health Measures Survey cycle 5, 2016–17 (Statistics Canada, Health Reports 30(10), 2019)', url: 'https://www150.statcan.gc.ca/n1/pub/82-003-x/2019010/article/00002/tbl/tbl04-eng.htm', pop: { en: 'Nationally representative Canadians, survey-weighted; countermovement jump with arm swing on a force plate', fr: 'Échantillon national représentatif (Canada), pondéré ; saut avec contre-mouvement et bras, sur plateforme de force' }, date: '2016–17', conf: 'high' },
+  vdot: { name: 'Race time → VO₂max equivalent (Daniels & Gilbert VDOT), ranked on FRIEND 2022', url: 'https://pubmed.ncbi.nlm.nih.gov/34809986/', pop: { en: 'Your race time converted to the VO₂max it usually takes, then compared with measured VO₂max of adults your age', fr: 'Ton temps converti en VO₂max habituellement nécessaire, puis comparé aux VO₂max mesurées des adultes de ton âge' }, date: '2022', conf: 'medium' },
   kouri: { name: 'Kouri et al. 1995, Clin J Sport Med 5:223–228 (FFMI of drug-free vs steroid-using athletes)', date: '1995', conf: 'medium' }
 };
 
@@ -51,6 +55,35 @@ export const FRIEND_P = [0.05, 0.25, 0.50, 0.75, 0.95];
 export const FRIEND = {
   m: { 20: [24.8, 37.3, 45.4, 52.6, 62.1], 30: [20.6, 31.3, 38.6, 46.5, 57.9], 40: [19.7, 28.4, 34.8, 41.8, 53.2], 50: [16.5, 23.9, 29.4, 35.5, 46.8], 60: [13.8, 19.7, 24.4, 29.9, 40.2], 70: [11.6, 16.8, 20.6, 25.0, 35.2], 80: [12.2, 15.9, 17.7, 20.9, 25.6] },
   f: { 20: [19.3, 28.6, 35.6, 42.2, 50.1], 30: [16.6, 23.1, 28.3, 34.5, 45.5], 40: [15.3, 21.3, 25.9, 30.9, 40.7], 50: [14.5, 19.5, 23.1, 27.3, 35.3], 60: [12.0, 16.4, 19.4, 23.1, 29.7], 70: [11.3, 14.8, 17.1, 20.0, 24.2], 80: [10.7, 12.8, 15.1, 17.2, 20.7] }
+};
+
+/* Strength Level max-rep standards (bodyweight converted from lb). Columns Beginner…Elite = 5/20/50/80/95 % of lifters.
+   "< 1" stored as 0.5. */
+const LB = x => Math.round(x * 0.45359237 * 10) / 10;
+const SLR_M_BW = [110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310].map(LB);
+const SLR_F_BW = [90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260].map(LB);
+export const REPS = {
+  pullups: {
+    m: { bw: SLR_M_BW, rows: [[0.5,6,14,24,34],[0.5,7,14,24,34],[0.5,7,14,23,33],[0.5,7,14,23,32],[0.5,7,14,22,31],[0.5,7,14,22,30],[0.5,7,13,21,29],[1,7,13,21,28],[1,7,13,20,28],[1,7,12,19,27],[1,7,12,19,26],[0.5,6,11,18,25],[0.5,6,11,18,24],[0.5,6,11,17,24],[0.5,6,10,16,23],[0.5,5,10,16,22],[0.5,5,10,15,21],[0.5,5,9,15,21],[0.5,5,9,14,20],[0.5,4,9,14,19],[0.5,4,9,13,19]] },
+    f: { bw: SLR_F_BW, rows: [[0.5,0.5,6,14,23],[0.5,0.5,6,13,22],[0.5,0.5,6,13,22],[0.5,0.5,6,13,21],[0.5,0.5,6,12,20],[0.5,0.5,6,12,19],[0.5,0.5,6,11,18],[0.5,0.5,5,11,17],[0.5,0.5,5,10,16],[0.5,0.5,5,10,16],[0.5,0.5,4,9,15],[0.5,0.5,4,9,14],[0.5,0.5,3,8,13],[0.5,0.5,3,8,13],[0.5,0.5,3,8,12],[0.5,0.5,2,7,11],[0.5,0.5,2,7,11],[0.5,0.5,1,6,10]] }
+  },
+  pushups: {
+    m: { bw: SLR_M_BW, rows: [[0.5,18,42,70,102],[2,19,42,69,99],[3,19,41,67,96],[4,20,41,66,93],[5,20,40,64,91],[5,20,40,63,88],[6,20,39,61,85],[6,20,38,60,83],[6,20,37,58,81],[6,19,37,57,78],[6,19,36,55,76],[6,19,35,54,74],[6,18,34,53,73],[6,18,34,52,71],[6,18,33,50,69],[6,17,32,49,67],[6,17,32,48,66],[6,17,31,47,64],[6,16,30,46,63],[6,16,30,45,61],[6,16,29,44,60]] },
+    f: { bw: SLR_F_BW, rows: [[0.5,5,19,36,55],[0.5,6,19,35,53],[0.5,7,19,34,51],[0.5,7,19,33,49],[0.5,7,18,32,48],[0.5,7,18,31,46],[0.5,7,17,30,44],[0.5,7,17,29,43],[0.5,7,16,28,41],[0.5,7,16,27,40],[0.5,6,15,26,38],[0.5,6,15,25,37],[0.5,6,14,25,36],[0.5,6,14,24,34],[0.5,5,13,23,33],[0.5,5,12,22,32],[0.5,5,12,21,31],[0.5,5,11,21,30]] }
+  }
+};
+
+/* Concept2 2024 BikeErg 1,000 m and SkiErg 500 m: time (s) at the 25/50/75/90th percentile. */
+export const ERG = {
+  bike1000: { m: { n: 492, t: { 0.25: 111.0, 0.5: 100.5, 0.75: 93.1, 0.9: 87.0 }, top: 74.7 }, f: { n: 146, t: { 0.25: 134.3, 0.5: 118.4, 0.75: 106.6, 0.9: 101.0 }, top: 92.5 } },
+  ski500: { m: { n: 615, t: { 0.25: 119.0, 0.5: 107.3, 0.75: 98.0, 0.9: 90.3 }, top: 69.4 }, f: { n: 135, t: { 0.25: 150.6, 0.5: 133.9, 0.75: 118.6, 0.9: 111.5 }, top: 95.2 } }
+};
+
+/* CHMS cycle 5 countermovement jump height (cm), survey-weighted GAMLSS percentiles by age band (key = band start). */
+export const VJ_P = [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95];
+export const VJ = {
+  m: { 18: [32.6,36.3,40.7,43.8,46.3,48.7,51.0,53.5,56.3,60.1,63.2], 20: [32.6,36.6,41.2,44.3,47.0,49.4,51.7,54.1,56.9,60.7,63.8], 25: [31.5,35.5,40.0,43.1,45.7,48.0,50.3,52.6,55.3,59.0,61.9], 30: [30.1,33.9,38.2,41.1,43.6,45.8,47.9,50.2,52.8,56.3,59.1], 35: [28.8,32.3,36.3,39.1,41.4,43.5,45.5,47.7,50.2,53.5,56.2], 40: [27.5,30.7,34.4,37.0,39.1,41.1,43.1,45.1,47.5,50.7,53.3], 45: [26.2,29.1,32.5,34.9,36.9,38.8,40.6,42.6,44.9,48.0,50.5], 50: [24.8,27.4,30.6,32.8,34.7,36.4,38.2,40.0,42.2,45.1,47.6], 55: [23.4,25.7,28.5,30.6,32.3,33.9,35.6,37.3,39.3,42.2,44.5], 60: [21.7,23.8,26.4,28.2,29.8,31.3,32.8,34.4,36.3,39.0,41.2], 65: [19.9,21.7,24.0,25.7,27.1,28.5,29.8,31.3,33.1,35.5,37.6] },
+  f: { 18: [23.6,25.6,28.0,29.8,31.3,32.8,34.2,35.8,37.6,40.2,42.4], 20: [22.8,24.7,27.1,28.9,30.4,31.8,33.3,34.8,36.7,39.3,41.4], 25: [22.2,24.1,26.5,28.3,29.9,31.3,32.8,34.3,36.2,38.8,41.0], 30: [21.7,23.6,26.1,27.9,29.4,30.9,32.3,33.9,35.8,38.5,40.7], 35: [21.0,22.9,25.4,27.2,28.7,30.2,31.6,33.2,35.1,37.8,40.0], 40: [20.1,22.0,24.4,26.1,27.7,29.1,30.5,32.1,34.0,36.6,38.7], 45: [19.0,20.8,23.1,24.8,26.3,27.7,29.1,30.6,32.4,34.9,37.0], 50: [17.7,19.5,21.7,23.3,24.7,26.1,27.4,28.8,30.5,32.9,34.9], 55: [16.4,18.1,20.2,21.8,23.1,24.4,25.6,27.0,28.6,30.9,32.7], 60: [15.2,16.8,18.8,20.2,21.5,22.7,23.9,25.2,26.7,28.8,30.6], 65: [14.1,15.6,17.4,18.8,20.0,21.1,22.2,23.4,24.9,26.9,28.5] }
 };
 
 /* NHANES 1999–2004 DXA % body fat: 5th, 25th, 50th, 75th, 95th percentile by 5-year band (key = band start). */
@@ -99,9 +132,19 @@ export const EVENTS = {
   row250: { domain: 'power', kind: 'row', dist: 250, src: 'c2m', q: { m: 0.05, f: 0.04 } },
   row500: { domain: 'power', kind: 'row', dist: 500, src: 'c2', q: { m: 0.05, f: 0.04 } },
   row1min: { domain: 'power', kind: 'rowtime', secs: 60, src: 'c2m', q: { m: 0.05, f: 0.04 } },
-  vo2: { domain: 'aerobic', kind: 'vo2', src: 'friend', q: { m: 1, f: 1 } }
+  bike1000: { domain: 'power', kind: 'erg', src: 'c2x', q: { m: 0.03, f: 0.02 } },
+  ski500: { domain: 'power', kind: 'erg', src: 'c2x', q: { m: 0.03, f: 0.02 } },
+  vjump: { domain: 'explosive', kind: 'jump', src: 'chms', q: { m: 1, f: 1 } },
+  pullups: { domain: 'upper', kind: 'reps', src: 'slr', q: { m: 0.10, f: 0.05 } },
+  pushups: { domain: 'upper', kind: 'reps', src: 'slr', q: { m: 0.15, f: 0.10 } },
+  vo2: { domain: 'aerobic', kind: 'vo2', src: 'friend', q: { m: 1, f: 1 } },
+  run5k: { domain: 'aerobic', kind: 'race', dist: 5000, src: 'vdot', q: { m: 1, f: 1 } },
+  run10k: { domain: 'aerobic', kind: 'race', dist: 10000, src: 'vdot', q: { m: 1, f: 1 } }
 };
-export const DOMAINS = ['strength', 'speed', 'power', 'aerobic', 'lean'];
+/* Performance domains on the radar (Leanness is a separate, secondary score). Aerobic events measure one quality,
+   so that domain keeps the best result; the others average the best three. */
+export const DOMAINS = ['strength', 'explosive', 'speed', 'power', 'aerobic', 'upper'];
+export const DOMAIN_AGG = { aerobic: 'max' };
 
 /* Occupation baseline METs for awake, non-exercise hours (Forge estimates on the Compendium scale). */
 export const OCCUPATION = { desk: 1.3, mixed: 1.6, standing: 2.2, manual: 3.0 };
@@ -110,21 +153,21 @@ export const OCCUPATION = { desk: 1.3, mixed: 1.6, standing: 2.2, manual: 3.0 };
    (codes alongside). cadence = steps per minute counted by a watch during the session (Forge estimate,
    used to avoid double counting with daily steps). pace = net kcal per kg per km when a pace is given (ACSM). */
 export const CATALOGUE = {
-  strength: { en: 'Weight training', fr: 'Musculation', met: [3.5, 5.0, 6.0, 6.0], codes: ['02054', '02052', '02050', '02050'], cadence: 0, strength: true, hk: ['TraditionalStrengthTraining'] },
-  circuit: { en: 'Circuit / functional / CrossFit', fr: 'Circuit / fonctionnel / CrossFit', met: [3.5, 5.0, 6.0, 7.5], codes: ['02034', '02035', '02032', '02040'], cadence: 20, strength: true, hk: ['FunctionalStrengthTraining', 'CrossTraining'] },
-  hiit: { en: 'HIIT', fr: 'HIIT', met: [5.0, 7.0, 8.8, 11.0], codes: ['02035', '02210', '01305', '02214'], cadence: 40, hk: ['HighIntensityIntervalTraining'] },
-  calisthenics: { en: 'Calisthenics / core', fr: 'Callisthénie / gainage', met: [2.8, 3.8, 7.5, 7.5], codes: ['02024', '02022', '02020', '02020'], cadence: 0, strength: true, hk: ['CoreTraining'] },
+  strength: { en: 'Weight training', fr: 'Musculation', met: [3.5, 5.0, 6.0, 6.0], codes: ['02054', '02052', '02050', '02050'], cadence: 25, strength: true, lift: true, hk: ['TraditionalStrengthTraining'] },
+  circuit: { en: 'Circuit / functional / CrossFit', fr: 'Circuit / fonctionnel / CrossFit', met: [3.5, 5.0, 6.0, 7.5], codes: ['02034', '02035', '02032', '02040'], cadence: 40, strength: true, hk: ['FunctionalStrengthTraining', 'CrossTraining'] },
+  hiit: { en: 'HIIT', fr: 'HIIT', met: [5.0, 7.0, 8.8, 11.0], codes: ['02035', '02210', '01305', '02214'], cadence: 60, hk: ['HighIntensityIntervalTraining'] },
+  calisthenics: { en: 'Calisthenics / core', fr: 'Callisthénie / gainage', met: [2.8, 3.8, 7.5, 7.5], codes: ['02024', '02022', '02020', '02020'], cadence: 15, strength: true, hk: ['CoreTraining'] },
   run: { en: 'Running', fr: 'Course à pied', met: [7.5, 9.3, 11.8, 14.8], codes: ['12020', '12050', '12080', '12120'], cadence: 165, pace: 1.0, hk: ['Running'] },
-  sprint: { en: 'Sprint / track session', fr: 'Sprint / séance sur piste', met: [6.0, 8.0, 10.0, 10.0], codes: ['12010', '12150', '12180', '15734'], cadence: 90, hk: ['TrackAndField'] },
+  sprint: { en: 'Sprint / track session', fr: 'Sprint / séance sur piste', met: [6.0, 8.0, 10.0, 10.0], codes: ['12010', '12150', '12180', '15734'], cadence: 90, interval: true, hk: ['TrackAndField'] },
   walk: { en: 'Brisk walk (as a workout)', fr: 'Marche rapide (séance)', met: [4.8, 4.8, 5.5, 5.5], codes: ['17200', '17200', '17220', '17220'], cadence: 115, hk: ['Walking'] },
   hike: { en: 'Hiking', fr: 'Randonnée', met: [3.8, 5.3, 6.0, 7.8], codes: ['17081', '17082', '17080', '17012'], cadence: 95, hk: ['Hiking'] },
   cycle: { en: 'Cycling (outdoor)', fr: 'Vélo (extérieur)', met: [6.8, 8.0, 10.0, 12.0], codes: ['01020', '01030', '01040', '01050'], cadence: 0, hk: ['Cycling'] },
   spin: { en: 'Indoor bike / spin', fr: 'Vélo d’intérieur / spinning', met: [5.0, 6.8, 9.0, 10.8], codes: ['01216', '01224', '01270', '01236'], cadence: 0, watts: [[60, 5.0, '01216'], [80, 5.8, '01218'], [100, 6.0, '01220'], [125, 6.8, '01224'], [150, 8.0, '01228'], [199, 10.3, '01232'], [229, 10.8, '01236'], [260, 12.5, '01240'], [305, 13.8, '01244'], [9999, 16.3, '01248']], hk: [] },
   row: { en: 'Rowing machine', fr: 'Rameur', met: [5.0, 7.5, 11.0, 14.0], codes: ['02071', '02072', '02073', '02074'], cadence: 0, watts: [[99, 5.0, '02071'], [149, 7.5, '02072'], [199, 11.0, '02073'], [9999, 14.0, '02074']], hk: ['Rowing'] },
   swim: { en: 'Swimming', fr: 'Natation', met: [5.3, 5.8, 8.0, 10.5], codes: ['18265', '18292', '18290', '18280'], cadence: 0, hk: ['Swimming'] },
-  boxing: { en: 'Boxing (bag, pads)', fr: 'Boxe (sac, pattes d’ours)', met: [5.8, 7.0, 8.5, 10.8], codes: ['15110', '15113', '15115', '15118'], cadence: 30, hk: ['Boxing'] },
-  sparring: { en: 'Boxing sparring', fr: 'Sparring de boxe', met: [7.8, 7.8, 7.8, 12.3], codes: ['15120', '15120', '15120', '15100'], cadence: 30, hk: [] },
-  martial: { en: 'Martial arts / kickboxing', fr: 'Arts martiaux / kickboxing', met: [5.3, 7.3, 10.3, 11.3], codes: ['15425', '15457', '15430', '15433'], cadence: 20, hk: ['MartialArts', 'Kickboxing', 'TaiChi'] },
+  boxing: { en: 'Boxing (bag, pads)', fr: 'Boxe (sac, pattes d’ours)', met: [5.8, 7.0, 8.5, 10.8], codes: ['15110', '15113', '15115', '15118'], cadence: 70, hk: ['Boxing'] },
+  sparring: { en: 'Boxing sparring', fr: 'Sparring de boxe', met: [7.8, 7.8, 7.8, 12.3], codes: ['15120', '15120', '15120', '15100'], cadence: 70, hk: [] },
+  martial: { en: 'Martial arts / kickboxing', fr: 'Arts martiaux / kickboxing', met: [5.3, 7.3, 10.3, 11.3], codes: ['15425', '15457', '15430', '15433'], cadence: 40, hk: ['MartialArts', 'Kickboxing', 'TaiChi'] },
   grappling: { en: 'Wrestling / BJJ / judo', fr: 'Lutte / JJB / judo', met: [5.3, 6.0, 10.3, 11.3], codes: ['15425', '15730', '15430', '15433'], cadence: 0, hk: ['Wrestling'] },
   soccer: { en: 'Football (soccer)', fr: 'Football', met: [7.0, 7.0, 9.5, 9.5], codes: ['15610', '15610', '15605', '15605'], cadence: 90, hk: ['Soccer'] },
   basketball: { en: 'Basketball', fr: 'Basket-ball', met: [7.5, 7.5, 8.0, 8.0], codes: ['15055', '15055', '15040', '15040'], cadence: 80, hk: ['Basketball'] },

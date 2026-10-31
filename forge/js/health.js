@@ -1,6 +1,6 @@
 /* Forge — Apple Health import: the Shortcut text payload and the Health app's export.zip / export.xml.
    Parsing happens on the device; nothing is uploaded. */
-import { HK_MAP } from './data.js';
+import { HK_MAP, CATALOGUE } from './data.js';
 
 /* ---------- loose number/date parsing for Shortcut text ---------- */
 export function num(s, integer) {
@@ -59,9 +59,11 @@ const TYPES = {
   HKQuantityTypeIdentifierDietaryCarbohydrates: 'c', HKQuantityTypeIdentifierDietaryFatTotal: 'f', HKQuantityTypeIdentifierBodyMass: 'w',
   HKQuantityTypeIdentifierBodyFatPercentage: 'bf', HKQuantityTypeIdentifierRestingHeartRate: 'rhr', HKQuantityTypeIdentifierHeartRateVariabilitySDNN: 'hrv', HKQuantityTypeIdentifierVO2Max: 'vo2'
 };
+/* "2026-10-29 17:00:00 +0100" → epoch ms */
+export const hkTime = s => s ? Date.parse(`${s.slice(0, 10)}T${s.slice(11, 19)}${s.slice(20, 23)}:${s.slice(23, 25)}`) || null : null;
 const attr = (l, k) => { const i = l.indexOf(' ' + k + '="'); if (i < 0) return null; const s = i + k.length + 3; return l.slice(s, l.indexOf('"', s)); };
 export class HealthAccumulator {
-  constructor(days = 180, now = new Date()) { const c = new Date(now.getTime() - days * 864e5); this.cut = c.toISOString().slice(0, 10); this.sum = {}; this.first = {}; this.avg = {}; this.last = {}; this.workouts = []; this.wo = null; }
+  constructor(days = 180, now = new Date()) { const c = new Date(now.getTime() - days * 864e5); this.cut = c.toISOString().slice(0, 10); this.stepCut = new Date(now.getTime() - 45 * 864e5).toISOString().slice(0, 10); this.sum = {}; this.first = {}; this.avg = {}; this.last = {}; this.workouts = []; this.wo = null; this.stepSamples = []; }
   line(l) {
     if (this.wo) {
       if (l.includes('<WorkoutStatistics')) {
@@ -79,7 +81,8 @@ export class HealthAccumulator {
       if (f === 'kcal') v = this.energy(v, unit);
       if (f === 'w' && unit === 'lb') v *= 0.45359237;
       if (f === 'bf' && v <= 1) v *= 100;
-      if (f === 'steps' || f === 'kcal' || f === 'p' || f === 'c' || f === 'f') { const src = attr(l, 'sourceName') || '?'; const k = date + '|' + f; (this.sum[k] ||= {}); this.sum[k][src] = (this.sum[k][src] || 0) + v; }
+      if (f === 'steps' || f === 'kcal' || f === 'p' || f === 'c' || f === 'f') { const src = attr(l, 'sourceName') || '?'; const k = date + '|' + f; (this.sum[k] ||= {}); this.sum[k][src] = (this.sum[k][src] || 0) + v;
+        if (f === 'steps' && date >= this.stepCut) { const a = hkTime(sd), b = hkTime(attr(l, 'endDate')) || a; if (a) this.stepSamples.push([a, Math.max(b, a + 1000), v, src]); } }
       else if (f === 'w' || f === 'bf') { const k = date + '|' + f; if (!this.first[k] || time < this.first[k].t) this.first[k] = { t: time, v }; }
       else if (f === 'vo2') { const k = date + '|' + f; this.last[k] = v; }
       else { const k = date + '|' + f; const a = this.avg[k] ||= { s: 0, n: 0 }; a.s += v; a.n++; }
@@ -90,7 +93,7 @@ export class HealthAccumulator {
       const type = (attr(l, 'workoutActivityType') || '').replace('HKWorkoutActivityType', '');
       let min = +attr(l, 'duration'); const du = attr(l, 'durationUnit'); if (du === 's') min /= 60; if (du === 'h') min *= 60;
       const td = +attr(l, 'totalDistance'), tu = attr(l, 'totalDistanceUnit');
-      this.wo = { date: sd.slice(0, 10), hk: type, type: HK_MAP[type] || 'other', minutes: min || 0, kcal: this.energy(+attr(l, 'totalEnergyBurned'), attr(l, 'totalEnergyBurnedUnit')) || null, km: td ? (tu === 'mi' ? td * 1.609344 : tu === 'm' ? td / 1000 : td) : null, hr: null };
+      this.wo = { date: sd.slice(0, 10), t0: hkTime(sd), t1: hkTime(attr(l, 'endDate')), hk: type, type: HK_MAP[type] || 'other', minutes: min || 0, kcal: this.energy(+attr(l, 'totalEnergyBurned'), attr(l, 'totalEnergyBurnedUnit')) || null, km: td ? (tu === 'mi' ? td * 1.609344 : tu === 'm' ? td / 1000 : td) : null, hr: null };
       if (l.trim().endsWith('/>')) { this.workouts.push(this.wo); this.wo = null; }
     }
   }
@@ -101,6 +104,13 @@ export class HealthAccumulator {
     for (const [k, x] of Object.entries(this.first)) put(k, x.v);
     for (const [k, a] of Object.entries(this.avg)) put(k, a.s / a.n);
     for (const [k, v] of Object.entries(this.last)) put(k, v);
+    // steps the watch/phone counted inside each workout (largest source), so daily steps are not counted twice
+    for (const w of this.workouts) {
+      if (!w.t0 || !w.t1 || w.date < this.stepCut) continue;
+      const per = {};
+      for (const [a, b, v, src] of this.stepSamples) { const ov = Math.min(b, w.t1) - Math.max(a, w.t0); if (ov > 0) per[src] = (per[src] || 0) + v * ov / (b - a); }
+      w.steps = Math.round(Math.max(0, ...Object.values(per)));
+    }
     return { days, workouts: this.workouts };
   }
 }
@@ -108,8 +118,8 @@ export class HealthAccumulator {
 const loadFflate = () => window.fflate ? Promise.resolve(window.fflate) : new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/fflate.min.js'; s.onload = () => res(window.fflate); s.onerror = () => rej(new Error('zip library')); document.head.appendChild(s); });
 
 /* Reads a File (export.zip or export.xml) in 4 MB slices so a multi-GB export never sits in memory. */
-export async function readHealthFile(file, { days = 180, onProgress, fflate } = {}) {
-  const acc = new HealthAccumulator(days); const dec = new TextDecoder(); let rest = '';
+export async function readHealthFile(file, { days = 180, onProgress, fflate, now } = {}) {
+  const acc = new HealthAccumulator(days, now || new Date()); const dec = new TextDecoder(); let rest = '';
   const feed = (bytes, final) => { const text = rest + dec.decode(bytes, { stream: !final }); const lines = text.split('\n'); rest = final ? '' : lines.pop(); for (const l of lines) acc.line(l); if (final && rest) acc.line(rest); };
   const CH = 4 * 1024 * 1024, size = file.size, isZip = /\.zip$/i.test(file.name || '') || (await file.slice(0, 2).text()) === 'PK';
   let found = !isZip, unz = null;
@@ -139,14 +149,22 @@ export function summarise(res, age) {
   const hrMax = 208 - 0.7 * (age || 30);
   const groups = {};
   for (const w of recent) {
-    const g = groups[w.type] ||= { type: w.type, n: 0, min: 0, hr: [], pace: [] }; g.n++; g.min += w.minutes;
+    const g = groups[w.type] ||= { type: w.type, n: 0, min: 0, hr: [], pace: [], kcal: [], spm: [] }; g.n++; g.min += w.minutes;
     if (w.hr) g.hr.push(w.hr / hrMax);
+    if (w.kcal > 0) g.kcal.push(w.kcal);
+    if (w.steps != null && w.minutes > 0) g.spm.push(w.steps / w.minutes);
     if (w.type === 'run' && w.km > 0) g.pace.push(w.km / (w.minutes / 60));
   }
   const workouts = Object.values(groups).map(g => {
     const hr = g.hr.length ? g.hr.reduce((a, b) => a + b, 0) / g.hr.length : null;
-    const intensity = hr == null ? 'moderate' : hr < 0.64 ? 'light' : hr < 0.77 ? 'moderate' : hr < 0.9 ? 'vigorous' : 'very';
-    const w = { type: g.type, minutes: Math.round(g.min / g.n), perWeek: Math.round(g.n / 4 * 10) / 10, intensity };
+    // Lifting and sprint sessions are mostly rest between sets/reps, so their average heart rate maps one level lower.
+    const intervalish = CATALOGUE[g.type]?.lift || CATALOGUE[g.type]?.interval;
+    const cuts = intervalish ? [0.75, 0.85, 0.93] : [0.64, 0.77, 0.9];
+    const intensity = hr == null ? (intervalish ? 'light' : 'moderate') : hr < cuts[0] ? 'light' : hr < cuts[1] ? 'moderate' : hr < cuts[2] ? 'vigorous' : 'very';
+    const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const w = { type: g.type, minutes: Math.round(g.min / g.n), perWeek: Math.round(g.n / 4 * 10) / 10, intensity, src: 'health' };
+    if (g.kcal.length) w.watchKcal = Math.round(avg(g.kcal));
+    if (g.spm.length) w.spm = Math.round(avg(g.spm));
     if (g.pace.length) w.paceKmh = Math.round(g.pace.reduce((a, b) => a + b, 0) / g.pace.length * 10) / 10;
     return w;
   }).filter(w => w.perWeek >= 0.25);

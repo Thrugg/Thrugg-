@@ -28,7 +28,7 @@ export function radar(vals, W = 300) {
   const n = vals.length; if (n < 3) return '';
   const c = W / 2, r = W / 2 - 46, ang = i => -Math.PI / 2 + i * 2 * Math.PI / n;
   const pt = (i, f) => [c + Math.cos(ang(i)) * r * f, c + Math.sin(ang(i)) * r * f];
-  let g = `<svg class="radar" viewBox="0 0 ${W} ${W}" role="img">`;
+  let g = `<svg class="radar" viewBox="-34 -4 ${W + 68} ${W + 8}" role="img">`;
   for (const f of [0.25, 0.5, 0.75, 1]) g += `<polygon class="${f === 0.5 ? 'ring mid' : 'ring'}" points="${vals.map((_, i) => pt(i, f).join(',')).join(' ')}"/>`;
   vals.forEach((_, i) => { const [x, y] = pt(i, 1); g += `<line class="spoke" x1="${c}" y1="${c}" x2="${x}" y2="${y}"/>`; });
   g += `<polygon class="shape" points="${vals.map((v, i) => pt(i, Math.max(0.02, (v.v || 0) / 100)).join(',')).join(' ')}"/>`;

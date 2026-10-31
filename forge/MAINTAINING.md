@@ -21,14 +21,20 @@ Forge is a static web app (no build step). Open `forge/` on GitHub Pages; everyt
 
 ## Engine (as approved in the design framework v0.9)
 
-- **RMR**: Mifflin-St Jeor always. Body fat known + lifting ≥ 3×/week (or ≥ 2× with ≥ 1 training year): 25 % Mifflin + 75 % mean(Tinsley-FFM, ten Haaf-FFM, Cunningham). Body fat known, untrained: mean(Mifflin, Katch-McArdle). Trained, body fat unknown: 50 % Mifflin + 25 % Tinsley-BW + 25 % ten Haaf-BW. SD = 10 %.
-- **Maintenance** = (RMR + daily life + steps + stairs + workouts + after-burn) / 0.9. Daily life = awake non-exercise hours × (job MET − 1) + sleep × (0.95 − 1), all × own RMR per kg-hour (CF). Steps = 0.5 kcal/kg/km net (ACSM), stride 0.415 / 0.413 × height, minus watch-counted steps inside workouts (cadence per activity). Workouts = (MET − 1) × CF × kg × h, 2024 Compendium codes; runs with a pace = 1 kcal/kg/km. After-burn 5 % of non-light sessions. SD = √(RMR SD² + (25 % × activity)²) / 0.9.
+- **RMR**: Mifflin-St Jeor always. When body fat rests only on a smart scale or own guess (SD > 4 points), the lean-mass set gets half weight and the weight-based set the other half. Body fat known + lifting ≥ 3×/week (or ≥ 2× with ≥ 1 training year): 25 % Mifflin + 75 % mean(Tinsley-FFM, ten Haaf-FFM, Cunningham). Body fat known, untrained: mean(Mifflin, Katch-McArdle). Trained, body fat unknown: 50 % Mifflin + 25 % Tinsley-BW + 25 % ten Haaf-BW. SD = 10 %.
+- **Maintenance** = (RMR + daily life + steps + stairs + workouts + after-burn) / 0.9. Daily life = awake non-exercise hours × (job MET − 1) + sleep × (0.95 − 1), all × own RMR per kg-hour (CF). Steps = 0.5 kcal/kg/km net (ACSM), stride 0.415 / 0.413 × height, minus steps counted inside workouts: measured from the Health export (step samples overlapping each workout, largest source) or, without it, an estimated cadence per activity (weight training 25/min, boxing 70/min, etc.). Workouts = (MET − 1) × CF × kg × h, 2024 Compendium codes; runs with a pace = 1 kcal/kg/km. Weight-training intensity: typical session 3.5 (02054), heavy compounds 5.0 (02052), hard 6.0 (02050). From Health, lifting and sprint sessions map average heart rate with cut-offs 75/85/93 % HRmax (other activities 64/77/90 %). Apple Watch active kcal per session is shown next to Forge's figure as a cross-check (flagged when Forge is > 25 % higher), never used in the sum. After-burn 5 % of non-light sessions. SD = √(RMR SD² + (25 % × activity)²) / 0.9.
 - **Adaptive maintenance**: last 28 days, ≥ 14-day span, ≥ 4 weigh-ins, calories on ≥ 70 % of days. Linear regression of weight on day; maintenance = mean intake − slope × energy density. Energy density from the Forbes partition (lean share = 10.4 / (10.4 + fat kg); halved in a deficit when lifting, +0.15 in a surplus) with Hall's 1,816 / 9,440 kcal/kg. SD = √((ED × SE)² + 100²). Blended with the prediction by inverse variance.
 - **Plans**: cut 0.25–1 %/week; recomp −5 %; lean bulk +15 / 10 / 5 % by training years (< 1, 1–3, > 3), slow bulk ≤ 7 % near the FFMI ceiling. Protein: cut 2.7 g/kg FFM (2.2 g/kg reference weight if FFM unknown), recomp 2.6 g/kg FFM, bulk 1.9 g/kg, maintain 2.0 g/kg; reference weight = weight at BMI 25 when BMI > 30. Fat 25 % (floor 0.5 g/kg). Energy availability = (intake − exercise) / FFM: amber < 30, blocked < 25. Floors: never below RMR, 1,500 (men) / 1,200 (women). Safety answers switch deficits off.
 - **Body fat**: inverse-variance ensemble of DXA (SD 1.5), BodPod 2.5, pro BIA 4.5, smart scale 6.0, tape US Navy 3.8 (3.0 once calibrated against a DXA within 14 days; 70 % of the offset applied), tape RFM 3.8, photo-derived Navy/RFM 4.8 (4.2 calibrated), own estimate 5.0; Deurenberg (BMI) only when nothing else exists and never used for the lean-mass equations. Inputs older than 30 days are shown but not used. A heterogeneity term widens the range when methods disagree.
 
 ## Arena
 
+- Domains (radar, Peak, Balance): Strength, Explosive power, Speed, Power endurance, Aerobic, Upper-body endurance. Leanness is a secondary score shown apart. Aerobic keeps the best result (VO₂max and race times measure one quality); other domains average the best three events.
+- **Vertical jump**: CHMS cycle 5 (2016–17) countermovement jump with arm swing on a force plate, survey-weighted GAMLSS percentiles P5–P95 by 5-year band (18–19 separate). Population data. Wall-reach results are ranked with a warning.
+- **Pull-ups / push-ups**: Strength Level max-rep standards by bodyweight (lb converted to kg). "< 1" stored as 0.5; tied anchors keep the highest percentile.
+- **BikeErg 1,000 m, SkiErg 500 m**: Concept2 2024 (men n = 492 / 615, women n = 146 / 135), same method as the RowErg events. Confidence low for women.
+- **5 km / 10 km**: Daniels–Gilbert VDOT (VO₂ = −4.60 + 0.182258 v + 0.000104 v²; %max = 0.8 + 0.1894393 e^(−0.012778 t) + 0.2989558 e^(−0.1932605 t)), ranked on FRIEND by decade; the time for the next tier is solved by bisection.
+- Not added (no defensible adult reference data): standing broad jump, agility tests (5-10-5, T-test, Illinois), 10–40 m acceleration, assault bike, mobility.
 - Tier lower bounds (percentile among people who do the event): 5, 20, 50, 80, 95, 99, 99.9 % → Hobbit, Gaulish Villager, Roman Legionary, Viking (Shieldmaiden), Spartan (Amazon), Saiyan, Viltrumite, Olympian God.
 - Percentiles: linear in z between anchor points, end segments extended linearly beyond them.
 - **Lifts**: Strength Level bodyweight tables (5/20/50/80/95 %), interpolated by bodyweight; 99 / 99.9 % extrapolated. e1RM = mean of Epley, Brzycki, Lombardi (≤ 10 reps incl. reps in reserve). No age adjustment yet.
@@ -36,12 +42,12 @@ Forge is a static web app (no build step). Open `forge/` on GitHub Pages; everyt
 - **Rowing**: Concept2 2024 rankings (25/50/75/90 %) for 100 m and 500 m on −ln(time). 200 m, 250 m and 1 minute modelled per percentile on a log-log line between 100 m and 500 m (labelled "modelled").
 - **VO₂max**: FRIEND 2022 treadmill, RER ≥ 1.10, by decade (population data, so one percentile only). Cooper: (m − 504.9) / 44.73. Watch values flagged low confidence.
 - **All adults**: (1 − q) · Φ(z + 1.5) + q · p, range with (1.5q, Δ 1.0) and (0.5q, Δ 2.25). q per event in `EVENTS` (Forge estimates).
-- **Scores**: event score = 100 × percentile (× decay after 24 months, −25 %/year); domain = mean of the best 3 events; Leanness = 100 × (1 − NHANES body-fat percentile). Peak = mean of the best 2 domains; Balance = geometric mean of all domains (≥ 3).
+- **Scores**: event score = 100 × percentile (× decay after 24 months, −25 %/year); domain = mean of the best 3 events; Leanness = 100 × (1 − NHANES body-fat percentile), secondary. Peak = mean of the best 2 performance domains; Balance = geometric mean of all performance domains logged (≥ 3).
 
 ## Refreshing the benchmark data (yearly is enough)
 
-1. Strength Level: re-read the four bodyweight tables (bench, squat, deadlift, shoulder press; men and women) and replace the rows in `STRENGTH`. Update the date in `SOURCES.sl`.
-2. Concept2: take the latest complete season (May–April) for RowErg 100 m and 500 m, men and women: the summary box gives the 90/75/50/25 % times. Update `C2` and `SOURCES.c2`.
+1. Strength Level: re-read the four lift tables and the pull-up and push-up rep tables (bench, squat, deadlift, shoulder press; men and women) and replace the rows in `STRENGTH`. Update the date in `SOURCES.sl`.
+2. Concept2: take the latest complete season (May–April) for RowErg 100 m and 500 m, BikeErg 1,000 m and SkiErg 500 m, men and women: the summary box gives the 90/75/50/25 % times. Update `C2` and `SOURCES.c2`.
 3. Sprint world records in `SPRINT.wr` (60, 100, 200, 400 m).
 4. Bump `DATA_VERSION`, run both tests, check the Arena standards sheet for a lift and a sprint.
 
@@ -59,3 +65,11 @@ Photos live only in IndexedDB on the device that took them. Numbers sync through
 - Built-in food logger: Open Food Facts barcodes, BLS 4.0 (free since Dec 2025) and CIQUAL, saved meals, training-day vs rest-day targets.
 - More events (vertical/broad jump, pull-ups, HYROX, cycling W/kg, swimming), age adjustment for lifts, Concept2 by age group.
 - Calibrate the sprint ladder against real recreational sprint data.
+
+## MyFitnessPal
+
+No direct connection: MyFitnessPal writes Dietary Energy and macros to Apple Health, and Forge reads them through the Shortcut (`@kcal @protein @carbs @fat`) or the Health export. Settings → MyFitnessPal explains the setup and shows how many of the last 28 days have imported calories; Today shows yesterday's imported calories; Fuel → Daily log shows imported vs typed-in days.
+
+## State migrations
+
+- v2 (31 Oct 2026): weight-training sessions saved as "moderate" (5.0 MET) become "typical session" (3.5 MET).

@@ -9,10 +9,10 @@ t('worked example: 30 y man, 180 cm, 80 kg, 18 % fat, 8,000 steps, 4×60 strengt
   const r = C.predictTdee({ sex: 'm', kg: 80, cm: 180, age: 30, ffm: 65.6, trainingYears: 3, stepsAvg: 8000, sleepH: 8, occupation: 'desk',
     workouts: [{ type: 'strength', minutes: 60, perWeek: 4, intensity: 'moderate' }, { type: 'run', minutes: 40, perWeek: 2, intensity: 'moderate', paceKmh: 10 }] });
   near(r.rmr.value, 1921, 1, 'RMR ensemble');
-  near(r.stepsKcal, 183, 1, 'steps kcal');
+  near(r.stepsKcal, 157, 1, 'steps kcal (gym steps, 25/min, no longer counted twice)');
   near(r.items[0].kcalDay, 183, 1, 'strength kcal/day');
   near(r.items[1].kcalDay, 152, 1, 'run kcal/day');
-  near(r.tdee, 3070, 15, 'maintenance');
+  near(r.tdee, 3041, 15, 'maintenance (3,070 before the gym-step correction)');
   near(r.sd, 320, 20, 'maintenance SD');
 });
 t('RMR equations on an example DXA (male 28 y, 178 cm, 78 kg, FFM 65 kg)', () => {
@@ -75,5 +75,24 @@ t('plan guardrails', () => {
 t('trend weight handles gaps', () => {
   const s = C.trendSeries([{ date: '2026-10-01', w: 80 }, { date: '2026-10-11', w: 78 }]);
   near(s[1].trend, 80 - (1 - 0.9 ** 10) * 2, 1e-9, 'gap-aware EMA');
+});
+t('new Arena events', () => {
+  near(C.vdot(5000, 1200), 49.8, 0.1, 'VDOT 5 km in 20:00');
+  near(C.raceTime(5000, 49.8), 1200, 2, 'inverse VDOT');
+  const who = { sex: 'm', kg: 80, age: 32 };
+  let r = C.evaluatePR({ event: 'vjump', cm: 45.8, method: 'mat' }, who); near(r.p, 0.5, 0.001, 'CMJ median 30-34');
+  r = C.evaluatePR({ event: 'pullups', reps: 13, bw: 81.6 }, who); near(r.p, 0.5, 0.01, 'pull-ups median at 180 lb');
+  r = C.evaluatePR({ event: 'bike1000', time: 100.5 }, who); near(r.p, 0.5, 0.001, 'BikeErg median');
+  r = C.evaluatePR({ event: 'run5k', time: 1200 }, who); assert.ok(r.p > 0.8 && r.p < 0.86, '20:00 5 km at 32 = VDOT 49.8, between P75 (46.5) and P95 (57.9)');
+  r = C.evaluatePR({ event: 'pullups', reps: 3, bw: 60 }, { sex: 'f', kg: 60, age: 30 }); assert.ok(r.p > 0.2 && r.p < 0.5, 'women pull-ups with <1 anchors');
+  const A = C.arena([{ event: 'bench', weight: 98, reps: 1, bw: 80, date: C.today() }], who, 0.9);
+  assert.equal(A.dom.lean, undefined, 'leanness is not a domain'); assert.equal(A.lean, 90);
+  const a2 = C.arena([{ event: 'vo2', value: 38.6, method: 'lab', date: C.today() }, { event: 'run5k', time: 1200, date: C.today() }], who, null);
+  assert.ok(a2.dom.aerobic > 60, 'aerobic keeps the best result');
+});
+t('RMR: smart-scale body fat gets half weight', () => {
+  const p = { sex: 'm', kg: 93, cm: 175, age: 32, ffm: 79, trained: true };
+  const full = C.rmrEnsemble(p).value, half = C.rmrEnsemble({ ...p, bfSd: 6 }).value, bw = C.rmrEnsemble({ ...p, ffm: null }).value;
+  near(half, (full + bw) / 2, 0.01, 'half weight');
 });
 console.log(`\n${n} test groups passed`);

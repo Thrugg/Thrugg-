@@ -2,6 +2,7 @@
 import { S, save, set, upsert, remove, logDay, uid, storeImage, getPhoto, delPhoto, exportBackup, importBackup, reset, clearPhotos } from './store.js';
 import * as C from './calc.js';
 import { CATALOGUE, INTENSITIES, EVENTS, TIERS, TIER_P, DOMAINS, SOURCES, DATA_VERSION, HELPLINES } from './data.js';
+const LEAN_KEY = 'lean';
 import { t, setLang, getLang, nf, df } from './i18n.js';
 import { line, radar, pctBar, stack } from './charts.js';
 import { parseShortcut, readHealthFile, summarise } from './health.js';
@@ -17,8 +18,8 @@ const imp = () => S.profile.units === 'imperial';
 const kgShow = v => v == null ? null : imp() ? v * 2.20462 : v, kgRead = v => v == null || v === '' ? null : imp() ? +v / 2.20462 : +v, kgU = () => imp() ? 'lb' : 'kg';
 const cmShow = v => v == null ? null : imp() ? v / 2.54 : v, cmRead = v => v == null || v === '' ? null : imp() ? +v * 2.54 : +v, cmU = () => imp() ? 'in' : 'cm';
 const r1 = v => v == null ? '' : Math.round(v * 10) / 10;
-export const fmtTime = s => { if (s == null || !isFinite(s)) return '–'; if (s < 60) return s.toFixed(s < 30 ? 2 : 1); const m = Math.floor(s / 60), r = s - 60 * m; return `${m}:${r.toFixed(1).padStart(4, '0')}`; };
-export const parseTime = str => { if (str == null || str === '') return null; const s = String(str).trim().replace(',', '.'); const m = s.match(/^(\d+):(\d{1,2}(?:\.\d+)?)$/); return m ? +m[1] * 60 + +m[2] : (isFinite(+s) ? +s : null); };
+export const fmtTime = s => { if (s == null || !isFinite(s)) return '–'; if (s < 60) return s.toFixed(s < 30 ? 2 : 1); if (s >= 3600) { const h = Math.floor(s / 3600), m = Math.floor((s - 3600 * h) / 60), r = Math.round(s - 3600 * h - 60 * m); return `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`; } const m = Math.floor(s / 60), r = s - 60 * m; return s >= 600 ? `${m}:${String(Math.round(r)).padStart(2, '0')}` : `${m}:${r.toFixed(1).padStart(4, '0')}`; };
+export const parseTime = str => { if (str == null || str === '') return null; const s = String(str).trim().replace(',', '.'); let m = s.match(/^(\d+):(\d{2}):(\d{2}(?:\.\d+)?)$/); if (m) return +m[1] * 3600 + +m[2] * 60 + +m[3]; m = s.match(/^(\d+):(\d{1,2}(?:\.\d+)?)$/); return m ? +m[1] * 60 + +m[2] : (isFinite(+s) ? +s : null); };
 
 /* ---------- small builders ---------- */
 const field = (label, input, hint) => `<label class="field"><span>${label}</span>${input}${hint ? `<small>${hint}</small>` : ''}</label>`;
@@ -79,7 +80,7 @@ export function model(modeOverride) {
   const out = { p, a, age, series, kg, bfx, bf, ffm, fmKg, ok, blockDeficit };
   out.bmiV = kg && p.cm ? C.bmi(kg, p.cm) : null;
   if (ok) {
-    const pred = C.predictTdee({ sex: p.sex, kg, cm: p.cm, age, ffm, trainingYears: a.years, stepsAvg: a.stepsAvg, stepsIncludeWorkouts: a.stepsInc, strideCm: a.strideCm, flightsAvg: a.flights, occupation: a.occupation, sleepH: a.sleepH, workouts: a.workouts });
+    const pred = C.predictTdee({ sex: p.sex, kg, cm: p.cm, age, ffm, bfSd: bfx.usable ? bfx.ens?.sd : null, trainingYears: a.years, stepsAvg: a.stepsAvg, stepsIncludeWorkouts: a.stepsInc, strideCm: a.strideCm, flightsAvg: a.flights, occupation: a.occupation, sleepH: a.sleepH, workouts: a.workouts });
     const obs = C.adaptiveTdee(S.logs, { fmKg, trained: pred.trained });
     const tdee = C.blend(pred.tdee, pred.sd, obs);
     const rec = C.recommendMode({ sex: p.sex, bf, ffmiN: ffm ? C.ffmiNorm(ffm, p.cm) : null, trainingYears: a.years, bmiV: out.bmiV, blockDeficit });
@@ -100,7 +101,9 @@ function workoutsEditor() {
   return `<div class="wlist">${ws.map((w, i) => {
     const c = CATALOGUE[w.type] || CATALOGUE.other, b = `activity.workouts.${i}.`;
     const extra = c.pace ? field(t('fuel.pace'), numIn(b + 'paceKmh', w.paceKmh, { ph: '10' })) : c.watts ? field(t('fuel.watts'), numIn(b + 'watts', w.watts, { ph: '150' })) : '';
-    return `<div class="wrow">${field(t('fuel.type'), selIn(b + 'type', w.type, types))}<div class="g3">${field(t('fuel.minutes'), numIn(b + 'minutes', w.minutes, { step: 5 }))}${field(t('fuel.per'), numIn(b + 'perWeek', w.perWeek, { step: 0.5 }))}${extra}</div>${field(t('fuel.intensity'), selIn(b + 'intensity', w.intensity, INTENSITIES.map(k => [k, t('fuel.int.' + k)])))}<button class="lnk danger" data-act="wdel" data-i="${i}">${t('common.del')}</button></div>`;
+    const lbl = c.lift ? 'fuel.intS.' : 'fuel.int.';
+    const hint = w.src === 'health' ? `<p class="xs muted">${t('fuel.fromHealthNote')}${w.watchKcal ? ' · ' + t('fuel.watchSession', { k: nf(w.watchKcal) }) : ''}${w.spm != null ? ' · ' + t('fuel.spm', { s: nf(w.spm) }) : ''}</p>` : '';
+    return `<div class="wrow">${field(t('fuel.type'), selIn(b + 'type', w.type, types))}<div class="g3">${field(t('fuel.minutes'), numIn(b + 'minutes', w.minutes, { step: 5 }))}${field(t('fuel.per'), numIn(b + 'perWeek', w.perWeek, { step: 0.5 }))}${extra}</div>${field(t('fuel.intensity'), selIn(b + 'intensity', w.intensity, INTENSITIES.map(k => [k, t(lbl + k)])))}${hint}<button class="lnk danger" data-act="wdel" data-i="${i}">${t('common.del')}</button></div>`;
   }).join('')}</div><button class="btn ghost" data-act="wadd">+ ${t('ob.addWorkout')}</button>`;
 }
 const kcalBand = tdee => `${nf(rnd(tdee.value - tdee.sd, 50))}–${nf(rnd(tdee.value + tdee.sd, 50))}`;
@@ -114,7 +117,7 @@ function screenToday(M) {
     h += card(t('today.target'), `<div class="kpi">${nf(rnd(pl.kcal, 10))}<small> kcal</small></div><p class="muted">${t('fuel.mode.' + M.mode)}${M.tdee.source === 'blended' ? ' · ' + t('fuel.src.blended') : ''}</p>
       <div class="macros">${[['protein', pl.protein, 'p'], ['carbs', pl.carbs, 'c'], ['fat', pl.fat, 'f']].map(([k, g, cls]) => `<div class="mac ${cls}"><b>${nf(rnd(g, 5))} g</b><span>${t('today.' + k)}</span></div>`).join('')}</div>`, 'hero');
   } else h += card(t('today.target'), `<p class="muted">${t('today.noPlan')}</p><button class="btn pri" data-act="tab" data-tab="fuel">${t('today.setPlan')}</button>`, 'hero');
-  h += card(t('today.quick'), `<div class="g2">${field(`${t('today.weight')} (${kgU()})`, numIn('logtoday.w', r1(kgShow(log.w)), { conv: 'kg' }))}${field(`${t('today.intake')} (kcal)`, numIn('logtoday.kcal', log.kcal, { step: 10 }))}</div><button class="btn ghost sm" data-act="paste">${t('today.paste')}</button>`);
+  h += card(t('today.quick'), `<div class="g2">${field(`${t('today.weight')} (${kgU()})`, numIn('logtoday.w', r1(kgShow(log.w)), { conv: 'kg' }))}${field(`${t('today.intake')} (kcal)`, numIn('logtoday.kcal', log.kcal, { step: 10 }))}</div>${(() => { const y = S.logs[C.addDays(td, -1)]; return y?.kcal && !y.m?.includes('kcal') ? `<p class="xs muted">${t('today.fromMfp', { k: nf(y.kcal) })}</p>` : ''; })()}<button class="btn ghost sm" data-act="paste">${t('today.paste')}</button>`);
   if (M.series.length) {
     const last = M.series.slice(-30), pts = last.map(s => ({ x: C.dayNum(s.date), y: kgShow(s.w) })), tr = last.map(s => ({ x: C.dayNum(s.date), y: kgShow(s.trend) }));
     const wkAgo = M.series.filter(s => C.dayNum(s.date) <= C.dayNum(td) - 7).pop();
@@ -126,6 +129,7 @@ function screenToday(M) {
   const todo = [];
   if (!log.w) todo.push(['today.t_weigh']);
   if (!S.health.last || C.dayNum(td) - C.dayNum(S.health.last) > 7) todo.push(['today.t_health', 'settings']);
+  if (!Object.entries(S.logs).some(([d, v]) => d > C.addDays(td, -7) && v.kcal)) todo.push(['today.t_mfp', 'settings']);
   const lastPh = [...S.photos].sort((a, b) => a.date < b.date ? 1 : -1)[0];
   if (!lastPh) todo.push(['today.t_photoFirst', 'physique']); else if (C.dayNum(td) - C.dayNum(lastPh.date) > 21) todo.push([t('today.t_photo', { d: C.dayNum(td) - C.dayNum(lastPh.date) }), 'physique', true]);
   const lastTape = [...S.tapes].sort((a, b) => a.date < b.date ? 1 : -1)[0];
@@ -144,7 +148,7 @@ function screenFuel(M0) {
   h += card(t('fuel.maint'), `<div class="kpi">${nf(rnd(M.tdee.value, 10))}<small> kcal</small></div><p class="muted">${t('fuel.band68')}: ${kcalBand(M.tdee)} · ${t('fuel.band95')}: ${nf(rnd(M.tdee.value - 1.96 * M.tdee.sd, 50))}–${nf(rnd(M.tdee.value + 1.96 * M.tdee.sd, 50))}</p><p>${chip(t('fuel.src.' + M.tdee.source))} ${confChip(C.confidence(M.tdee.sd))}</p>`, 'hero');
   const parts = [['rmr', P.rmr.value, 'k1'], ['neat', P.neat, 'k2'], ['steps', P.stepsKcal, 'k3'], ['flights', P.flightsKcal, 'k3'], ['ex', P.exercise, 'k4'], ['epoc', P.epoc, 'k4'], ['tef', P.tef, 'k5']].filter(x => x[1] > 0.5);
   const rmrNames = { mifflin: 'Mifflin-St Jeor', katch: 'Katch-McArdle', cunningham: 'Cunningham', tinsleyFFM: 'Tinsley (FFM)', tinsleyBW: 'Tinsley (weight)', tenHaafFFM: 'ten Haaf (FFM)', tenHaafBW: 'ten Haaf (weight)' };
-  h += card(t('fuel.breakdown'), stack(parts.map(([k, v, cls]) => ({ v, cls, label: t('fuel.c_' + k) }))) + `<dl class="brk">${parts.map(([k, v, cls]) => `<dt><i class="${cls}"></i>${t('fuel.c_' + k)}</dt><dd>${nf(rnd(v, 5))}</dd>` + (k === 'rmr' ? `<dd class="sub">${t('fuel.rmrMethod', { m: P.rmr.parts.map(([e, w]) => `${rmrNames[e]} ${Math.round(w * 100)} %`).join(', ') })}</dd>` : k === 'steps' ? `<dd class="sub">${t('fuel.stepsDetail', { steps: nf(P.steps), km: nf(P.km, 1) })}</dd>` : k === 'ex' ? P.items.map(i => `<dd class="sub">${esc(CATALOGUE[i.type]?.[getLang()] || i.type)}: ${nf(i.kcalDay)} kcal${t('common.perDay')} · ${i.method === 'pace' ? 'ACSM' : `${i.met} MET (${i.code})`}</dd>`).join('') : '')).join('')}</dl>` + how(t('common.how'), `<p>${t('fuel.howText')}</p><p><a href="${SOURCES.compendium.url}" target="_blank" rel="noopener">${esc(SOURCES.compendium.name)}</a></p>`));
+  h += card(t('fuel.breakdown'), stack(parts.map(([k, v, cls]) => ({ v, cls, label: t('fuel.c_' + k) }))) + `<dl class="brk">${parts.map(([k, v, cls]) => `<dt><i class="${cls}"></i>${t('fuel.c_' + k)}</dt><dd>${nf(rnd(v, 5))}</dd>` + (k === 'rmr' ? `<dd class="sub">${t('fuel.rmrMethod', { m: P.rmr.parts.map(([e, w]) => `${rmrNames[e]} ${Math.round(w * 100)} %`).join(', ') })}</dd>` : k === 'steps' ? `<dd class="sub">${t('fuel.stepsDetail', { steps: nf(P.steps), km: nf(P.km, 1) })}</dd>` : k === 'ex' ? P.items.map(i => `<dd class="sub">${esc(CATALOGUE[i.type]?.[getLang()] || i.type)}: ${nf(i.kcalDay)} kcal${t('common.perDay')} · ${nf(i.session)} ${t('fuel.perSession')} · ${i.method === 'pace' ? 'ACSM' : `${i.met} MET (${i.code})`}${i.watch ? ` · <b class="${i.session > 1.25 * i.watch ? 'warnTxt' : ''}">${t('fuel.watchCmp', { k: nf(i.watch) })}</b>` : ''}</dd>`).join('') + (P.items.some(i => i.watch && i.session > 1.25 * i.watch) ? `<dd class="sub warnTxt">${t('fuel.watchHigh')}</dd>` : '') : '')).join('')}</dl>` + how(t('common.how'), `<p>${t('fuel.howText')}</p><p><a href="${SOURCES.compendium.url}" target="_blank" rel="noopener">${esc(SOURCES.compendium.name)}</a></p>`));
   h += card(t('fuel.activity'), `<div class="g2">${field(t('fuel.stepsAvg'), numIn('activity.stepsAvg', a.stepsAvg, { step: 100 }))}${field(t('ob.occupation'), selIn('activity.occupation', a.occupation, ['desk', 'mixed', 'standing', 'manual'].map(k => [k, t('ob.occ.' + k)])))}${field(t('ob.sleep'), numIn('activity.sleepH', a.sleepH, { step: 0.5 }))}${field(t('ob.years'), numIn('activity.years', a.years, { step: 0.5 }))}${field(t('fuel.flights'), numIn('activity.flights', a.flights, { step: 1 }))}${field(`${t('fuel.stride')} (cm)`, numIn('activity.strideCm', a.strideCm, { ph: nf(C.strideM(S.profile.sex, S.profile.cm) * 100) }), t('fuel.strideHint'))}</div>${chk('activity.stepsInc', a.stepsInc, t('fuel.stepsInc'))}<h3>${t('fuel.sessions')}</h3>${workoutsEditor()}`);
   // plan
   const modes = ['cut', 'recomp', 'maintain', 'bulk', 'custom'];
@@ -172,7 +176,8 @@ function screenFuel(M0) {
   // log
   const days = Object.entries(S.logs).sort((x, y) => x[0] < y[0] ? 1 : -1).slice(0, 14);
   const tr = Object.fromEntries(M.series.map(s => [s.date, s.trend]));
-  h += card(t('fuel.log'), (days.length ? `<table class="tbl"><thead><tr><th>${t('common.date')}</th><th>${kgU()}</th><th>${t('today.trend')}</th><th>kcal</th><th>${t('fuel.steps')}</th></tr></thead><tbody>${days.map(([d, v]) => `<tr data-act="logedit" data-d="${d}"><td>${df(d, { day: 'numeric', month: 'short' })}</td><td>${v.w ? nf(kgShow(v.w), 1) : '–'}</td><td>${tr[d] ? nf(kgShow(tr[d]), 1) : '–'}</td><td>${v.kcal ? nf(v.kcal) : '–'}</td><td>${v.steps ? nf(v.steps) : '–'}</td></tr>`).join('')}</tbody></table>` : `<p class="muted">${t('fuel.noLog')}</p>`) + `<button class="btn ghost" data-act="logedit" data-d="${C.today()}">${t('fuel.addEntry')}</button>`);
+  const k28 = Object.entries(S.logs).filter(([d, v]) => d > C.addDays(C.today(), -28) && v.kcal); const kImp = k28.filter(([, v]) => !v.m?.includes('kcal')).length;
+  h += card(t('fuel.log'), `<p class="xs muted">${t('fuel.kcalSrc', { n: kImp, m: k28.length - kImp })}</p>` + (days.length ? `<table class="tbl"><thead><tr><th>${t('common.date')}</th><th>${kgU()}</th><th>${t('today.trend')}</th><th>kcal</th><th>${t('fuel.steps')}</th></tr></thead><tbody>${days.map(([d, v]) => `<tr data-act="logedit" data-d="${d}"><td>${df(d, { day: 'numeric', month: 'short' })}</td><td>${v.w ? nf(kgShow(v.w), 1) : '–'}</td><td>${tr[d] ? nf(kgShow(tr[d]), 1) : '–'}</td><td>${v.kcal ? nf(v.kcal) : '–'}</td><td>${v.steps ? nf(v.steps) : '–'}</td></tr>`).join('')}</tbody></table>` : `<p class="muted">${t('fuel.noLog')}</p>`) + `<button class="btn ghost" data-act="logedit" data-d="${C.today()}">${t('fuel.addEntry')}</button>`);
   return h;
 }
 
@@ -220,20 +225,21 @@ function poseSvg(kind) {
 }
 
 /* ---------- ARENA ---------- */
-const EVENT_GROUPS = { strength: ['bench', 'squat', 'deadlift', 'ohp'], speed: ['sprint60', 'sprint100', 'sprint200', 'sprint400'], power: ['row100', 'row200', 'row250', 'row500', 'row1min'], aerobic: ['vo2'] };
-const fmtVal = (id, v) => { const k = EVENTS[id].kind; return k === 'lift' ? `${nf(kgShow(v), 1)} ${kgU()}` : k === 'rowtime' ? `${nf(v)} m` : k === 'vo2' ? `${nf(v, 1)}` : fmtTime(v); };
+const EVENT_GROUPS = { strength: ['bench', 'squat', 'deadlift', 'ohp'], explosive: ['vjump'], speed: ['sprint60', 'sprint100', 'sprint200', 'sprint400'], power: ['row100', 'row200', 'row250', 'row500', 'row1min', 'bike1000', 'ski500'], aerobic: ['vo2', 'run5k', 'run10k'], upper: ['pullups', 'pushups'] };
+const fmtVal = (id, v) => { const k = EVENTS[id].kind; return k === 'lift' ? `${nf(kgShow(v), 1)} ${kgU()}` : k === 'rowtime' ? `${nf(v)} m` : k === 'vo2' ? `${nf(v, 1)}` : k === 'jump' ? `${nf(cmShow(v), 1)} ${cmU()}` : k === 'reps' ? `${nf(v)} ${t('arena.repsU')}` : fmtTime(v); };
 function screenArena(M) {
   const A = M.ar, sex = S.profile.sex;
   let h = `<header class="hdr"><h1>${t('arena.title')}</h1><p class="muted">${t('arena.lead')}</p></header>`;
   if (!sex) return h + card('', `<p class="muted">${t('ob.you')}</p>`);
-  const domVals = DOMAINS.filter(d => d !== 'lean' || M.leanP != null).map(d => ({ label: t('arena.dom.' + d), v: A.dom[d] ?? null, d }));
+  const domVals = DOMAINS.map(d => ({ label: t('arena.domS.' + d), name: t('arena.dom.' + d), v: A.dom[d] ?? null, d }));
   let top = `<div class="g2"><div class="score"><p class="eyebrow">${t('arena.peak')}</p><div class="kpi">${A.peak != null ? nf(A.peak) : '–'}</div><small>${t('arena.peakText')}</small></div><div class="score"><p class="eyebrow">${t('arena.balance')}</p><div class="kpi">${A.balance != null ? nf(A.balance) : '–'}</div><small>${t('arena.balanceText')}</small></div></div>`;
   top += radar(domVals);
+  if (A.lean != null) top += `<div class="kv"><span>${t('arena.leanTitle')}</span><b>${nf(A.lean)}</b><small>${t('arena.leanText')}</small></div>`;
   if (A.balance != null) {
     const present = domVals.filter(x => x.v != null); const weak = present.reduce((a, b) => a.v < b.v ? a : b);
     const nextP = TIER_P.find(b => b * 100 > weak.v); const vals = present.map(x => x === weak ? Math.max(x.v, (nextP || 0.999) * 100) : x.v);
     const nb = Math.exp(C.mean(vals.map(v => Math.log(Math.max(1, v)))));
-    top += `<p class="tip">${t('arena.limiter', { d: weak.label, a: nf(A.balance), b: nf(nb) })}</p>`;
+    top += `<p class="tip">${t('arena.limiter', { d: weak.name, a: nf(A.balance), b: nf(nb) })}</p>`;
   } else top += `<p class="muted">${t('arena.needMore')}</p>`;
   top += `<p class="muted xs">${t('arena.gapText')}</p>`;
   h += card('', top, 'hero');
@@ -255,7 +261,9 @@ function gapTxt(id, r) {
   if (k === 'lift') return `+${nf(kgShow(r.next - r.value), 1)} ${kgU()}`;
   if (k === 'rowtime') return `+${nf(r.next - r.value)} m`;
   if (k === 'vo2') return `+${nf(r.next - r.value, 1)}`;
-  return `−${(r.value - r.next).toFixed(2)} s`;
+  if (k === 'jump') return `+${nf(cmShow(r.next - r.value), 1)} ${cmU()}`;
+  if (k === 'reps') return `+${Math.max(1, Math.ceil(r.next - r.value))} ${t('arena.repsU')}`;
+  const d = r.value - r.next; return d >= 60 ? `−${fmtTime(d)}` : `−${d.toFixed(2)} s`;
 }
 function progress(r) { if (r.tier >= 7) return 1; const lo = r.tier ? C.invcdf(TIER_P[r.tier - 1]) : C.invcdf(0.005), hi = C.invcdf(TIER_P[r.tier]); return C.clamp((C.invcdf(r.p) - lo) / (hi - lo), 0, 1); }
 
@@ -264,6 +272,8 @@ function screenSettings(M) {
   const p = S.profile; let h = `<header class="hdr"><h1>${t('tab.settings')}</h1></header>`;
   h += card(t('set.profile'), `<div class="g2">${field(t('set.language'), selIn('profile.lang', p.lang, [['en', 'English'], ['fr', 'Français']]))}${field(t('set.units'), selIn('profile.units', p.units, [['metric', t('units.metric')], ['imperial', t('units.imperial')]]))}${field(t('ob.name'), `<input type="text" data-bind="profile.name" value="${esc(p.name)}">`)}${field(t('sex.m') + ' / ' + t('sex.f'), selIn('profile.sex', p.sex || '', [['', '–'], ['m', t('sex.m')], ['f', t('sex.f')]]))}${field(t('ob.dob'), `<input type="date" data-bind="profile.dob" value="${p.dob || ''}">`)}${field(`${t('ob.height')} (${cmU()})`, numIn('profile.cm', r1(cmShow(p.cm)), { conv: 'cm' }))}</div>`);
   h += card(t('set.sync'), `<p class="muted">${t('set.syncLead')}</p><p id="syncStatus" class="chip">${t('set.syncOff')}</p><div class="row wrap"><button class="btn pri" data-act="signin">${t('set.signIn')}</button><button class="btn ghost" data-act="signup">${t('set.signUp')}</button><button class="btn ghost" data-act="signout">${t('set.signOut')}</button></div>`);
+  { const k28 = Object.entries(S.logs).filter(([d, v]) => d > C.addDays(C.today(), -28) && v.kcal && !v.m?.includes('kcal')).map(([d]) => d).sort();
+    h += card(t('set.mfp'), `<p class="muted">${t('set.mfpLead')}</p><ol class="guide">${t('set.mfpSteps').map(s => `<li>${esc(s)}</li>`).join('')}</ol><p class="chip ${k28.length >= 20 ? 'ok' : ''}">${k28.length ? t('set.mfpStatus', { n: k28.length, d: df(k28[k28.length - 1]) }) : t('set.mfpNone')}</p>`, 'mfp'); }
   h += card(t('set.health'), `<p class="muted">${t('set.healthLead')}</p>${S.health.last ? `<p class="xs muted">${t('set.hLast', { d: df(S.health.last) })}</p>` : ''}
     <h3>${t('set.hQuick')}</h3><p class="muted">${t('set.hQuickLead')}</p>${how(t('set.guide'), `<ol class="guide">${t('set.guideSteps').map(s => `<li>${esc(s).replace(/\n/g, '<br>')}</li>`).join('')}</ol><p class="muted xs">${t('set.guideNote')}</p>`)}<button class="btn ghost" data-act="paste">${t('set.hPaste')}</button>
     <h3>${t('set.hFull')}</h3><p class="muted">${t('set.hFullLead')}</p><label class="btn pri file">${t('set.hChoose')}<input type="file" id="hkfile" accept=".zip,.xml,application/zip,text/xml" hidden></label><p id="hkprog" class="muted"></p>`);
@@ -328,6 +338,10 @@ function prSheet(eventId, dom) {
     if (k === 'sprint') return `${field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="12.34" required>`)}<div class="g2">${field(t('arena.timing'), `<select name="timing">${['electronic', 'hand', 'gps'].map(x => `<option value="${x}">${t('arena.t.' + x)}</option>`).join('')}</select>`)}${field(t('arena.wind'), `<input type="number" step="any" name="wind">`)}</div>`;
     if (k === 'row') return field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="${id === 'row500' ? '1:32.0' : '17.5'}" required>`);
     if (k === 'rowtime') return field(t('arena.meters'), `<input type="number" name="meters" required>`);
+    if (k === 'erg') return field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="${id === 'bike1000' ? '1:40.0' : '1:45.0'}" required>`);
+    if (k === 'race') return field(t('arena.timeLong'), `<input type="text" inputmode="decimal" name="time" placeholder="${id === 'run5k' ? '22:30' : '47:00'}" required>`);
+    if (k === 'jump') return `${field(`${t('arena.cm')} (${cmU()})`, `<input type="number" step="any" inputmode="decimal" name="cm" required>`)}${field(t('arena.jumpMethod'), `<select name="method">${['mat', 'reach'].map(x => `<option value="${x}">${t('arena.jm.' + x)}</option>`).join('')}</select>`)}<p class="xs muted">${t('arena.jumpHow')}</p>`;
+    if (k === 'reps') return `<div class="g2">${field(t('arena.repsMax'), `<input type="number" inputmode="numeric" name="reps" min="1" required>`)}${field(`${t('arena.bwThen')} (${kgU()})`, `<input type="number" step="any" name="bw" value="${r1(kgShow(model().kg))}">`)}</div><p class="xs muted">${t('arena.repsHow.' + id)}</p>`;
     return `${field(t('arena.method'), `<select name="method">${['lab', 'cycle', 'watch', 'cooper'].map(x => `<option value="${x}">${t('arena.vm.' + x)}</option>`).join('')}</select>`)}<div class="g2">${field(t('arena.value'), `<input type="number" step="any" name="value">`)}${field(t('arena.cooperM'), `<input type="number" name="meters">`)}</div>`;
   };
   sheet(`<h2>${t('arena.add')}</h2>${field(t('arena.event'), `<select name="event">${ids.map(id => `<option value="${id}">${t('arena.ev.' + id)}</option>`).join('')}</select>`)}<div id="prbody">${body(ev0)}</div>${field(t('common.date'), `<input type="date" name="date" value="${C.today()}">`)}<div class="row"><button class="btn ghost" data-close>${t('common.cancel')}</button><button class="btn pri" data-save>${t('common.save')}</button></div>`, d => {
@@ -337,7 +351,9 @@ function prSheet(eventId, dom) {
       e.preventDefault(); const id = fv(f, 'event'), k = EVENTS[id].kind, pr = { id: uid(), event: id, date: fv(f, 'date') || C.today() };
       if (k === 'lift') Object.assign(pr, { weight: kgRead(fv(f, 'weight')), reps: +fv(f, 'reps') || 1, rir: +fv(f, 'rir') || 0, bw: kgRead(fv(f, 'bw')) });
       else if (k === 'sprint') Object.assign(pr, { time: parseTime(fv(f, 'time')), timing: fv(f, 'timing'), wind: fv(f, 'wind') == null ? null : +fv(f, 'wind') });
-      else if (k === 'row') pr.time = parseTime(fv(f, 'time'));
+      else if (k === 'row' || k === 'erg' || k === 'race') pr.time = parseTime(fv(f, 'time'));
+      else if (k === 'jump') Object.assign(pr, { cm: cmRead(fv(f, 'cm')), method: fv(f, 'method') });
+      else if (k === 'reps') Object.assign(pr, { reps: +fv(f, 'reps'), bw: kgRead(fv(f, 'bw')) });
       else if (k === 'rowtime') pr.meters = +fv(f, 'meters');
       else Object.assign(pr, { method: fv(f, 'method'), value: fv(f, 'value') == null ? null : +fv(f, 'value'), meters: fv(f, 'meters') == null ? null : +fv(f, 'meters') });
       const r = C.prValue(pr); if (!(r.value > 0)) { toast('?'); return; }
@@ -349,8 +365,8 @@ function eventSheet(id) {
   const M = model(), who = M.who, an = C.anchorsFor(id, { sex: who.sex, bw: who.kg, age: who.age }), ev = EVENTS[id], src = SOURCES[ev.src];
   const rows = TIERS.map((_, i) => { const v = i === 0 ? null : an.dec(C.valueAtP(TIER_P[i - 1], an.A)); return `<tr><td>${tierBadge(i)}</td><td>${v == null ? '–' : (an.lowerBetter ? '≤ ' : '≥ ') + fmtVal(id, v)}</td><td class="muted">${t('tier.band')[i]}</td></tr>`; }).reverse().join('');
   const prs = S.prs.filter(p => p.event === id).sort((a, b) => a.date < b.date ? 1 : -1);
-  const tipKey = ev.kind === 'lift' ? 'lift' : ev.kind === 'sprint' ? 'sprint' : ev.kind === 'vo2' ? 'vo2' : 'row';
-  sheet(`<h2>${t('arena.ev.' + id)}</h2><h3>${t('arena.standards')}</h3><p class="muted xs">${ev.kind === 'lift' ? `${t('arena.bwThen')}: ${nf(kgShow(who.kg), 1)} ${kgU()} · ` : ''}${t('sex.' + who.sex)}${ev.kind === 'vo2' || ev.kind === 'sprint' ? ` · ${who.age}` : ''}</p><table class="tbl std">${rows}</table>
+  const tipKey = { lift: 'lift', sprint: 'sprint', vo2: 'vo2', race: 'vo2', jump: 'jump', reps: 'reps', erg: 'erg' }[ev.kind] || 'row';
+  sheet(`<h2>${t('arena.ev.' + id)}</h2><h3>${t('arena.standards')}</h3><p class="muted xs">${ev.kind === 'lift' || ev.kind === 'reps' ? `${t('arena.bwThen')}: ${nf(kgShow(who.kg), 1)} ${kgU()} · ` : ''}${t('sex.' + who.sex)}${['vo2', 'sprint', 'jump', 'race'].includes(ev.kind) ? ` · ${who.age}` : ''}</p><table class="tbl std">${rows}</table>
     <h3>${t('arena.history')}</h3>${prs.length ? `<ul class="hist">${prs.map(p => { const r = C.evaluatePR(p, who); return `<li><span>${df(p.date)}</span><b>${r.value ? fmtVal(id, r.value) : '–'}</b>${r.rankable ? tierBadge(r.tier) : ''}${r.note ? `<small>${t('arena.note.' + r.note)}</small>` : r.est ? `<small>${t('arena.note.est')}</small>` : ''}<button class="lnk danger" data-delpr="${p.id}">×</button></li>`; }).join('')}</ul>` : `<p class="muted">${t('arena.none')}</p>`}
     <h3>${t('arena.improve')}</h3><ul>${t('arena.tips.' + tipKey).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
     <p class="xs muted">${t('common.source')}: ${src.url ? `<a href="${src.url}" target="_blank" rel="noopener">${esc(src.name)}</a>` : esc(src.name)} · ${esc(src.pop?.[getLang()] || '')} ${confChip(src.conf)}${ev.src === 'c2m' ? ' · ' + t('arena.note.modelled') : ''}${an.clampedBw ? ' · ' + t('arena.note.clampedBw') : ''}</p>
@@ -431,7 +447,7 @@ function onClick(e) {
   if (el.tagName === 'BUTTON') e.preventDefault();
   const acts = {
     tab: () => go(el.dataset.tab),
-    wadd: () => { S.activity.workouts.push({ type: 'strength', minutes: 60, perWeek: 3, intensity: 'moderate' }); save(); render(); },
+    wadd: () => { S.activity.workouts.push({ type: 'strength', minutes: 60, perWeek: 3, intensity: 'light' }); save(); render(); },
     wdel: () => { S.activity.workouts.splice(+el.dataset.i, 1); save(); render(); },
     mode: () => { previewMode = el.dataset.m; render(); },
     rate: () => { S.plan.ratePct = +el.dataset.r; save(); render(); },
