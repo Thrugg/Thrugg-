@@ -65,6 +65,9 @@ const attr = (l, k) => { const i = l.indexOf(' ' + k + '="'); if (i < 0) return 
 export class HealthAccumulator {
   constructor(days = 180, now = new Date()) { const c = new Date(now.getTime() - days * 864e5); this.cut = c.toISOString().slice(0, 10); this.stepCut = new Date(now.getTime() - 45 * 864e5).toISOString().slice(0, 10); this.sum = {}; this.first = {}; this.avg = {}; this.last = {}; this.workouts = []; this.wo = null; this.stepSamples = []; }
   line(l) {
+    if (l.includes('><')) { for (const x of l.replace(/>\s*</g, '>\n<').split('\n')) this.one(x); } else this.one(l);
+  }
+  one(l) {
     if (this.wo) {
       if (l.includes('<WorkoutStatistics')) {
         const ty = attr(l, 'type');

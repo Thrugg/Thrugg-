@@ -7,6 +7,7 @@ const DEF = () => ({
   profile: { lang: (navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en', units: 'metric', name: '', sex: null, dob: null, cm: null, variant: 'classic', onboarded: false },
   safety: { under18: false, preg: false, ed: false, med: false },
   activity: { stepsAvg: 8000, stepsInc: true, flights: 0, strideCm: null, occupation: 'desk', sleepH: 7.5, years: 0, workouts: [] },
+  body: { source: 'auto' }, renpho: { rows: {}, imported: null, file: null, height: null },
   plan: { mode: null, ratePct: 0.5, fatPct: 25, meals: 4, customKcal: null, applied: null },
   logs: {}, tapes: [], scans: [], photos: [], prs: [], health: { last: null }, meta: { created: today() }
 });

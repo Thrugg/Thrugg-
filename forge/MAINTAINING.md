@@ -11,13 +11,14 @@ Forge is a static web app (no build step). Open `forge/` on GitHub Pages; everyt
 | `js/ui.js` | All screens: Today, Fuel, Physique, Arena, Settings, onboarding, sheets |
 | `js/calc.js` | The engine (pure functions): RMR, maintenance, adaptive maintenance, plans, body fat, percentiles, tiers, Peak/Balance |
 | `js/data.js` | Benchmark packs, Compendium activity catalogue, tiers, helplines. **Every number has a source in `SOURCES`.** |
+| `js/renpho.js` | Renpho smart-scale CSV import and the source rule that merges Renpho, Apple Health and typed values into the daily view every calculation uses |
 | `js/health.js` | Apple Health import: Shortcut text payload and Health `export.zip` / `export.xml` (streamed in 4 MB slices) |
 | `js/photo.js` | On-device photo measurement (MediaPipe Pose Landmarker, GPU delegate for the mask) and the marker editor |
 | `js/store.js` | State, persistence, photos in IndexedDB (never synced), backups |
 | `js/i18n.js` | English and French text |
 | `vendor/fflate.min.js` | Zip reader (fflate 0.8.2, MIT) |
 | `sw.js` | Offline cache, network first |
-| `test/*.mjs` | `node forge/test/calc.test.mjs` and `node forge/test/health.test.mjs <path to fflate/umd/index.js>` |
+| `test/*.mjs` | `node forge/test/calc.test.mjs`, `node forge/test/renpho.test.mjs` and `node forge/test/health.test.mjs <path to fflate/umd/index.js>` |
 
 ## Engine (as approved in the design framework v0.9)
 
@@ -73,3 +74,10 @@ No direct connection: MyFitnessPal writes Dietary Energy and macros to Apple Hea
 ## State migrations
 
 - v2 (31 Oct 2026): weight-training sessions saved as "moderate" (5.0 MET) become "typical session" (3.5 MET).
+
+## Renpho smart scale (since 1 Nov 2026)
+
+- Import: Settings → Renpho smart scale → Choose Renpho CSV (the export of the Renpho Health app). Parser: comma, semicolon or tab separated, decimal commas, kg or lb (stone refused), dates `YYYY.MM.DD`, `YYYY-MM-DD` or day-first, `--` = empty. Earliest reading of a day wins; duplicates are counted. Height is derived from Renpho's BMI (median of √(weight/BMI)) and compared with Forge's profile height (warning from 1.5 cm).
+- Re-import: readings inside the file's date range replace the stored ones (deletions carry over), readings outside it are kept. Stored in `S.renpho.rows`, synced like the rest of the state.
+- Source rule, applied when reading (`mergeLogs`, nothing is overwritten in `S.logs`): body source `auto` = Renpho once a file is imported. Weight and body fat = Renpho reading of the day; else a value typed in Forge; Apple Health weight/body fat are ignored from the first Renpho day (kept before it). All other fields: typed in Forge, else Apple Health. Each day carries `_s` with the source of every field (shown as R / H / ✎ in Fuel → Daily log).
+- Engine use: weight (trend, adaptive maintenance) and the smart-scale body fat (mean of the readings in the 7 days up to the latest one, used up to 30 days, SD 6). Renpho's BMR is shown next to Forge's resting metabolism but not used (it is Katch-McArdle on Renpho's own fat-free mass, within ~13 kcal on Zach's file). Other Renpho values are shown in Physique → Smart scale with the change against the reading closest to 4 weeks earlier, and a note when body fat moves in lockstep with weight (r > 0.9 over 90 days).

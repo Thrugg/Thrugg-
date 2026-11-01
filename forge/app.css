@@ -77,3 +77,6 @@ dialog#sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:620px;ma
 pre{white-space:pre-wrap;font-size:12px}
 @media (max-width:360px){.g3{grid-template-columns:1fr 1fr}.kpi{font-size:40px}}
 .warnTxt{color:var(--warn)}
+.src{font-style:normal;font-size:9px;font-weight:700;margin-left:4px;padding:1px 4px;border-radius:4px;vertical-align:1px}.s-renpho{color:#fff;background:#3b7fe0}.s-health{color:#fff;background:#d4644a}.s-manual{color:var(--ink);background:var(--card2);border:1px solid var(--line)}
+.flagline{color:var(--warn);font-size:13px;font-weight:600;margin:8px 0}
+.srcmap th{width:34%;text-transform:none;letter-spacing:0;font-size:12px;vertical-align:top;color:var(--ink)}.srcmap td{font-size:13px;color:var(--muted)}

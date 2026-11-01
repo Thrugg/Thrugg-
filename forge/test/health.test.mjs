@@ -71,4 +71,8 @@ assert.equal(st.intensity, 'light', 'lifting at 69 % HRmax = typical session'); 
 const r2 = await readHealthFile(new File([zipped], 'export.zip'), { days: 180, fflate });
 assert.ok(!Object.keys(r2.days).some(k => k < '2026-01-01'), 'old records skipped');
 const xmlFile = new File([xml], 'export.xml'); const r3 = await readHealthFile(xmlFile, { days: 3650 }); assert.equal(r3.days['2026-10-29'].steps, 11000, 'plain export.xml also works');
+// a whole export written on one line (some tools strip line breaks) parses the same way
+const oneLine = xml.replace(/\n\s*/g, '');
+const r4 = await readHealthFile(new File([oneLine], 'export.xml'), { days: 3650, now: new Date('2026-10-31T12:00:00Z') });
+assert.equal(r4.workouts.length, 2); assert.equal(r4.workouts[0].hr, 128); assert.equal(r4.days['2026-10-29'].steps, 11000); assert.equal(r4.workouts[0].steps, 1250);
 console.log('health import tests passed');

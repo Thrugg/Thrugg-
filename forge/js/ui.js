@@ -7,6 +7,7 @@ import { t, setLang, getLang, nf, df } from './i18n.js';
 import { line, radar, pctBar, stack } from './charts.js';
 import { parseShortcut, readHealthFile, summarise } from './health.js';
 import { analyse, editor, measure } from './photo.js';
+import { parseRenphoCsv, mergeRenpho, mergeLogs, bodySource, renphoStats } from './renpho.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,13 +49,13 @@ export function photoCal() {
   }
   return null;
 }
-function bodyFat(kg, age) {
+function bodyFat(kg, age, L) {
   const p = S.profile, td = C.today(), items = [], stale = [];
   const within = (d, n) => d && C.dayNum(td) - C.dayNum(d) <= n;
   const scans = [...S.scans].filter(s => s.bf).sort((a, b) => a.date < b.date ? 1 : -1);
   scans.slice(0, 4).forEach((s, i) => (i === 0 && within(s.date, 30) ? items : stale).push({ method: s.method, value: s.bf, sd: C.BF_SD[s.method] || 4.5, date: s.date }));
-  const bia = Object.entries(S.logs).filter(([d, v]) => v.bf && within(d, 7)).sort().pop();
-  if (bia) items.push({ method: 'bia', value: bia[1].bf, sd: C.BF_SD.bia, date: bia[0] });
+  const biaAll = Object.entries(L).filter(([d, v]) => v.bf > 0 && within(d, 30)).sort();
+  if (biaAll.length) { const lastD = biaAll[biaAll.length - 1][0], wk = biaAll.filter(([d]) => C.dayNum(lastD) - C.dayNum(d) < 7); items.push({ method: 'bia', value: C.mean(wk.map(([, v]) => v.bf)), sd: C.BF_SD.bia, date: lastD, n: wk.length, renpho: L[lastD]._s?.bf === 'renpho' }); }
   const tape = [...S.tapes].sort((a, b) => a.date < b.date ? 1 : -1)[0];
   if (tape && p.cm) {
     const off = navyOffset(), arr = within(tape.date, 30) ? items : stale;
@@ -71,17 +72,18 @@ function bodyFat(kg, age) {
 }
 export function model(modeOverride) {
   const p = S.profile, a = S.activity, age = C.ageAt(p.dob) ?? 30;
-  const series = C.trendSeries(Object.entries(S.logs).filter(([, v]) => v.w > 0).map(([date, v]) => ({ date, w: v.w })));
+  const src = bodySource(S), L = mergeLogs(S.logs, S.renpho, src);
+  const series = C.trendSeries(Object.entries(L).filter(([, v]) => v.w > 0).map(([date, v]) => ({ date, w: v.w })));
   const kg = series.length ? series[series.length - 1].trend : null;
-  const bfx = bodyFat(kg, age), bf = bfx.usable ? bfx.ens?.value ?? null : null;
+  const bfx = bodyFat(kg, age, L), bf = bfx.usable ? bfx.ens?.value ?? null : null;
   const ffm = bf != null && kg ? kg * (1 - bf / 100) : null, fmKg = bf != null && kg ? kg * bf / 100 : (kg ? kg * (p.sex === 'm' ? 0.2 : 0.3) : null);
   const ok = !!(p.sex && p.cm && kg && p.dob);
   const blockDeficit = !!(S.safety.under18 || S.safety.preg || S.safety.ed || S.safety.med);
-  const out = { p, a, age, series, kg, bfx, bf, ffm, fmKg, ok, blockDeficit };
+  const out = { p, a, age, series, kg, bfx, bf, ffm, fmKg, ok, blockDeficit, L, src };
   out.bmiV = kg && p.cm ? C.bmi(kg, p.cm) : null;
   if (ok) {
     const pred = C.predictTdee({ sex: p.sex, kg, cm: p.cm, age, ffm, bfSd: bfx.usable ? bfx.ens?.sd : null, trainingYears: a.years, stepsAvg: a.stepsAvg, stepsIncludeWorkouts: a.stepsInc, strideCm: a.strideCm, flightsAvg: a.flights, occupation: a.occupation, sleepH: a.sleepH, workouts: a.workouts });
-    const obs = C.adaptiveTdee(S.logs, { fmKg, trained: pred.trained });
+    const obs = C.adaptiveTdee(L, { fmKg, trained: pred.trained });
     const tdee = C.blend(pred.tdee, pred.sd, obs);
     const rec = C.recommendMode({ sex: p.sex, bf, ffmiN: ffm ? C.ffmiNorm(ffm, p.cm) : null, trainingYears: a.years, bmiV: out.bmiV, blockDeficit });
     const mode = modeOverride || S.plan.mode || rec.mode;
@@ -110,14 +112,14 @@ const kcalBand = tdee => `${nf(rnd(tdee.value - tdee.sd, 50))}–${nf(rnd(tdee.v
 
 /* ---------- TODAY ---------- */
 function screenToday(M) {
-  const p = S.profile, td = C.today(), log = S.logs[td] || {};
+  const p = S.profile, td = C.today(), log = M.L[td] || {}, rpToday = log._s?.w === 'renpho';
   let h = `<header class="hdr"><p class="eyebrow">${esc(df(td, { weekday: 'long', day: 'numeric', month: 'long' }))}</p><h1>${p.name ? t('today.hello', { name: esc(p.name) }) : t('app')}</h1></header>`;
   if (M.plan && S.plan.mode) {
     const pl = M.plan;
     h += card(t('today.target'), `<div class="kpi">${nf(rnd(pl.kcal, 10))}<small> kcal</small></div><p class="muted">${t('fuel.mode.' + M.mode)}${M.tdee.source === 'blended' ? ' · ' + t('fuel.src.blended') : ''}</p>
       <div class="macros">${[['protein', pl.protein, 'p'], ['carbs', pl.carbs, 'c'], ['fat', pl.fat, 'f']].map(([k, g, cls]) => `<div class="mac ${cls}"><b>${nf(rnd(g, 5))} g</b><span>${t('today.' + k)}</span></div>`).join('')}</div>`, 'hero');
   } else h += card(t('today.target'), `<p class="muted">${t('today.noPlan')}</p><button class="btn pri" data-act="tab" data-tab="fuel">${t('today.setPlan')}</button>`, 'hero');
-  h += card(t('today.quick'), `<div class="g2">${field(`${t('today.weight')} (${kgU()})`, numIn('logtoday.w', r1(kgShow(log.w)), { conv: 'kg' }))}${field(`${t('today.intake')} (kcal)`, numIn('logtoday.kcal', log.kcal, { step: 10 }))}</div>${(() => { const y = S.logs[C.addDays(td, -1)]; return y?.kcal && !y.m?.includes('kcal') ? `<p class="xs muted">${t('today.fromMfp', { k: nf(y.kcal) })}</p>` : ''; })()}<button class="btn ghost sm" data-act="paste">${t('today.paste')}</button>`);
+  h += card(t('today.quick'), `<div class="g2">${rpToday ? `<div class="field"><span>${t('today.weight')} (${kgU()})</span><div class="kpi sm">${nf(kgShow(log.w), 2)}</div><small class="muted">${t('today.fromRenpho', { t: esc((S.renpho.rows[td]?.t || '').slice(0, 5)) })}</small></div>` : field(`${t('today.weight')} (${kgU()})`, numIn('logtoday.w', r1(kgShow(log.w)), { conv: 'kg' }))}${field(`${t('today.intake')} (kcal)`, numIn('logtoday.kcal', log.kcal, { step: 10 }))}</div>${(() => { const y = M.L[C.addDays(td, -1)]; return y?.kcal && y._s?.kcal !== 'manual' ? `<p class="xs muted">${t('today.fromMfp', { k: nf(y.kcal) })}</p>` : ''; })()}<button class="btn ghost sm" data-act="paste">${t('today.paste')}</button>`);
   if (M.series.length) {
     const last = M.series.slice(-30), pts = last.map(s => ({ x: C.dayNum(s.date), y: kgShow(s.w) })), tr = last.map(s => ({ x: C.dayNum(s.date), y: kgShow(s.trend) }));
     const wkAgo = M.series.filter(s => C.dayNum(s.date) <= C.dayNum(td) - 7).pop();
@@ -127,9 +129,10 @@ function screenToday(M) {
   if (M.tdee) h += card(t('today.maintenance'), `<div class="kpi">${nf(rnd(M.tdee.value, 10))}<small> kcal</small></div><p class="muted">${t('fuel.band68')}: ${kcalBand(M.tdee)} · ${t('fuel.src.' + M.tdee.source)}</p>${confChip(C.confidence(M.tdee.sd))}`);
   if (M.ar && S.prs.length && M.ar.peak != null) h += card(t('today.arena'), `<div class="g2"><div><p class="eyebrow">${t('today.peak')}</p><div class="kpi sm">${nf(M.ar.peak)}</div></div><div><p class="eyebrow">${t('today.balance')}</p><div class="kpi sm">${M.ar.balance != null ? nf(M.ar.balance) : '–'}</div></div></div><div class="badges">${Object.values(M.ar.best).sort((a, b) => b.r.p - a.r.p).slice(0, 4).map(b => `<span class="bb">${tierBadge(b.r.tier)} ${esc(t('arena.ev.' + b.pr.event))}</span>`).join('')}</div><button class="lnk" data-act="tab" data-tab="arena">${t('arena.title')} →</button>`);
   const todo = [];
-  if (!log.w) todo.push(['today.t_weigh']);
+  if (M.src === 'renpho') { const imp = S.renpho.imported; if (!imp || C.dayNum(td) - C.dayNum(imp) > 7) todo.push(['today.t_renpho', 'settings']); }
+  else if (!log.w) todo.push(['today.t_weigh']);
   if (!S.health.last || C.dayNum(td) - C.dayNum(S.health.last) > 7) todo.push(['today.t_health', 'settings']);
-  if (!Object.entries(S.logs).some(([d, v]) => d > C.addDays(td, -7) && v.kcal)) todo.push(['today.t_mfp', 'settings']);
+  if (!Object.entries(M.L).some(([d, v]) => d > C.addDays(td, -7) && v.kcal)) todo.push(['today.t_mfp', 'settings']);
   const lastPh = [...S.photos].sort((a, b) => a.date < b.date ? 1 : -1)[0];
   if (!lastPh) todo.push(['today.t_photoFirst', 'physique']); else if (C.dayNum(td) - C.dayNum(lastPh.date) > 21) todo.push([t('today.t_photo', { d: C.dayNum(td) - C.dayNum(lastPh.date) }), 'physique', true]);
   const lastTape = [...S.tapes].sort((a, b) => a.date < b.date ? 1 : -1)[0];
@@ -148,7 +151,7 @@ function screenFuel(M0) {
   h += card(t('fuel.maint'), `<div class="kpi">${nf(rnd(M.tdee.value, 10))}<small> kcal</small></div><p class="muted">${t('fuel.band68')}: ${kcalBand(M.tdee)} · ${t('fuel.band95')}: ${nf(rnd(M.tdee.value - 1.96 * M.tdee.sd, 50))}–${nf(rnd(M.tdee.value + 1.96 * M.tdee.sd, 50))}</p><p>${chip(t('fuel.src.' + M.tdee.source))} ${confChip(C.confidence(M.tdee.sd))}</p>`, 'hero');
   const parts = [['rmr', P.rmr.value, 'k1'], ['neat', P.neat, 'k2'], ['steps', P.stepsKcal, 'k3'], ['flights', P.flightsKcal, 'k3'], ['ex', P.exercise, 'k4'], ['epoc', P.epoc, 'k4'], ['tef', P.tef, 'k5']].filter(x => x[1] > 0.5);
   const rmrNames = { mifflin: 'Mifflin-St Jeor', katch: 'Katch-McArdle', cunningham: 'Cunningham', tinsleyFFM: 'Tinsley (FFM)', tinsleyBW: 'Tinsley (weight)', tenHaafFFM: 'ten Haaf (FFM)', tenHaafBW: 'ten Haaf (weight)' };
-  h += card(t('fuel.breakdown'), stack(parts.map(([k, v, cls]) => ({ v, cls, label: t('fuel.c_' + k) }))) + `<dl class="brk">${parts.map(([k, v, cls]) => `<dt><i class="${cls}"></i>${t('fuel.c_' + k)}</dt><dd>${nf(rnd(v, 5))}</dd>` + (k === 'rmr' ? `<dd class="sub">${t('fuel.rmrMethod', { m: P.rmr.parts.map(([e, w]) => `${rmrNames[e]} ${Math.round(w * 100)} %`).join(', ') })}</dd>` : k === 'steps' ? `<dd class="sub">${t('fuel.stepsDetail', { steps: nf(P.steps), km: nf(P.km, 1) })}</dd>` : k === 'ex' ? P.items.map(i => `<dd class="sub">${esc(CATALOGUE[i.type]?.[getLang()] || i.type)}: ${nf(i.kcalDay)} kcal${t('common.perDay')} · ${nf(i.session)} ${t('fuel.perSession')} · ${i.method === 'pace' ? 'ACSM' : `${i.met} MET (${i.code})`}${i.watch ? ` · <b class="${i.session > 1.25 * i.watch ? 'warnTxt' : ''}">${t('fuel.watchCmp', { k: nf(i.watch) })}</b>` : ''}</dd>`).join('') + (P.items.some(i => i.watch && i.session > 1.25 * i.watch) ? `<dd class="sub warnTxt">${t('fuel.watchHigh')}</dd>` : '') : '')).join('')}</dl>` + how(t('common.how'), `<p>${t('fuel.howText')}</p><p><a href="${SOURCES.compendium.url}" target="_blank" rel="noopener">${esc(SOURCES.compendium.name)}</a></p>`));
+  h += card(t('fuel.breakdown'), stack(parts.map(([k, v, cls]) => ({ v, cls, label: t('fuel.c_' + k) }))) + `<dl class="brk">${parts.map(([k, v, cls]) => `<dt><i class="${cls}"></i>${t('fuel.c_' + k)}</dt><dd>${nf(rnd(v, 5))}</dd>` + (k === 'rmr' ? (M.src === 'renpho' ? rpBmr() : '') + `<dd class="sub">${t('fuel.rmrMethod', { m: P.rmr.parts.map(([e, w]) => `${rmrNames[e]} ${Math.round(w * 100)} %`).join(', ') })}</dd>` : k === 'steps' ? `<dd class="sub">${t('fuel.stepsDetail', { steps: nf(P.steps), km: nf(P.km, 1) })}</dd>` : k === 'ex' ? P.items.map(i => `<dd class="sub">${esc(CATALOGUE[i.type]?.[getLang()] || i.type)}: ${nf(i.kcalDay)} kcal${t('common.perDay')} · ${nf(i.session)} ${t('fuel.perSession')} · ${i.method === 'pace' ? 'ACSM' : `${i.met} MET (${i.code})`}${i.watch ? ` · <b class="${i.session > 1.25 * i.watch ? 'warnTxt' : ''}">${t('fuel.watchCmp', { k: nf(i.watch) })}</b>` : ''}</dd>`).join('') + (P.items.some(i => i.watch && i.session > 1.25 * i.watch) ? `<dd class="sub warnTxt">${t('fuel.watchHigh')}</dd>` : '') : '')).join('')}</dl>` + how(t('common.how'), `<p>${t('fuel.howText')}</p><p><a href="${SOURCES.compendium.url}" target="_blank" rel="noopener">${esc(SOURCES.compendium.name)}</a></p>`));
   h += card(t('fuel.activity'), `<div class="g2">${field(t('fuel.stepsAvg'), numIn('activity.stepsAvg', a.stepsAvg, { step: 100 }))}${field(t('ob.occupation'), selIn('activity.occupation', a.occupation, ['desk', 'mixed', 'standing', 'manual'].map(k => [k, t('ob.occ.' + k)])))}${field(t('ob.sleep'), numIn('activity.sleepH', a.sleepH, { step: 0.5 }))}${field(t('ob.years'), numIn('activity.years', a.years, { step: 0.5 }))}${field(t('fuel.flights'), numIn('activity.flights', a.flights, { step: 1 }))}${field(`${t('fuel.stride')} (cm)`, numIn('activity.strideCm', a.strideCm, { ph: nf(C.strideM(S.profile.sex, S.profile.cm) * 100) }), t('fuel.strideHint'))}</div>${chk('activity.stepsInc', a.stepsInc, t('fuel.stepsInc'))}<h3>${t('fuel.sessions')}</h3>${workoutsEditor()}`);
   // plan
   const modes = ['cut', 'recomp', 'maintain', 'bulk', 'custom'];
@@ -174,10 +177,11 @@ function screenFuel(M0) {
   const o = M.obs;
   h += card(t('fuel.learn'), `<p class="muted">${t('fuel.learnLead')}</p>` + (o.ok ? `<p>${t('fuel.learnOk', { s: o.span, v: nf(rnd(o.tdee, 10)), sd: nf(rnd(o.sd, 10)), slope: (o.slopeKgWk > 0 ? '+' : '') + nf(o.slopeKgWk, 2) })}</p><p class="muted">${t('fuel.learnWeight', { pct: nf((M.tdee.wObs || 0) * 100) })}</p>` : `<p>${t('fuel.learnNeed', { w: o.nW, k: o.nK, s: o.span })}</p>`));
   // log
-  const days = Object.entries(S.logs).sort((x, y) => x[0] < y[0] ? 1 : -1).slice(0, 14);
+  const days = Object.entries(M.L).sort((x, y) => x[0] < y[0] ? 1 : -1).slice(0, 14);
+  const tag = (v, k) => v._s?.[k] ? `<i class="src s-${v._s[k]}">${{ renpho: 'R', health: 'H', manual: '✎' }[v._s[k]]}</i>` : '';
   const tr = Object.fromEntries(M.series.map(s => [s.date, s.trend]));
-  const k28 = Object.entries(S.logs).filter(([d, v]) => d > C.addDays(C.today(), -28) && v.kcal); const kImp = k28.filter(([, v]) => !v.m?.includes('kcal')).length;
-  h += card(t('fuel.log'), `<p class="xs muted">${t('fuel.kcalSrc', { n: kImp, m: k28.length - kImp })}</p>` + (days.length ? `<table class="tbl"><thead><tr><th>${t('common.date')}</th><th>${kgU()}</th><th>${t('today.trend')}</th><th>kcal</th><th>${t('fuel.steps')}</th></tr></thead><tbody>${days.map(([d, v]) => `<tr data-act="logedit" data-d="${d}"><td>${df(d, { day: 'numeric', month: 'short' })}</td><td>${v.w ? nf(kgShow(v.w), 1) : '–'}</td><td>${tr[d] ? nf(kgShow(tr[d]), 1) : '–'}</td><td>${v.kcal ? nf(v.kcal) : '–'}</td><td>${v.steps ? nf(v.steps) : '–'}</td></tr>`).join('')}</tbody></table>` : `<p class="muted">${t('fuel.noLog')}</p>`) + `<button class="btn ghost" data-act="logedit" data-d="${C.today()}">${t('fuel.addEntry')}</button>`);
+  const k28 = Object.entries(M.L).filter(([d, v]) => d > C.addDays(C.today(), -28) && v.kcal); const kImp = k28.filter(([, v]) => v._s?.kcal !== 'manual').length;
+  h += card(t('fuel.log'), `<p class="xs muted">${t('fuel.kcalSrc', { n: kImp, m: k28.length - kImp })}</p>` + (days.length ? `<table class="tbl"><thead><tr><th>${t('common.date')}</th><th>${kgU()}</th><th>${t('today.trend')}</th><th>kcal</th><th>${t('fuel.steps')}</th></tr></thead><tbody>${days.map(([d, v]) => `<tr data-act="logedit" data-d="${d}"><td>${df(d, { day: 'numeric', month: 'short' })}</td><td>${v.w ? nf(kgShow(v.w), 1) + tag(v, 'w') : '–'}</td><td>${tr[d] ? nf(kgShow(tr[d]), 1) : '–'}</td><td>${v.kcal ? nf(v.kcal) + tag(v, 'kcal') : '–'}</td><td>${v.steps ? nf(v.steps) + tag(v, 'steps') : '–'}</td></tr>`).join('')}</tbody></table><p class="xs muted">${t('fuel.srcLegend')}</p>` : `<p class="muted">${t('fuel.noLog')}</p>`) + `<button class="btn ghost" data-act="logedit" data-d="${C.today()}">${t('fuel.addEntry')}</button>`);
   return h;
 }
 
@@ -188,7 +192,7 @@ function screenPhysique(M) {
   if (E && !S.safety.ed) {
     const lo = Math.max(3, E.lo), hi = E.hi;
     h += card(t('phys.bf'), `<div class="kpi">${nf(E.value, 1)}<small> %</small></div><p>${t('phys.bfRange', { lo: nf(lo, 0), hi: nf(hi, 0) })}</p>${confChip(E.sd < 2.5 ? 'high' : E.sd < 4 ? 'medium' : 'low')}
-      <h3>${t('phys.methods')}</h3><ul class="meth">${E.items.map(i => `<li><span>${t('phys.m.' + i.method)}${i.cal ? ' ✓' : ''}</span><b>${nf(i.value, 1)} %</b><small>±${nf(i.sd * 1.96, 1)} · ${df(i.date)} · ${t('phys.weight')} ${Math.round(i.weight * 100)} %</small></li>`).join('')}${M.bfx.stale.map(i => `<li class="stale"><span>${t('phys.m.' + i.method)}</span><b>${nf(i.value, 1)} %</b><small>${df(i.date)} · ${t('phys.stale')}</small></li>`).join('')}</ul>`, 'hero');
+      <h3>${t('phys.methods')}</h3><ul class="meth">${E.items.map(i => `<li><span>${i.renpho ? t('phys.m.biaRenpho', { n: i.n }) : t('phys.m.' + i.method)}${i.cal ? ' ✓' : ''}</span><b>${nf(i.value, 1)} %</b><small>±${nf(i.sd * 1.96, 1)} · ${df(i.date)} · ${t('phys.weight')} ${Math.round(i.weight * 100)} %</small></li>`).join('')}${M.bfx.stale.map(i => `<li class="stale"><span>${t('phys.m.' + i.method)}</span><b>${nf(i.value, 1)} %</b><small>${df(i.date)} · ${t('phys.stale')}</small></li>`).join('')}</ul>`, 'hero');
   } else if (!S.safety.ed) h += card(t('phys.bf'), `<p class="muted">${t('phys.bfNone')}</p>`, 'hero');
   // comparisons
   if (p.sex && !S.safety.ed && !S.safety.under18) {
@@ -205,6 +209,7 @@ function screenPhysique(M) {
     if (M.bmiV) { const lean = S.scans.find(s => s.method === 'dxa' && s.weight && s.bf && C.bmi(s.weight, p.cm) >= 25 && s.bf < (p.sex === 'm' ? 20 : 28)); cmp += `<div class="kv"><span>${t('phys.bmi')}</span><small>${t('phys.bmiText', { v: nf(M.bmiV, 1) })}${lean ? ' ' + t('phys.bmiDxa', { d: df(lean.date), b: nf(C.bmi(lean.weight, p.cm), 1), f: nf(lean.bf, 1) }) : ''}</small></div>`; }
     if (cmp) h += card(t('phys.compare'), cmp);
   }
+  if (M.src === 'renpho') h += smartScaleCard();
   // photos
   const photos = [...S.photos].sort((a, b) => a.date < b.date ? 1 : -1);
   h += card(t('phys.photos'), `<p class="muted xs">${t('phys.photoOnDevice')}</p>${how(t('phys.photoHow'), `<div class="poses">${poseSvg('front')}${poseSvg('side')}${poseSvg('back')}</div><dl class="proto">${t('phys.protocol').map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`)}<div class="gal">${photos.map(ph => `<button class="ph" data-act="photo" data-id="${ph.id}"><img data-photo="${ph.id}:front" alt=""><span>${df(ph.date)}${ph.ref ? ' · ' + esc(ph.ref) : ''}${ph.result ? ` · ${ph.result.cropped ? '⚠ ' : ''}${nf(ph.result.navy, 1)} %` : ''}</span></button>`).join('')}</div><button class="btn pri" data-act="photonew">${t('phys.photoNew')}</button>`);
@@ -272,11 +277,12 @@ function screenSettings(M) {
   const p = S.profile; let h = `<header class="hdr"><h1>${t('tab.settings')}</h1></header>`;
   h += card(t('set.profile'), `<div class="g2">${field(t('set.language'), selIn('profile.lang', p.lang, [['en', 'English'], ['fr', 'Français']]))}${field(t('set.units'), selIn('profile.units', p.units, [['metric', t('units.metric')], ['imperial', t('units.imperial')]]))}${field(t('ob.name'), `<input type="text" data-bind="profile.name" value="${esc(p.name)}">`)}${field(t('sex.m') + ' / ' + t('sex.f'), selIn('profile.sex', p.sex || '', [['', '–'], ['m', t('sex.m')], ['f', t('sex.f')]]))}${field(t('ob.dob'), `<input type="date" data-bind="profile.dob" value="${p.dob || ''}">`)}${field(`${t('ob.height')} (${cmU()})`, numIn('profile.cm', r1(cmShow(p.cm)), { conv: 'cm' }))}</div>`);
   h += card(t('set.sync'), `<p class="muted">${t('set.syncLead')}</p><p id="syncStatus" class="chip">${t('set.syncOff')}</p><div class="row wrap"><button class="btn pri" data-act="signin">${t('set.signIn')}</button><button class="btn ghost" data-act="signup">${t('set.signUp')}</button><button class="btn ghost" data-act="signout">${t('set.signOut')}</button></div>`);
-  { const k28 = Object.entries(S.logs).filter(([d, v]) => d > C.addDays(C.today(), -28) && v.kcal && !v.m?.includes('kcal')).map(([d]) => d).sort();
+  { const k28 = Object.entries(M.L).filter(([d, v]) => d > C.addDays(C.today(), -28) && v.kcal && v._s?.kcal !== 'manual').map(([d]) => d).sort();
     h += card(t('set.mfp'), `<p class="muted">${t('set.mfpLead')}</p><ol class="guide">${t('set.mfpSteps').map(s => `<li>${esc(s)}</li>`).join('')}</ol><p class="chip ${k28.length >= 20 ? 'ok' : ''}">${k28.length ? t('set.mfpStatus', { n: k28.length, d: df(k28[k28.length - 1]) }) : t('set.mfpNone')}</p>`, 'mfp'); }
   h += card(t('set.health'), `<p class="muted">${t('set.healthLead')}</p>${S.health.last ? `<p class="xs muted">${t('set.hLast', { d: df(S.health.last) })}</p>` : ''}
-    <h3>${t('set.hQuick')}</h3><p class="muted">${t('set.hQuickLead')}</p>${how(t('set.guide'), `<ol class="guide">${t('set.guideSteps').map(s => `<li>${esc(s).replace(/\n/g, '<br>')}</li>`).join('')}</ol><p class="muted xs">${t('set.guideNote')}</p>`)}<button class="btn ghost" data-act="paste">${t('set.hPaste')}</button>
+    <h3>${t('set.hQuick')}</h3><p class="muted">${t('set.hQuickLead')}</p>${how(t('set.guide'), `<ol class="guide">${t('set.guideSteps').map(s => `<li>${esc(s).replace(/\n/g, '<br>')}</li>`).join('')}</ol><p class="muted xs">${t('set.guideNote')}</p>${M.src === 'renpho' ? `<p class="muted xs">${t('set.guideRenpho')}</p>` : ''}`)}<button class="btn ghost" data-act="paste">${t('set.hPaste')}</button>
     <h3>${t('set.hFull')}</h3><p class="muted">${t('set.hFullLead')}</p><label class="btn pri file">${t('set.hChoose')}<input type="file" id="hkfile" accept=".zip,.xml,application/zip,text/xml" hidden></label><p id="hkprog" class="muted"></p>`);
+  h += renphoCard(M);
   h += card(t('set.data'), `<div class="row wrap"><button class="btn ghost" data-act="export">${t('set.export')}</button><label class="btn ghost file">${t('set.import')}<input type="file" id="bkfile" accept=".json,application/json" hidden></label><button class="btn danger" data-act="wipe">${t('set.wipe')}</button></div>`);
   h += card(t('set.safety'), `${chk('safety.under18', S.safety.under18, t('ob.s_under18'))}${chk('safety.preg', S.safety.preg, t('ob.s_preg'))}${chk('safety.ed', S.safety.ed, t('ob.s_ed'))}${chk('safety.med', S.safety.med, t('ob.s_med'))}<h3>${t('set.helpTitle')}</h3><p>${HELPLINES.de.name}: <a href="tel:+49221892031">${HELPLINES.de.phone}</a> (${HELPLINES.de.hours}) · <a href="${HELPLINES.de.url}" target="_blank" rel="noopener">${HELPLINES.de.url.replace('https://', '')}</a></p><p>${HELPLINES.fr.name}: <a href="${HELPLINES.fr.url}" target="_blank" rel="noopener">${HELPLINES.fr.url.replace('https://www.', '')}</a></p>`);
   h += card(t('set.sources'), `<ul class="src">${Object.values(SOURCES).map(s => `<li><b>${s.url ? `<a href="${s.url}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)}</b>${s.pop ? `<span>${esc(s.pop[getLang()] || s.pop.en)}</span>` : ''}${s.conf ? confChip(s.conf) : ''}</li>`).join('')}</ul><p class="muted xs">${t('set.dataVer', { v: DATA_VERSION })}</p>`);
@@ -298,6 +304,45 @@ function screenOnboarding() {
   return `<div class="obw">${n ? `<p class="eyebrow">${t('ob.step', { n, m: total - 1 })}</p>` : ''}${steps[n]()}${err}${n ? `<div class="row"><button class="btn ghost" data-act="obback">${t('common.back')}</button><button class="btn pri" data-act="obnext">${n === total - 1 ? t('ob.finish') : t('common.next')}</button></div>` : ''}</div>`;
 }
 
+/* ---------- Renpho ---------- */
+function rpBmr() {
+  const st = renphoStats(S.renpho.rows); const b = st?.latest?.bmr;
+  return b ? `<dd class="sub">${t('fuel.rpBmr', { v: nf(b), d: df(st.last, { day: 'numeric', month: 'short' }) })}</dd>` : '';
+}
+function heightNote() {
+  const h = S.renpho.height, cm = S.profile.cm;
+  return h && cm && Math.abs(h - cm) >= 1.5 ? `<p class="flagline">${t('set.rpHeight', { r: nf(h), f: nf(cm) })}</p>` : '';
+}
+function renphoCard(M) {
+  const R = S.renpho, keys = Object.keys(R.rows || {}).sort();
+  const status = keys.length ? `<p class="chip ${R.imported && C.dayNum(C.today()) - C.dayNum(R.imported) <= 7 ? 'ok' : ''}">${t('set.rpStatus', { n: keys.length, a: df(keys[0], { day: 'numeric', month: 'short' }), b: df(keys[keys.length - 1]), d: df(R.imported) })}</p>` : `<p class="chip">${t('set.rpNone')}</p>`;
+  const rule = `<table class="tbl srcmap"><tbody><tr><th>${t('set.rpFromR')}</th><td>${t('set.rpFromRList')}</td></tr><tr><th>${t('set.rpFromH')}</th><td>${t('set.rpFromHList')}</td></tr><tr><th>${t('set.rpFromM')}</th><td>${t('set.rpFromMList')}</td></tr></tbody></table>`;
+  return card(t('set.rp'), `<p class="muted">${t('set.rpLead')}</p>${how(t('set.rpHow'), `<ol class="guide">${t('set.rpSteps').map(x => `<li>${esc(x)}</li>`).join('')}</ol>`)}
+    <label class="btn pri file">${t('set.rpChoose')}<input type="file" id="rpfile" accept=".csv,text/csv,text/comma-separated-values" hidden></label>${status}${heightNote()}
+    ${field(t('set.rpSource'), selIn('body.source', S.body.source || 'auto', [['auto', t('set.rpSrc.auto')], ['renpho', t('set.rpSrc.renpho')], ['health', t('set.rpSrc.health')]]), t('set.rpNow', { s: t('set.rpSrc.' + M.src) }))}
+    ${M.src === 'renpho' ? rule : ''}${keys.length ? `<button class="lnk danger" data-act="rpclear">${t('set.rpClear')}</button>` : ''}`);
+}
+async function importRenpho(file) {
+  try {
+    const parsed = parseRenphoCsv(await file.text());
+    S.renpho.rows = mergeRenpho(S.renpho, parsed);
+    Object.assign(S.renpho, { imported: C.today(), file: file.name, height: parsed.heightCm ? Math.round(parsed.heightCm * 10) / 10 : S.renpho.height });
+    save(); render();
+    toast(t('set.rpDone', { n: parsed.days, r: parsed.readings }) + (parsed.dupes ? ' ' + t('set.rpDupes', { d: parsed.dupes }) : ''));
+  } catch (e) { toast(t('set.rpErr.' + (e.code || 'other'))); }
+}
+function smartScaleCard() {
+  const st = renphoStats(S.renpho.rows); if (!st) return '';
+  const L = st.latest, P = st.prev, kg = v => `${nf(kgShow(v), 1)} ${kgU()}`, kg2 = v => `${nf(kgShow(v), 2)} ${kgU()}`, pct = v => `${nf(v, 1)} %`;
+  const rows = [['w', 'today.weight', kg2], ['bf', 'phys.rp.bf', pct], ['fm', 'phys.rp.fm', kg], ['ffm', 'phys.rp.ffm', kg], ['sm', 'phys.rp.sm', kg], ['mus', 'phys.rp.mus', kg], ['waterPct', 'phys.rp.water', pct], ['bone', 'phys.rp.bone', kg], ['protPct', 'phys.rp.prot', pct], ['subq', 'phys.rp.subq', pct], ['vis', 'phys.rp.vis', v => nf(v)], ['bmr', 'phys.rp.bmr', v => nf(v) + ' kcal'], ['mage', 'phys.rp.mage', v => nf(v)]]
+    .filter(([k]) => L[k] != null);
+  const dec = { w: 2, vis: 0, bmr: 0, mage: 0 };
+  const delta = (k, f) => { if (!P || P[k] == null) return '–'; const step = 10 ** -(dec[k] ?? 1), d = Math.round((L[k] - P[k]) / step) * step; if (Math.abs(d) < step / 2) return '0'; return (d > 0 ? '+' : '−') + f(Math.abs(d)); };
+  let note = '';
+  if (st.rWeightFat != null && st.rWeightFat > 0.9) note = `<p class="tip">${t('phys.rp.lockstep', { r: nf(st.rWeightFat, 2), f: nf(st.fatPerKg, 2), l: nf(st.lostSplit, 2) })}</p>`;
+  return card(t('phys.rp.title'), `<p class="muted xs">${t('phys.rp.lead', { d: df(st.last), t: esc((L.t || '').slice(0, 5)) })}</p><table class="tbl"><thead><tr><th></th><th>${t('phys.rp.latest')}</th><th>${P ? t('phys.rp.change', { d: df(st.ref, { day: 'numeric', month: 'short' }) }) : ''}</th></tr></thead><tbody>${rows.map(([k, lbl, f]) => `<tr><td>${t(lbl)}</td><td>${f(L[k])}</td><td>${delta(k, f)}</td></tr>`).join('')}</tbody></table>${note}${heightNote()}<p class="muted xs">${t('phys.rp.caveat')}</p>`);
+}
+
 /* ---------- sheets ---------- */
 function sheet(html, mount) {
   const d = $('#sheet'); d.innerHTML = `<form method="dialog" class="sh">${html}</form>`; d.showModal();
@@ -306,9 +351,9 @@ function sheet(html, mount) {
 }
 const fv = (f, k) => { const v = f.elements[k]?.value; return v === '' || v == null ? null : v; };
 function logSheet(date) {
-  const v = S.logs[date] || {};
-  sheet(`<h2>${t('fuel.addEntry')}</h2>${field(t('common.date'), `<input type="date" name="d" value="${date}">`)}<div class="g2">${field(`${t('today.weight')} (${kgU()})`, `<input type="number" step="any" inputmode="decimal" name="w" value="${r1(kgShow(v.w))}">`)}${field('kcal', `<input type="number" inputmode="numeric" name="kcal" value="${v.kcal ?? ''}">`)}${field(t('fuel.protein'), `<input type="number" step="any" name="p" value="${v.p ?? ''}">`)}${field(t('fuel.carbs'), `<input type="number" step="any" name="c" value="${v.c ?? ''}">`)}${field(t('fuel.fat'), `<input type="number" step="any" name="f" value="${v.f ?? ''}">`)}${field(t('fuel.steps'), `<input type="number" name="steps" value="${v.steps ?? ''}">`)}</div><div class="row"><button class="btn ghost" data-close>${t('common.cancel')}</button><button class="btn pri" data-save>${t('common.save')}</button></div>`, d => {
-    d.querySelector('[data-save]').onclick = e => { e.preventDefault(); const f = d.querySelector('form'); const date2 = fv(f, 'd') || date; const n = k => fv(f, k) == null ? '' : +fv(f, k); logDay(date2, { w: fv(f, 'w') == null ? '' : kgRead(fv(f, 'w')), kcal: n('kcal'), p: n('p'), c: n('c'), f: n('f'), steps: n('steps') }); save(); d.close(); render(); toast(t('common.saved')); };
+  const v = S.logs[date] || {}, M0 = model(), rp = M0.L[date]?._s?.w === 'renpho';
+  sheet(`<h2>${t('fuel.addEntry')}</h2>${field(t('common.date'), `<input type="date" name="d" value="${date}">`)}<div class="g2">${rp ? field(`${t('today.weight')} (${kgU()})`, `<input type="number" name="w" value="${r1(kgShow(M0.L[date].w))}" disabled>`, t('fuel.rpLocked')) : field(`${t('today.weight')} (${kgU()})`, `<input type="number" step="any" inputmode="decimal" name="w" value="${r1(kgShow(v.w))}">`)}${field('kcal', `<input type="number" inputmode="numeric" name="kcal" value="${v.kcal ?? ''}">`)}${field(t('fuel.protein'), `<input type="number" step="any" name="p" value="${v.p ?? ''}">`)}${field(t('fuel.carbs'), `<input type="number" step="any" name="c" value="${v.c ?? ''}">`)}${field(t('fuel.fat'), `<input type="number" step="any" name="f" value="${v.f ?? ''}">`)}${field(t('fuel.steps'), `<input type="number" name="steps" value="${v.steps ?? ''}">`)}</div><div class="row"><button class="btn ghost" data-close>${t('common.cancel')}</button><button class="btn pri" data-save>${t('common.save')}</button></div>`, d => {
+    d.querySelector('[data-save]').onclick = e => { e.preventDefault(); const f = d.querySelector('form'); const date2 = fv(f, 'd') || date; const n = k => fv(f, k) == null ? '' : +fv(f, k); logDay(date2, { ...(rp ? {} : { w: fv(f, 'w') == null ? '' : kgRead(fv(f, 'w')) }), kcal: n('kcal'), p: n('p'), c: n('c'), f: n('f'), steps: n('steps') }); save(); d.close(); render(); toast(t('common.saved')); };
   });
 }
 function tapeSheet(id) {
@@ -462,7 +507,8 @@ function onClick(e) {
     wipe: async () => { if (!confirm(t('set.wipeConfirm'))) return; await clearPhotos().catch(() => { }); reset(); ob = { step: 0 }; render(); },
     signin: () => window.Cloud?.dialog(() => render()),
     signout: async () => { await window.Cloud?.signOut(); render(); },
-    signup: () => signupSheet()
+    signup: () => signupSheet(),
+    rpclear: () => { if (!confirm(t('set.rpClearConfirm'))) return; S.renpho = { rows: {}, imported: null, file: null, height: null }; save(); render(); }
   };
   acts[a]?.();
 }
@@ -478,6 +524,7 @@ function signupSheet() {
 function onChangeEv(e) {
   const el = e.target;
   if (el.id === 'hkfile' && el.files[0]) return importHealthFile(el.files[0]);
+  if (el.id === 'rpfile' && el.files[0]) return importRenpho(el.files[0]);
   if (el.id === 'bkfile' && el.files[0]) return el.files[0].text().then(importBackup).then(kind => { setLang(S.profile.lang); toast(t('set.imported')); if (ob && kind === 'merge') ob.step = 1; render(); }).catch(err => toast(t('set.hErr', { e: err.message })));
   if (el.id === 'c1w' || el.id === 'c1r') return calc1rm();
   const b = el.dataset?.bind; if (!b) return;
