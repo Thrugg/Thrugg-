@@ -16,9 +16,9 @@ assert.equal(p.rows['2026-10-05'].whr, undefined, '"--" is empty'); assert.ok(Ma
 assert.equal(p.unit, 'kg');
 
 // semicolon + decimal comma export, dates day-first, pounds
-const lb = 'Date;Time;Weight(lb);Body Fat Percentage(%);Fat-Free Mass(lb)\n31.10.2026;07:00;209,1;18,7;170,0\n01.11.2026;7:05 AM;208,0;18,6;169,3\n';
+const lb = 'Date;Time;Weight(lb);Body Fat Percentage(%);Fat-Free Mass(lb)\n31.10.2026;07:00;176,4;15,2;149,6\n01.11.2026;7:05 AM;175,9;15,1;149,3\n';
 const q = parseRenphoCsv(lb);
-assert.equal(q.first, '2026-10-31'); assert.ok(Math.abs(q.rows['2026-10-31'].w - 94.85) < 0.01, 'lb → kg'); assert.equal(q.rows['2026-11-01'].bf, 18.6); assert.equal(q.unit, 'lb');
+assert.equal(q.first, '2026-10-31'); assert.ok(Math.abs(q.rows['2026-10-31'].w - 80.01) < 0.01, 'lb → kg'); assert.equal(q.rows['2026-11-01'].bf, 15.1); assert.equal(q.unit, 'lb');
 assert.throws(() => parseRenphoCsv('a,b\n1,2'), e => e.code === 'columns');
 
 // re-import: readings inside the new file's period are replaced (deleted ones disappear), outside kept
