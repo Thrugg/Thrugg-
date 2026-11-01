@@ -1282,7 +1282,7 @@ function initMap() {
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showZoom: !isPhone() }), 'bottom-right');
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
-  map.on('load', () => { mapReady = true; pushHikeData(); pushHome(); fitRegion(false); });
+  map.on('load', () => { mapReady = true; pushHikeData(); pushHome(); if (!Builder.on && !UI.detailId) fitRegion(false); });
   map.on('style.load', () => { pushHikeData(); });
   map.on('error', e => { if (e && e.error) console.warn('map:', e.error.message || e.error); });
   map.on('click', onMapClick);
