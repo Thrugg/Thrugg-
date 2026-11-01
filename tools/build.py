@@ -119,7 +119,7 @@ def build(hikes):
     tpl = (SRC / 'index.template.html').read_text()
     css = (SRC / 'styles.css').read_text()
     body = (SRC / 'body.html').read_text()
-    js = '\n'.join((SRC / 'js' / f).read_text() for f in ['core.js', 'map.js', 'ui.js', 'extras.js'])
+    js = '\n'.join((SRC / 'js' / f).read_text() for f in ['core.js', 'map.js', 'ui.js', 'builder.js', 'extras.js'])
     data = 'let HIKES = ' + serialise(hikes).rstrip() + ';'
     html = tpl.replace('{{CSS}}', css).replace('{{BODY}}', body).replace('{{DATA}}', data).replace('{{JS}}', js)
     (ROOT / 'index.html').write_text(html)

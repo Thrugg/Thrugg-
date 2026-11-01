@@ -23,6 +23,7 @@ const Dlg = {
     const L = logId && ITEMS[logId] ? ITEMS[logId].d : null;
     const est = h ? yourTime(h) : 0, dur = preset.dur ?? L?.dur ?? est;
     let who = (L?.who || [0, 1]).slice(), rating = L?.rating || 0;
+    const wkm = preset.km ?? L?.km ?? '', wup = preset.up ?? L?.up ?? '', wdn = preset.dn ?? L?.dn ?? '';
     this.open({
       title: logId ? 'Edit entry' : 'Mark as done',
       body: `${h ? `<div class="field">Hike<b style="font:500 18px var(--f-display);text-transform:none;letter-spacing:0;color:var(--ink)">${esc(h.n)}</b><input type="hidden" name="hike" value="${h.id}"></div>` : `<label class="field">Hike<select name="hike" required>${this.hikeOptions()}</select></label>`}
@@ -31,37 +32,62 @@ const Dlg = {
         <div class="field">Who came<div class="who" id="fWho">${[0, 1].map(i => `<button type="button" data-i="${i}" aria-pressed="${who.includes(i)}">${esc(personName(i))}</button>`).join('')}</div></div>
         <label class="chk"><input type="checkbox" name="dog" ${(L ? L.dog : preset.dog) ? 'checked' : ''}> ${esc(dogName() || 'Our dog')} came along</label>
         <div class="field">How was it<div class="stars" id="fStars">${[1, 2, 3, 4, 5].map(i => `<button type="button" data-v="${i}" class="${i <= rating ? 'on' : ''}" aria-label="${i} star${i > 1 ? 's' : ''}">${ic('i-star')}</button>`).join('')}</div></div>
-        <label class="field">Note<textarea name="note" placeholder="Conditions, the view, where we had lunch…">${esc(L?.note || '')}</textarea></label>
-        ${preset.km ? `<p class="muted" style="margin:0">From your GPX: ${fmtKm(preset.km)} · ↑ ${fmtM(preset.up)}</p>` : ''}`,
+        <details class="watch" ${wkm ? 'open' : ''}><summary>From your watch or app <small>optional, makes the log and your pace exact</small></summary>
+          <div class="row3"><label class="field">Distance km<input name="wkm" type="number" step="0.01" min="0" inputmode="decimal" value="${wkm}"></label><label class="field">Ascent m<input name="wup" type="number" step="1" min="0" inputmode="numeric" value="${wup}"></label><label class="field">Descent m<input name="wdn" type="number" step="1" min="0" inputmode="numeric" value="${wdn}" placeholder="same"></label></div>
+          <div class="watch-row"><button type="button" class="btn ghost small" id="wShot">${ic('i-camera')}Read a screenshot</button><span class="muted" id="wMsg">${preset.km ? 'Filled in from your GPX.' : 'Apple Watch, Garmin, Komoot or Strava summary. Read on this device.'}</span></div>
+          <input type="file" id="wFile" accept="image/*" hidden>
+          ${h && h.custom ? `<label class="chk"><input type="checkbox" name="wUpd" ${h.auto !== false ? 'checked' : ''}> Use these numbers for the hike as well</label>` : ''}
+        </details>
+        <label class="field">Note<textarea name="note" placeholder="Conditions, the view, where we had lunch…">${esc(L?.note || '')}</textarea></label>`,
       foot: `${logId ? '<button type="button" class="btn ghost left" id="logDel">Delete entry</button>' : ''}<button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary" type="submit">Save</button>`,
       onOpen: f => {
         f.querySelectorAll('#fWho button').forEach(b => b.onclick = () => { const i = +b.dataset.i; who = who.includes(i) ? who.filter(x => x !== i) : [...who, i].sort(); b.setAttribute('aria-pressed', who.includes(i)); });
         f.querySelectorAll('#fStars button').forEach(b => b.onclick = () => { rating = +b.dataset.v === rating ? 0 : +b.dataset.v; f.querySelectorAll('#fStars button').forEach(x => x.classList.toggle('on', +x.dataset.v <= rating)); });
         const del = f.querySelector('#logDel');
         if (del) this.confirmBtn(del, 'Tap again to delete', () => { delItem(logId); $('#dlg').close(); afterLog(); toast('Entry deleted'); });
+        const msg = f.querySelector('#wMsg'), file = f.querySelector('#wFile');
+        f.querySelector('#wShot').onclick = () => file.click();
+        file.onchange = async () => {
+          const img = file.files[0]; file.value = ''; if (!img) return;
+          msg.textContent = 'Reading the screenshot…';
+          try {
+            const r = await Shot.read(img, pc => { msg.textContent = `Reading the screenshot… ${pc} %`; });
+            if (r.km) f.wkm.value = r.km; if (r.up != null) f.wup.value = r.up; if (r.dn != null) f.wdn.value = r.dn;
+            if (r.dur) { f.hh.value = Math.floor(r.dur / 60); f.mm.value = r.dur % 60; }
+            const got = [r.km && fmtKm(r.km), r.up != null && '↑ ' + fmtM(r.up), r.dn != null && '↓ ' + fmtM(r.dn), r.dur && fmtDur(r.dur)].filter(Boolean);
+            msg.textContent = got.length ? `Found ${got.join(', ')}. Check them before saving.` : 'No distance, climb or time found on that image. Type them in instead.';
+          } catch (e) { msg.textContent = 'Could not read it (' + e.message + '). Type the numbers in instead.'; }
+        };
       },
       onSubmit: f => {
         const fd = new FormData(f), hike = fd.get('hike');
         if (!who.length) { toast('Pick at least one of you'); return false; }
         const dur = (+fd.get('hh') || 0) * 60 + (+fd.get('mm') || 0);
         const data = { hike, date: fd.get('date'), dur: dur || null, who, dog: !!fd.get('dog'), rating, note: (fd.get('note') || '').trim() };
-        if (preset.km) Object.assign(data, { km: preset.km, up: preset.up, dn: preset.dn });
-        else if (L && L.km) Object.assign(data, { km: L.km, up: L.up, dn: L.dn });
+        const n = k => fd.get(k) === '' || fd.get(k) == null ? null : +fd.get(k);
+        const km = n('wkm'), up = n('wup'), dn = n('wdn');
+        if (km > 0) Object.assign(data, { km: Math.round(km * 100) / 100, up: up ?? null, dn: dn ?? up ?? null });
         putItem(logId || 'log:' + uid(), 'log', data);
+        const hk = HBY[hike];
+        if (fd.get('wUpd') && hk && hk.custom && km > 0) {
+          saveHike(hk, { km: Math.round(km * 10) / 10, up: up ?? hk.up, dn: hk.ty === 'trav' ? (dn ?? hk.dn) : null, auto: false });
+        }
         afterLog(); toast(logId ? 'Entry updated' : 'Logged. Well walked!');
       }
     });
   },
-  hike(h, isNew = false) {
+  hike(h, isNew = false, o = {}) {
     const tags = new Set(h.tg || []);
     const opt = (v, cur, lbl) => `<option value="${v}" ${String(v) === String(cur) ? 'selected' : ''}>${lbl}</option>`;
     this.open({
-      title: isNew ? 'New hike' : 'Edit hike',
-      body: `<label class="field">Name<input name="n" value="${esc(h.n || '')}" required placeholder="e.g. Herzogstand from Walchensee"></label>
+      title: o.builder ? (isNew ? 'Name your route' : 'Route details') : isNew ? 'New hike' : 'Edit hike',
+      body: `${o.builder ? `<p class="b-dlgnote">Distance, climb and heights come from the traced line${h.auto ? '' : ' (the distance is the one you know)'}. Change any number to use your own.</p>` : ''}
+        <label class="field">Name<input name="n" value="${esc(h.n || '')}" required placeholder="e.g. Herzogstand from Walchensee"></label>
         <div class="row2"><label class="field">Area<input name="ar" value="${esc(h.ar || '')}" list="areaList"></label><label class="field">Country<select name="c">${Object.entries(COUNTRIES).map(([k, v]) => opt(k, h.c, v)).join('')}</select></label></div>
         <datalist id="areaList">${[...new Set(HK.map(x => x.ar))].sort().map(a => `<option value="${esc(a)}">`).join('')}</datalist>
+        ${o.why ? `<p class="b-dlgnote small">Suggested grade: <b>${GL[o.suggested]}</b>. ${esc(o.why)}</p>` : ''}
         <div class="row3"><label class="field">Difficulty<select name="g">${GRADES.map(g => opt(g, h.g, GL[g])).join('')}</select></label><label class="field">Scale<select name="sc">${['', ...Object.keys(SCALES)].map(s => opt(s, h.sc || '', s || '–')).join('')}</select></label><label class="field">Type<select name="ty">${Object.entries(TYPE_LABEL).map(([k, v]) => opt(k, h.ty, v)).join('')}</select></label></div>
-        <div class="row3"><label class="field">Distance km<input name="km" type="number" step="0.1" min="0" value="${h.km || ''}" placeholder="auto"></label><label class="field">Ascent m<input name="up" type="number" step="10" min="0" value="${h.up || ''}" placeholder="auto"></label><label class="field">Descent m<input name="dn" type="number" step="10" min="0" value="${h.ty === 'trav' ? h.dn ?? '' : ''}" placeholder="same"></label></div>
+        <div class="row3"><label class="field">Distance km<input name="km" type="number" step="0.1" min="0" value="${h.km || ''}" placeholder="auto"></label><label class="field">Ascent m<input name="up" type="number" step="10" min="0" value="${o.builder ? h.up : h.up || ''}" placeholder="auto"></label><label class="field">Descent m<input name="dn" type="number" step="10" min="0" value="${h.ty === 'trav' ? h.dn ?? '' : ''}" placeholder="same"></label></div>
         <div class="row2"><label class="field">Highest point m<input name="mx" type="number" step="10" value="${h.mx || ''}" placeholder="auto"></label><label class="field">Trailhead m<input name="lo" type="number" step="10" value="${h.lo || ''}" placeholder="auto"></label></div>
         <div class="row2"><label class="field">Season from<select name="s0">${MONTHS.map((m, i) => opt(i + 1, (h.ss || [1, 12])[0], m)).join('')}</select></label><label class="field">to<select name="s1">${MONTHS.map((m, i) => opt(i + 1, (h.ss || [1, 12])[1], m)).join('')}</select></label></div>
         <div class="field">Features<div class="seg-chips" id="eTags">${TAGS.map(([k, v]) => `<button type="button" data-v="${k}" aria-pressed="${tags.has(k)}">${v}</button>`).join('')}</div></div>
@@ -71,17 +97,18 @@ const Dlg = {
         <label class="field">Lift, boat or access note<input name="lf" value="${esc(h.lf || '')}"></label>
         <label class="field">Description<textarea name="b">${esc(h.b || '')}</textarea></label>
         <label class="field">Your links <small>one per line: photos, Komoot tour, blog…</small><textarea name="links">${esc((h.links || []).join('\n'))}</textarea></label>
-        ${isNew ? '' : '<button type="button" class="btn ghost" id="eRoute">' + ic('i-route') + 'Edit the route on the map</button>'}`,
-      foot: `${h.custom && !isNew ? '<button type="button" class="btn ghost left" id="eDel">Delete hike</button>' : h.edited ? '<button type="button" class="btn ghost left" id="eReset">Back to catalogue version</button>' : ''}<button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary" type="submit">Save</button>`,
+        ${isNew || o.builder ? '' : '<button type="button" class="btn ghost" id="eRoute">' + ic('i-draw') + 'Edit the route on the map</button>'}`,
+      foot: `${h.custom && !isNew && !o.builder ? '<button type="button" class="btn ghost left" id="eDel">Delete hike</button>' : h.edited && !o.builder ? '<button type="button" class="btn ghost left" id="eReset">Back to catalogue version</button>' : ''}<button type="button" class="btn ghost" data-close>${o.builder ? 'Back to the map' : 'Cancel'}</button><button class="btn primary" type="submit">${o.builder ? 'Save the hike' : 'Save'}</button>`,
       onOpen: f => {
         f.querySelectorAll('#eTags button').forEach(b => b.onclick = () => { const v = b.dataset.v; tags.has(v) ? tags.delete(v) : tags.add(v); b.setAttribute('aria-pressed', tags.has(v)); });
         const del = f.querySelector('#eDel'); if (del) this.confirmBtn(del, 'Tap again to delete', () => { delItem('hike:' + h.id); delItem('route:' + h.id); $('#dlg').close(); rebuildHikes(); UI.closeDetail(); UI.refresh(); toast('Hike deleted'); });
         const rs = f.querySelector('#eReset'); if (rs) this.confirmBtn(rs, 'Tap again to reset', () => { delItem('hike:' + h.id); $('#dlg').close(); rebuildHikes(); UI.refresh(); UI.openHike(h.id, { noFly: true }); toast('Back to the catalogue version'); });
-        const er = f.querySelector('#eRoute'); if (er) er.onclick = () => { $('#dlg').close(); Edit.start(HBY[h.id]); };
+        const er = f.querySelector('#eRoute'); if (er) er.onclick = () => { $('#dlg').close(); if (h.custom) Builder.start(HBY[h.id]); else Edit.start(HBY[h.id]); };
       },
       onSubmit: f => {
         const fd = new FormData(f), num = k => fd.get(k) === '' ? null : +fd.get(k);
-        const auto = !num('km') && !num('up');
+        // numbers left as traced keep following the line; a changed number is yours and stays
+        const auto = (!num('km') && !num('up')) || (!!h.auto && Math.abs((num('km') || 0) - (h.km || 0)) < 0.05 && Math.abs((num('up') || 0) - (h.up || 0)) < 5);
         const patch = {
           n: fd.get('n').trim(), ar: fd.get('ar').trim() || 'My hikes', c: fd.get('c'), g: fd.get('g'), sc: fd.get('sc'), ty: fd.get('ty'),
           km: num('km') || 0, up: num('up') || 0, dn: fd.get('ty') === 'trav' ? num('dn') : null, mx: num('mx') || 0, lo: num('lo') || 0,
@@ -90,14 +117,21 @@ const Dlg = {
           lf: fd.get('lf').trim(), b: fd.get('b').trim(), links: fd.get('links').split('\n').map(s => s.trim()).filter(s => /^https?:\/\//.test(s))
         };
         if (!patch.rg && !HIKES.some(b => b.id === h.id)) patch.rg = h.rg || '';
-        if (h.custom || isNew) { patch.auto = auto; patch.p = h.p; patch.hi = h.hi ?? h.p.length - 1; }
+        if (h.custom || isNew) {
+          Object.assign(patch, { auto, p: h.p, hi: h.hi ?? h.p.length - 1 });
+          for (const k of ['sn', 'fn', 'tp', 'free']) patch[k] = h[k] ?? null;
+        }
         const target = isNew ? Object.assign({}, h, patch) : h;
         saveHike(target, patch);
-        UI.refresh();
         const nh = HBY[h.id];
-        if (isNew || auto) Routes.get(nh, true).then(() => { rebuildHikes(); UI.refresh(); if (UI.detailId === h.id) UI.openHike(h.id, { noFly: true }); });
-        UI.openHike(h.id, { noFly: !isNew });
-        toast(isNew ? 'Hike added' : 'Saved');
+        if (o.route && nh && nh.ty === h.ty) {
+          // the builder already traced this exact line: keep it instead of tracing again
+          putItem('route:' + h.id, 'route', { c: o.route.c, wk: Routes.key(nh), src: o.route.src, snapped: false, ...lineStats(o.route.c), ts: Date.now() });
+        } else if (isNew || auto || o.route) Routes.get(nh, true).then(() => { rebuildHikes(); UI.refresh(); if (UI.detailId === h.id) UI.openHike(h.id, { noFly: true }); });
+        if (o.builder && Builder.on) Builder.done();
+        UI.refresh();
+        UI.openHike(h.id, { noFly: !isNew && !o.builder });
+        toast(o.builder ? (isNew ? 'Route saved to your hikes' : 'Route updated') : isNew ? 'Hike added' : 'Saved');
       }
     });
   },
@@ -287,6 +321,102 @@ const Gpx = {
         setTimeout(() => { Dlg.log(h, null, { date: t.date, dur: t.dur || undefined, km: Math.round(t.km * 10) / 10, up: t.asc, dn: t.desc }); const watch = setInterval(() => { if (!$('#dlg').open) { clearInterval(watch); this.next(); } }, 400); }, 60);
       }
     });
+  }
+};
+
+/* ───────────── Read distance, climb and time from a watch or app screenshot ─────────────
+   Text recognition runs in the browser (tesseract.js), so the image never leaves the device. */
+const Shot = {
+  cdn: 'https://cdn.jsdelivr.net/npm/',
+  async read(file, prog) {
+    if (!window.Tesseract) await loadScript(this.cdn + 'tesseract.js@5.1.1/dist/tesseract.min.js');
+    const img = await this.prep(file);
+    const w = await Tesseract.createWorker('eng', 1, {
+      workerPath: this.cdn + 'tesseract.js@5.1.1/dist/worker.min.js', corePath: this.cdn + 'tesseract.js-core@5.1.1',
+      langPath: this.cdn + '@tesseract.js-data/eng@1.0.0/4.0.0_best_int',
+      logger: m => { if (prog && m.status === 'recognizing text') prog(Math.round(m.progress * 100)); }
+    });
+    try { const { data } = await w.recognize(img); this.last = data.text || ''; return this.parse(this.last, data.blocks, this.w); }
+    finally { w.terminate(); }
+  },
+  /* Grey and dark-on-light: watch summaries are bright, coloured text on black. Tesseract does its own thresholding. */
+  async prep(file) {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(2, Math.max(1, 1700 / Math.max(bmp.width, bmp.height)));
+    const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+    const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(bmp, 0, 0, cv.width, cv.height);
+    const im = cx.getImageData(0, 0, cv.width, cv.height), d = im.data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) { const y = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]); d[i] = y; sum += y; }
+    const dark = sum / (d.length / 4) < 128;
+    for (let i = 0; i < d.length; i += 4) { const y = dark ? 255 - d[i] : d[i]; d[i] = d[i + 1] = d[i + 2] = y; d[i + 3] = 255; }
+    cx.putImageData(im, 0, 0);
+    this.w = cv.width;
+    return cv;
+  },
+  LBL: {
+    dist: /\b(DISTANCE|DISTANZ|DISTANZA|DISTANCIA|STRECKE)\b/,
+    up: /ELEV(ATION|\.)?\s*GAIN|ASCENT|UPHILL|AUFSTIEG|BERGAUF|H[ÖO]HENGEWINN|H[ÖO]HENMETER|H[ÖO]HENZUNAHME|POSITIF|D[ÉE]NIVEL[ÉE]\s*\+|MONT[ÉE]E|SALITA|ANSTIEG/,
+    dn: /DESCENT|DOWNHILL|ABSTIEG|BERGAB|N[ÉE]GATIF|DESCENTE|DISCESA|ELEV(ATION)?\s*LOSS/,
+    el: /ELAPSED|VERSTRICHEN|GESAMTZEIT|[ÉE]COUL[ÉE]|TEMPO TOTALE/,
+    wt: /WORKOUT|TRAININGSZEIT|ENTRA[ÎI]NEMENT|DUR[ÉE]E|DAUER|DURATION|MOVING|BEWEGUNG|\bTIME\b|\bZEIT\b/
+  },
+  // value readers on a small piece of text
+  rd: {
+    dist: t => { for (const m of t.matchAll(/(\d{1,3}(?:[.,]\d{1,3})?)\s*([A-Z«]{0,4})/g)) { if (/^(KC|CA|BP|SP|PP|M$|M\b)/.test(m[2]) || /^\d+'/.test(t.slice(m.index))) continue; const v = +m[1].replace(',', '.') * (/^MI/.test(m[2]) ? 1.609 : 1); if (v > 0 && v < 200) return Math.round(v * 100) / 100; } return null; },
+    m: t => { for (const m of t.replace(/\d+(?:[.,]\d+)?\s*(KM|MI)\b/g, ' ').matchAll(/(\d{1,2}[.,' ]\d{3}|\d{1,4})\s*([A-Z'"]{0,3})/g)) { if (/^(KC|CA|BP|SP|KM|MI|'|")/.test(m[2])) continue; const v = Math.round(+m[1].replace(/[.,' ]/g, '') * (/^FT/.test(m[2]) ? 0.3048 : 1)); if (v < 5000) return v; } return null; },
+    time: t => { let m = t.match(/(\d{1,2}):(\d{2}):(\d{2})/); if (m) return Math.round(+m[1] * 60 + +m[2] + +m[3] / 60); m = t.match(/(\d{1,2})\s*H\s*(\d{1,2})\s*M/); if (m) return +m[1] * 60 + +m[2]; m = t.match(/\b(\d{1,2}):(\d{2})\s*H\b/); if (m) return +m[1] * 60 + +m[2]; return null; }
+  },
+  /* Layout-aware: rows of words, split into columns at wide gaps; a value is the text under (or after) its label, in the same column. */
+  parseWords(blocks, W) {
+    const ws = [];
+    for (const b of blocks || []) for (const p of b.paragraphs || []) for (const l of p.lines || []) for (const w of l.words || []) {
+      const t = (w.text || '').trim().toUpperCase(); if (!t) continue;
+      const bb = w.bbox; ws.push({ t, x0: bb.x0, x1: bb.x1, y0: bb.y0, y1: bb.y1, cy: (bb.y0 + bb.y1) / 2, h: bb.y1 - bb.y0 });
+    }
+    if (!ws.length) return {};
+    ws.sort((a, b) => a.cy - b.cy);
+    const rows = [];
+    for (const w of ws) { const r = rows[rows.length - 1]; if (r && Math.abs(w.cy - r.cy) < Math.max(r.h, w.h) * 0.55) { r.ws.push(w); r.cy = (r.cy * (r.ws.length - 1) + w.cy) / r.ws.length; r.h = Math.max(r.h, w.h); } else rows.push({ ws: [w], cy: w.cy, h: w.h }); }
+    // two-column summaries (Apple Fitness, Strava): the right column's words all start at about the same x
+    const bins = new Array(52).fill(0); for (const w of ws) bins[clamp(Math.round(w.x0 / W * 50), 0, 51)]++;
+    let best = -1, bc = 0; for (let b = 17; b <= 38; b++) { const c = bins[b - 1] + bins[b] + bins[b + 1]; if (c > bc) { bc = c; best = b; } }
+    const split = bc >= 4 ? (best - 1.5) / 50 * W : null;
+    for (const r of rows) {
+      r.ws.sort((a, b) => a.x0 - b.x0); r.split = null;
+      if (split != null && r.ws.some(w => w.x0 < split) && r.ws.some(w => w.x0 >= split)) r.split = split;
+      else for (let i = 1; i < r.ws.length; i++) if (r.ws[i].x0 - r.ws[i - 1].x1 > W * 0.07) { r.split = r.ws[i].x0; break; }
+    }
+    const colOf = (r, x0) => r.split == null ? r.ws : x0 < r.split ? r.ws.filter(w => w.x0 < r.split) : r.ws.filter(w => w.x0 >= r.split);
+    const txt = a => a.map(w => w.t).join(' ');
+    const find = (re, read) => {
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        for (const col of r.split == null ? [r.ws] : [r.ws.filter(w => w.x0 < r.split), r.ws.filter(w => w.x0 >= r.split)]) {
+          const s = txt(col), m = s.match(re); if (!m) continue;
+          const v0 = read(s.slice(m.index + m[0].length)); if (v0 != null) return v0;
+          const x0 = col[0].x0, x1 = r.split != null && x0 < r.split ? r.split : W;
+          for (let j = i + 1; j < Math.min(rows.length, i + 4); j++) {
+            const below = rows[j].ws.filter(w => w.x0 >= x0 - W * 0.06 && w.x0 < x1 - W * 0.02);
+            if (!below.length) continue;
+            const v = read(txt(below)); if (v != null) return v;
+          }
+        }
+      }
+      return null;
+    };
+    return { km: find(this.LBL.dist, this.rd.dist), up: find(this.LBL.up, this.rd.m), dn: find(this.LBL.dn, this.rd.m), dur: find(this.LBL.el, this.rd.time) ?? find(this.LBL.wt, this.rd.time) };
+  },
+  /* Plain-text fallback for anything the layout pass didn't find. */
+  parse(text, blocks, W) {
+    const a = blocks ? this.parseWords(blocks, W || 1000) : {};
+    const lines = text.replace(/[‘’´`]/g, "'").split(/\n+/).map(x => x.trim().toUpperCase()).filter(Boolean);
+    const near = (re, read) => { for (let i = 0; i < lines.length; i++) { const m = lines[i].match(re); if (m) { const v = read(lines[i].slice(m.index + m[0].length)) ?? read(lines[i + 1] || ''); if (v != null) return v; } } return null; };
+    let km = a.km ?? null;
+    if (km == null) for (const x of lines) { const m = x.match(/(\d{1,3}(?:[.,]\d{1,3})?)\s*(KM|MI)\b(?!\s*\/\s*H)/); if (m) { km = Math.round(+m[1].replace(',', '.') * (m[2] === 'MI' ? 1.609 : 1) * 100) / 100; break; } }
+    const up = a.up ?? near(this.LBL.up, this.rd.m), dn = a.dn ?? near(this.LBL.dn, this.rd.m);
+    const dur = a.dur ?? near(this.LBL.el, this.rd.time) ?? near(this.LBL.wt, this.rd.time);
+    return { km, up: up ?? null, dn: dn ?? null, dur: dur ?? null };
   }
 };
 
@@ -637,7 +767,8 @@ function bindControls() {
   $('#q').addEventListener('input', e => { UI.state.q = e.target.value; UI.refreshSoon(); });
   $('#sortSel').value = UI.state.sort; $('#sortSel').onchange = e => { UI.state.sort = e.target.value; UI.renderList(); UI.save(); };
   $('#inView').checked = UI.state.inView; $('#inView').onchange = e => { UI.state.inView = e.target.checked; UI.renderList(); UI.save(); };
-  $('#btnAddHike').onclick = () => Pick.start('hike');
+  $('#btnAddHike').onclick = () => Builder.start();
+  $('#btnDraw').onclick = () => { if (Builder.on) return; Builder.start(); };
   $('#btnAsk').onclick = () => Dlg.ask(UI.state.q || '');
   $('#btnSettings').onclick = () => Dlg.settings();
   $('#btnSync').onclick = () => { toast(Sync.msg || 'Syncing'); Sync.run(true); };
@@ -663,9 +794,10 @@ function bindControls() {
   $('#editUndo').onclick = () => Edit.undo(); $('#editCancel').onclick = () => Edit.stop(); $('#editSave').onclick = () => Edit.save();
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || $('#dlg').open) return;
+    if (Builder.on) { if (Builder.popup) { Builder.popup.remove(); Builder.popup = null; } return; }
     if (Fly.on) Fly.stop(); else if (Pick.on) Pick.stop(); else if (Edit.on) Edit.stop(); else if (UI.detailId) UI.closeDetail();
   });
-  addEventListener('hashchange', () => { const m = location.hash.match(/^#hike-(.+)$/); if (m && HBY[m[1]] && UI.detailId !== m[1]) UI.openHike(m[1]); });
+  addEventListener('hashchange', () => { const m = location.hash.match(/^#hike-(.+)$/); if (m && HBY[m[1]] && UI.detailId !== m[1] && !Builder.on) UI.openHike(m[1]); });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.theme === 'system') { restyle(); if (UI.detailId) UI.openHike(UI.detailId, { noFly: true }); } });
 }
 function boot() {

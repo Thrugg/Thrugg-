@@ -232,7 +232,7 @@ const UI = {
       const h = HBY[l.hike], [y, m, d] = l.date.split('-');
       const who = (l.who || [0, 1]).map(i => esc(personName(i))).join(' & ');
       return `<li class="log-item"><div class="log-date"><b>${+d}</b>${MONTHS[+m - 1]} ${y}</div>
-        <div><div class="log-name" data-id="${h.id}">${esc(h.n)}</div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' · ' : ''}${who}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}${l.km ? ' · GPX ' + fmtKm(l.km) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}</div>
+        <div><div class="log-name" data-id="${h.id}">${esc(h.n)}</div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' · ' : ''}${who}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' ↑ ' + fmtM(l.up) : '') : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}</div>
         <button class="icon-btn" data-edit="${l.id}" aria-label="Edit this entry">${ic('i-edit')}</button></li>`;
     }).join('') : `<li class="empty"><strong>Nothing logged yet</strong>Open a hike and press “Mark as done”, or import a GPX from Komoot, Strava or Apple Health.</li>`;
     $$('#logList .log-name').forEach(el => el.onclick = () => this.openHike(el.dataset.id));
@@ -310,7 +310,7 @@ const UI = {
       <a class="btn ghost" href="https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
     </div>
     ${h.lf ? `<div class="note-box">${esc(h.lf)}</div>` : ''}
-    ${done.length ? `<div class="d-sec"><h3>Our visits</h3><ol class="log-list">${done.map(l => `<li class="log-item"><div class="log-date"><b>${+l.date.slice(8)}</b>${MONTHS[+l.date.slice(5, 7) - 1]} ${l.date.slice(0, 4)}</div><div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' (signposted ' + fmtDur(logDin(l)) + ')' : 'No time logged'}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}</div><button class="icon-btn" data-edit="${l.id}" aria-label="Edit entry">${ic('i-edit')}</button></li>`).join('')}</ol></div>` : ''}
+    ${done.length ? `<div class="d-sec"><h3>Our visits</h3><ol class="log-list">${done.map(l => `<li class="log-item"><div class="log-date"><b>${+l.date.slice(8)}</b>${MONTHS[+l.date.slice(5, 7) - 1]} ${l.date.slice(0, 4)}</div><div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' (signposted ' + fmtDur(logDin(l)) + ')' : 'No time logged'}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' · ↑ ' + fmtM(l.up) : '') : ''}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}</div><button class="icon-btn" data-edit="${l.id}" aria-label="Edit entry">${ic('i-edit')}</button></li>`).join('')}</ol></div>` : ''}
     <div class="d-sec"><h3>Elevation profile <span class="r" id="dProfNote"></span></h3><div class="profile" id="dProfile"><p class="muted">Tracing the route on the trail network…</p></div></div>
     <div class="d-sec"><h3>Weather <span class="r">trailhead ${fmtM(h.lo)} · top ${fmtM(h.mx)}</span></h3><div id="dWx"><p class="muted">Loading the forecast…</p></div></div>
     <div class="d-sec"><h3>${ic('i-paw')} Dog</h3>
@@ -323,19 +323,22 @@ const UI = {
     <div class="d-sec"><h3>${ic('i-camera')} Photos <span class="r">Wikimedia Commons, near the top</span></h3><div class="photos" id="dPhotos"><span class="muted">Looking for photos…</span></div>
       <div class="links">${links.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join('')}</div></div>
     <div class="d-sec"><h3>Plan</h3><dl class="kv-list">
-      <dt>Trailhead</dt><dd>${h.start[0].toFixed(4)}, ${h.start[1].toFixed(4)} · <a href="https://maps.apple.com/?daddr=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">Apple Maps</a> · <a href="https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">by train or bus</a></dd>
+      <dt>${h.sn ? 'Start' : 'Trailhead'}</dt><dd>${h.sn ? '<b>' + esc(h.sn) + '</b> · ' : ''}${h.start[0].toFixed(4)}, ${h.start[1].toFixed(4)} · <a href="https://maps.apple.com/?daddr=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">Apple Maps</a> · <a href="https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">by train or bus</a></dd>
+      ${h.ty === 'trav' ? (() => { const f = h.p[h.p.length - 1]; return `<dt>Finish</dt><dd>${h.fn ? '<b>' + esc(h.fn) + '</b> · ' : ''}${f[0].toFixed(4)}, ${f[1].toFixed(4)} · <a href="https://www.google.com/maps/dir/?api=1&travelmode=transit&origin=${f[0]},${f[1]}&destination=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">getting back by train or bus</a></dd>`; })() : ''}
       ${winter && aval ? `<dt>Snow</dt><dd><a href="${aval[1]}" target="_blank" rel="noopener">${aval[0]}</a></dd>` : ''}
       ${h.tk === 'hut' && h.tn ? `<dt>Hut</dt><dd><a href="https://www.google.com/search?q=${encodeURIComponent(h.tn + ' opening times')}" target="_blank" rel="noopener">${esc(h.tn)}: opening times</a></dd>` : ''}
       ${Array.isArray(h.ref) && h.ref.length ? `<dt>Sources</dt><dd>${h.ref.map(u => { let t = u; try { t = new URL(u).hostname.replace(/^www\./, ''); } catch (e) { } return `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`; }).join(' · ')}</dd>` : ''}
       <dt>Trail map</dt><dd><a href="https://hiking.waymarkedtrails.org/#?map=14/${h.top[0].toFixed(4)}/${h.top[1].toFixed(4)}" target="_blank" rel="noopener">Waymarked Trails</a> · <a href="https://www.openstreetmap.org/#map=15/${h.top[0].toFixed(4)}/${h.top[1].toFixed(4)}" target="_blank" rel="noopener">OpenStreetMap</a></dd>
     </dl>
-    <p class="fineprint">Distance and ascent come from the route checked on OpenStreetMap paths or from standard descriptions, rounded. Waypoints are placed on OSM summits, huts and lakes; the line is traced live and can take a different variant than the one you know. Grades and conditions are indicative; you decide on the day.</p></div>`;
+    ${h.custom ? `<button class="btn ghost small" id="dRoute">${ic('i-draw')}Edit the route on the map</button>` : ''}
+    <p class="fineprint">${h.custom ? 'Your route: distance, climb and heights come from the line traced on OpenStreetMap trails and the terrain model, unless you typed your own. ' : ''}Distance and ascent come from the route checked on OpenStreetMap paths or from standard descriptions, rounded. Waypoints are placed on OSM summits, huts and lakes; the line is traced live and can take a different variant than the one you know. Grades and conditions are indicative; you decide on the day.</p></div>`;
   },
   bindDetail(h) {
     const v = $('#view-detail');
     $('#dBack').onclick = () => this.closeDetail();
     $('#dWish').onclick = () => { toggleWish(h.id); const on = isWish(h.id); $('#dWish').setAttribute('aria-pressed', on); $('#dWish').style.color = on ? 'var(--gold)' : ''; toast(on ? 'Added to the bucket list' : 'Removed from the bucket list'); pushHikeData(); };
     $('#dEdit').onclick = () => Dlg.hike(h);
+    const dr = $('#dRoute'); if (dr) dr.onclick = () => Builder.start(h);
     $('#dDone').onclick = () => Dlg.log(h);
     $('#dFly').onclick = () => Fly.hike(h);
     $('#dOsm').onclick = () => Explore.checkRules(h);

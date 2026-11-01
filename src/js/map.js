@@ -99,6 +99,10 @@ function hikeLayers(C) {
     { id: 'hl-case', type: 'line', source: 'hike-lines', minzoom: 7, layout: lj, paint: { 'line-color': C.case, 'line-width': zi(7, 2.4, 14, 7), 'line-opacity': 0.9 } },
     { id: 'hl-line', type: 'line', source: 'hike-lines', minzoom: 7, layout: lj, paint: { 'line-color': gradeExpr(C), 'line-width': zi(7, 1.2, 14, 4) } },
     { id: 'edit-line', type: 'line', source: 'edit', layout: lj, paint: { 'line-color': C.ink, 'line-width': 2, 'line-dasharray': [2, 2] } },
+    { id: 'build-pre', type: 'line', source: 'build-pre', layout: lj, paint: { 'line-color': C.ink, 'line-width': 2, 'line-dasharray': [1.5, 2], 'line-opacity': 0.55 } },
+    { id: 'build-case', type: 'line', source: 'build', layout: lj, paint: { 'line-color': C.case, 'line-width': zi(7, 5, 14, 10) } },
+    { id: 'build-line', type: 'line', source: 'build', filter: ['!=', ['get', 'src'], 'line'], layout: lj, paint: { 'line-color': C.lake, 'line-width': zi(7, 3, 14, 5.5) } },
+    { id: 'build-free', type: 'line', source: 'build', filter: ['==', ['get', 'src'], 'line'], layout: lj, paint: { 'line-color': C.ink, 'line-width': zi(7, 2.5, 14, 4.5), 'line-dasharray': [1.4, 1.2] } },
     { id: 'sel-case', type: 'line', source: 'sel', layout: lj, paint: { 'line-color': C.case, 'line-width': zi(7, 5, 14, 11) } },
     { id: 'sel-line', type: 'line', source: 'sel', layout: lj, paint: { 'line-color': gradeExpr(C), 'line-width': zi(7, 3, 14, 6.5) } },
     { id: 'sel-prog', type: 'line', source: 'prog', layout: lj, paint: { 'line-color': C.glow, 'line-width': zi(7, 3, 14, 6.5) } },
@@ -114,7 +118,7 @@ function hikeLayers(C) {
 }
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
-const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY };
+const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY, build: EMPTY, 'build-pre': EMPTY };
 
 function buildStyle() {
   setupDem();
@@ -179,6 +183,7 @@ function initMap() {
   map.on('error', e => { if (e && e.error) console.warn('map:', e.error.message || e.error); });
   map.on('click', onMapClick);
   map.on('mousemove', e => {
+    if (Builder.on) { map.getCanvas().style.cursor = queryAt(e.point, ['build-line', 'build-free']).length ? 'copy' : 'crosshair'; return; }
     if (Pick.on || Edit.on) { map.getCanvas().style.cursor = 'crosshair'; return; }
     const f = queryAt(e.point, ['hk-pt', 'hl-line', 'ex-line', 'hut-pt']);
     map.getCanvas().style.cursor = f.length ? 'pointer' : '';
@@ -199,6 +204,7 @@ function queryAt(pt, ids) {
   return map.queryRenderedFeatures([[pt.x - r, pt.y - r], [pt.x + r, pt.y + r]], { layers });
 }
 function onMapClick(e) {
+  if (Builder.on) return Builder.click(e);
   if (Pick.on) return Pick.click(e);
   if (Edit.on) return Edit.click(e);
   const f = queryAt(e.point, ['hk-pt', 'sel-line', 'hl-line', 'hut-pt', 'ex-line']);
@@ -305,6 +311,24 @@ function lineStats(c) {
   }
   return { km, asc: Math.round(asc), desc: Math.round(desc), mx: mx > -1e9 ? Math.round(mx) : null, mn: mn < 1e9 ? Math.round(mn) : null };
 }
+async function fillElevation(c) {
+  const miss = []; c.forEach((p, i) => { if (p[2] == null) miss.push(i); });
+  if (!miss.length) return c;
+  const m = Math.min(100, miss.length), pick = [];
+  for (let k = 0; k < m; k++) pick.push(miss[Math.round(k * (miss.length - 1) / Math.max(1, m - 1))]);
+  const qs = new URLSearchParams({ latitude: pick.map(i => c[i][1].toFixed(5)).join(','), longitude: pick.map(i => c[i][0].toFixed(5)).join(',') });
+  const r = await fetchT('https://api.open-meteo.com/v1/elevation?' + qs, {}, 15000);
+  const el = (await r.json()).elevation || [];
+  const known = pick.map((i, k) => [i, el[k]]).filter(x => x[1] != null);
+  if (!known.length) return c;
+  for (const i of miss) {
+    let lo = null, hi = null;
+    for (const kv of known) { if (kv[0] <= i) lo = kv; if (kv[0] >= i) { hi = kv; break; } }
+    lo = lo || hi; hi = hi || lo;
+    c[i][2] = Math.round(hi[0] === lo[0] ? lo[1] : lo[1] + (hi[1] - lo[1]) * (i - lo[0]) / (hi[0] - lo[0]));
+  }
+  return c;
+}
 async function addElevation(c) {
   const n = c.length, m = Math.min(100, n), idx = [];
   for (let i = 0; i < m; i++) idx.push(Math.round(i * (n - 1) / Math.max(1, m - 1)));
@@ -346,14 +370,27 @@ const Routes = {
     const c = (await r.json()).map(e => [+e.lat, +e.lon]).filter(q => hav(pt, q) < 3).sort((a, b) => hav(pt, a) - hav(pt, b));
     return c[0] || null;
   },
-  async brouter(pts) {
+  async brouter(pts) { return (await this.brouterFull(pts)).c; },
+  /* The whole answer: the line with elevations, plus BRouter's per-stretch way tags (highway, sac_scale, surface…). */
+  async brouterFull(pts) {
     const ll = pts.map(p => p[1].toFixed(5) + ',' + p[0].toFixed(5)).join('|');
     const r = await fetchT(`https://brouter.de/brouter?lonlats=${ll}&profile=hiking-mountain&alternativeidx=0&format=geojson`, {}, 35000);
     if (r.status === 403 || r.status === 429 || r.status === 503) throw Object.assign(new Error('BRouter is busy'), { rate: true });
-    if (!r.ok) throw new Error('BRouter ' + r.status);
+    if (!r.ok) { const t = await r.text().catch(() => ''); throw Object.assign(new Error(/not mapped|no track|not found|target island|from-position|to-position/i.test(t) ? 'No trail connects these points' : 'BRouter ' + r.status), { unroutable: r.status === 400 || r.status === 500 }); }
     const f = (await r.json()).features?.[0];
     if (!f) throw new Error('No route');
-    return f.geometry.coordinates.map(c => [c[0], c[1], c[2] != null ? Math.round(c[2]) : null]);
+    const m = f.properties && f.properties.messages, msgs = [];
+    if (Array.isArray(m) && m.length > 1) { const H = m[0], iD = H.indexOf('Distance'), iW = H.indexOf('WayTags'); for (const row of m.slice(1)) msgs.push({ d: +row[iD] || 0, w: row[iW] || '' }); }
+    return { c: f.geometry.coordinates.map(c => [c[0], c[1], c[2] != null ? Math.round(c[2]) : null]), msgs };
+  },
+  /* Straight segments, densified so the terrain profile shows the hills in between. */
+  async straight(pts) {
+    const c = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], n = Math.max(1, Math.ceil(hav(a, b) / 0.06));
+      for (let k = i ? 1 : 0; k <= n; k++) c.push([a[1] + (b[1] - a[1]) * k / n, a[0] + (b[0] - a[0]) * k / n, null]);
+    }
+    return fillElevation(c);
   },
   async osrm(pts) {
     const r = await fetchT(`https://routing.openstreetmap.de/routed-foot/route/v1/driving/${pts.map(p => p[1].toFixed(5) + ',' + p[0].toFixed(5)).join(';')}?overview=full&geometries=geojson`, {}, 25000);
@@ -367,6 +404,13 @@ const Routes = {
     return (this.inflight[h.id] = (async () => {
       try {
         const pts = h.p.map(q => [q[0], q[1]]);
+        if (h.free) {
+          if (h.ty === 'loop') pts.push(pts[0]);
+          const c = simplify(await this.straight(pts), 5).map(p => [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5, p[2]]);
+          const r = { c, wk: this.key(h), src: 'line', snapped: false, ...lineStats(c), ts: Date.now() };
+          putItem('route:' + h.id, 'route', r);
+          return r;
+        }
         let snapped = false, topSnapped = false;
         if (h.tn && ['peak', 'hut', 'pass'].includes(h.tk)) {
           try { const s = await this.snap(h.tn, pts[h.hiIdx]); if (s) { pts[h.hiIdx] = s; snapped = topSnapped = true; } } catch (e) { console.warn('snap', e.message); }
@@ -402,7 +446,7 @@ const Routes = {
     (async () => {
       while (S.autoTrace) {
         const c = map ? map.getCenter() : { lat: 47.3, lng: 11.4 };
-        const needs = h => !this.failed[h.id] && (!this.fresh(h) || (['osrm', 'line'].includes(this.cached(h).src) && !this.upgraded[h.id]));
+        const needs = h => !this.failed[h.id] && (!this.fresh(h) || (!h.free && ['osrm', 'line'].includes(this.cached(h).src) && !this.upgraded[h.id]));
         const todo = (UI.filtered || HK).filter(needs).sort((a, b) => hav([c.lat, c.lng], a.start) - hav([c.lat, c.lng], b.start));
         if (!todo.length) break;
         const h = todo[0];

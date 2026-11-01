@@ -116,7 +116,7 @@ function enrich(h) {
   h.ss = h.ss || [1, 12]; h.ty = h.ty || 'out'; h.g = GRADES.includes(h.g) ? h.g : 'moderate';
   h.km = +h.km || 0; h.up = +h.up || 0; h.dn = h.dn != null && h.dn !== '' ? +h.dn : h.up; h.mx = +h.mx || 0; h.lo = +h.lo || 0;
   const hi = h.hi != null && h.hi < h.p.length ? h.hi : h.p.length - 1;
-  h.start = h.p[0]; h.top = h.p[hi]; h.hiIdx = hi;
+  h.start = h.p[0]; h.top = Array.isArray(h.tp) && h.tp.length === 2 && h.tp.every(Number.isFinite) ? h.tp : h.p[hi]; h.hiIdx = hi;
   h.din = dinMinutes(h.km, h.up, h.ty === 'trav' ? h.dn : h.up);
   h.lift = !!h.lf || h.tg.includes('cablecar') || h.tg.includes('boat') || h.tg.includes('train');
   h.q = norm([h.n, h.ar, h.rg, COUNTRIES[h.c], h.tg.map(t => (TAGS.find(x => x[0] === t) || [, t])[1]).join(' '), h.b, h.tn].join(' '));
@@ -161,7 +161,7 @@ function saveHike(h, patch) {
 }
 function stripHike(h) {
   const o = {};
-  for (const k of ['n', 'ar', 'rg', 'c', 'p', 'hi', 'tn', 'tk', 'ty', 'km', 'up', 'dn', 'mx', 'lo', 'g', 'sc', 'tg', 'ss', 'd', 'lf', 'b', 'links', 'auto']) if (h[k] !== undefined) o[k] = h[k];
+  for (const k of ['n', 'ar', 'rg', 'c', 'p', 'hi', 'tn', 'tk', 'ty', 'km', 'up', 'dn', 'mx', 'lo', 'g', 'sc', 'tg', 'ss', 'd', 'lf', 'b', 'links', 'auto', 'sn', 'fn', 'tp', 'free']) if (h[k] !== undefined) o[k] = h[k];
   return o;
 }
 function inSeason(h, m = new Date().getMonth() + 1) {

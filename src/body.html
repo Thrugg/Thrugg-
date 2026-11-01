@@ -15,6 +15,10 @@
 <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
 <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.8v2.7M12 19.5v2.7M1.8 12h2.7M19.5 12h2.7"/></symbol>
+<symbol id="i-draw" viewBox="0 0 24 24"><path d="M3.5 20.5c2.6-.6 3.6-3.6 6.5-3.6 2.6 0 3 2.1 6 1.4"/><path d="m15 3.8 3.2 3.2-7.6 7.6-3.8.6.6-3.8L15 3.8Z"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 5.5 4 10.5l5 5"/><path d="M4 10.5h10.5a5 5 0 0 1 0 10H11"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 3.5 3 7.5l4 4M3 7.5h14M17 12.5l4 4-4 4M21 16.5H7"/></symbol>
 <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="13" r=".6"/><circle cx="16.5" cy="13" r=".6"/></symbol>
 <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4V8Z"/><circle cx="12" cy="13" r="3.5"/></symbol>
 <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/></symbol>
@@ -67,7 +71,7 @@
         <div id="newsBar" class="news" hidden></div>
         <ol id="hikeList" class="hike-list"></ol>
         <div class="list-foot">
-          <button class="btn ghost" id="btnAddHike"><svg><use href="#i-plus"/></svg>Add a hike on the map</button>
+          <button class="btn ghost" id="btnAddHike"><svg><use href="#i-draw"/></svg>Draw a route</button>
           <button class="btn ghost" id="btnAsk"><svg><use href="#i-star"/></svg>Ask for a hike</button>
         </div>
         <p class="muted list-note">New hikes are added every Monday. Ask for one and it is added in the next update.</p>
@@ -156,6 +160,7 @@
       </section>
 
       <section class="view detail" id="view-detail" data-view="detail" hidden></section>
+      <section class="view build" id="view-build" data-view="build" hidden></section>
     </div>
   </aside>
 
@@ -163,6 +168,7 @@
     <button class="ctrl" id="btnBase" aria-label="Map style" aria-expanded="false"><svg><use href="#i-layers"/></svg></button>
     <button class="ctrl" id="btn3d" aria-label="3D terrain" aria-pressed="true"><svg><use href="#i-cube"/></svg><span>3D</span></button>
     <button class="ctrl" id="btnWx" aria-label="Weather on map" aria-pressed="false"><svg><use href="#i-cloudsun"/></svg></button>
+    <button class="ctrl" id="btnDraw" aria-label="Draw a new route" title="Draw a new route"><svg><use href="#i-draw"/></svg></button>
     <button class="ctrl" id="btnExplore" aria-label="Show all marked trails and huts here" aria-pressed="false"><svg><use href="#i-route"/></svg></button>
     <button class="ctrl" id="btnHome" aria-label="Back to the whole region"><svg><use href="#i-home"/></svg></button>
   </div>
