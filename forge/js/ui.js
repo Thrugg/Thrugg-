@@ -127,7 +127,7 @@ function screenToday(M) {
     h += card(t('today.trend'), `<div class="kpi">${nf(kgShow(M.kg), 1)}<small> ${kgU()}</small></div>${ch != null ? `<p class="muted">${ch > 0 ? '+' : ''}${nf(kgShow(ch), 2)} ${kgU()} ${t('today.week')} (${ch > 0 ? '+' : ''}${nf(ch / M.kg * 100, 2)} %)</p>` : ''}${line({ series: [{ pts, dots: true, cls: 'raw' }, { pts: tr, cls: 'trend' }], xFmt: x => df(new Date(x * 864e5).toISOString().slice(0, 10), { day: 'numeric', month: 'short' }) })}`);
   } else h += card(t('today.trend'), `<p class="muted">${t('today.noWeight')}</p>`);
   if (M.tdee) h += card(t('today.maintenance'), `<div class="kpi">${nf(rnd(M.tdee.value, 10))}<small> kcal</small></div><p class="muted">${t('fuel.band68')}: ${kcalBand(M.tdee)} · ${t('fuel.src.' + M.tdee.source)}</p>${confChip(C.confidence(M.tdee.sd))}`);
-  if (M.ar && S.prs.length && M.ar.peak != null) h += card(t('today.arena'), `<div class="g2"><div><p class="eyebrow">${t('today.peak')}</p><div class="kpi sm">${nf(M.ar.peak)}</div></div><div><p class="eyebrow">${t('today.balance')}</p><div class="kpi sm">${M.ar.balance != null ? nf(M.ar.balance) : '–'}</div></div></div><div class="badges">${Object.values(M.ar.best).sort((a, b) => b.r.p - a.r.p).slice(0, 4).map(b => `<span class="bb">${tierBadge(b.r.tier)} ${esc(t('arena.ev.' + b.pr.event))}</span>`).join('')}</div><button class="lnk" data-act="tab" data-tab="arena">${t('arena.title')} →</button>`);
+  if (M.ar && S.prs.length && M.ar.peak != null) h += card(t('today.arena'), `<div class="g2"><div><p class="eyebrow">${t('today.peak')}</p><div class="kpi sm">${sc(M.ar.peak)}</div>${tierBadge(C.scoreTier(M.ar.peak))}</div><div><p class="eyebrow">${t('today.balance')}</p><div class="kpi sm">${M.ar.balance != null ? sc(M.ar.balance) : '–'}</div>${M.ar.balance != null ? tierBadge(C.scoreTier(M.ar.balance)) : ''}</div></div><div class="badges">${Object.values(M.ar.best).sort((a, b) => b.r.p - a.r.p).slice(0, 4).map(b => `<span class="bb">${tierBadge(b.r.tier)} ${esc(t('arena.ev.' + b.pr.event))}</span>`).join('')}</div><button class="lnk" data-act="tab" data-tab="arena">${t('arena.title')} →</button>`);
   const todo = [];
   if (M.src === 'renpho') { const imp = S.renpho.imported; if (!imp || C.dayNum(td) - C.dayNum(imp) > 7) todo.push(['today.t_renpho', 'settings']); }
   else if (!log.w) todo.push(['today.t_weigh']);
@@ -237,19 +237,25 @@ function screenArena(M) {
   let h = `<header class="hdr"><h1>${t('arena.title')}</h1><p class="muted">${t('arena.lead')}</p></header>`;
   if (!sex) return h + card('', `<p class="muted">${t('ob.you')}</p>`);
   const domVals = DOMAINS.map(d => ({ label: t('arena.domS.' + d), name: t('arena.dom.' + d), v: A.dom[d] ?? null, d }));
-  let top = `<div class="g2"><div class="score"><p class="eyebrow">${t('arena.peak')}</p><div class="kpi">${A.peak != null ? nf(A.peak) : '–'}</div><small>${t('arena.peakText')}</small></div><div class="score"><p class="eyebrow">${t('arena.balance')}</p><div class="kpi">${A.balance != null ? nf(A.balance) : '–'}</div><small>${t('arena.balanceText')}</small></div></div>`;
+  const overall = (label, v, text) => {
+    if (v == null) return `<div class="score"><p class="eyebrow">${label}</p><div class="kpi">–</div><small>${text}</small></div>`;
+    const ti = C.scoreTier(v), nxt = ti < 7 ? TIER_P[ti] * 100 : null, lo = ti ? TIER_P[ti - 1] * 100 : 0;
+    return `<div class="score"><p class="eyebrow">${label}</p><div class="kpi">${sc(v)}</div>${tierBadge(ti)}<p class="flav">${esc(tierName(ti)[1])}</p><div class="prog"><i style="width:${C.clamp(nxt ? (v - lo) / (nxt - lo) : 1, 0, 1) * 100}%"></i></div><small class="nxt">${nxt ? t('arena.toNext', { gap: nf(Math.max(1, nxt - Math.floor(v + 1e-9))), tier: tierName(ti + 1)[0] }) : t('arena.top')}</small><small>${text}</small></div>`;
+  };
+  let top = `<div class="g2">${overall(t('arena.peak'), A.peak, t('arena.peakText'))}${overall(t('arena.balance'), A.balance, t('arena.balanceText'))}</div>`;
   top += radar(domVals);
   if (A.lean != null) top += `<div class="kv"><span>${t('arena.leanTitle')}</span><b>${nf(A.lean)}</b><small>${t('arena.leanText')}</small></div>`;
   if (A.balance != null) {
     const present = domVals.filter(x => x.v != null); const weak = present.reduce((a, b) => a.v < b.v ? a : b);
     const nextP = TIER_P.find(b => b * 100 > weak.v); const vals = present.map(x => x === weak ? Math.max(x.v, (nextP || 0.999) * 100) : x.v);
     const nb = Math.exp(C.mean(vals.map(v => Math.log(Math.max(1, v)))));
-    top += `<p class="tip">${t('arena.limiter', { d: weak.name, a: nf(A.balance), b: nf(nb) })}</p>`;
+    const up = C.scoreTier(nb) > C.scoreTier(A.balance);
+    top += `<p class="tip">${t(up ? 'arena.limiterUp' : 'arena.limiter', { d: weak.name, a: sc(A.balance), b: sc(nb), tier: tierName(C.scoreTier(nb))[0] })}</p>`;
   } else top += `<p class="muted">${t('arena.needMore')}</p>`;
-  top += `<p class="muted xs">${t('arena.gapText')}</p>`;
+  top += `<p class="muted xs">${t('arena.gapText')} ${t('arena.overallNote')}</p>`;
   h += card('', top, 'hero');
   for (const [dom, ids] of Object.entries(EVENT_GROUPS)) {
-    h += card(t('arena.dom.' + dom) + (A.dom[dom] != null ? ` <span class="dscore">${nf(A.dom[dom])}</span>` : ''), ids.map(id => {
+    h += card(t('arena.dom.' + dom) + (A.dom[dom] != null ? ` <span class="dscore">${sc(A.dom[dom])}</span> ${tierBadge(C.scoreTier(A.dom[dom]))}` : ''), ids.map(id => {
       const b = A.best[id];
       if (!b) return `<div class="ev empty" data-act="event" data-id="${id}"><span>${t('arena.ev.' + id)}</span><small>${t('arena.none')}</small></div>`;
       const r = b.r, nextTxt = r.tier < 7 ? t('arena.next', { gap: gapTxt(id, r), tier: tierName(r.tier + 1)[0] }) : t('arena.top');
@@ -260,6 +266,7 @@ function screenArena(M) {
   h += card(t('arena.calc'), `<div class="g2">${field(`${t('arena.weightKg')} (${kgU()})`, `<input type="number" inputmode="decimal" id="c1w" value="100">`)}${field(t('arena.reps'), `<input type="number" inputmode="numeric" id="c1r" value="5">`)}</div><p id="c1o" class="kpi sm"></p>`);
   return h;
 }
+const sc = v => nf(Math.floor(v + 1e-9)); // scores shown rounded down so the number, its tier and the gap agree
 const topPct = p => { const x = (1 - p) * 100; return x < 0.1 ? '0.1' : x < 1 ? nf(x, 1) : nf(x); };
 function gapTxt(id, r) {
   const k = EVENTS[id].kind;

@@ -43,6 +43,7 @@ Forge is a static web app (no build step). Open `forge/` on GitHub Pages; everyt
 - **Rowing**: Concept2 2024 rankings (25/50/75/90 %) for 100 m and 500 m on −ln(time). 200 m, 250 m and 1 minute modelled per percentile on a log-log line between 100 m and 500 m (labelled "modelled").
 - **VO₂max**: FRIEND 2022 treadmill, RER ≥ 1.10, by decade (population data, so one percentile only). Cooper: (m − 504.9) / 44.73. Watch values flagged low confidence.
 - **All adults**: (1 − q) · Φ(z + 1.5) + q · p, range with (1.5q, Δ 1.0) and (0.5q, Δ 2.25). q per event in `EVENTS` (Forge estimates).
+- **Overall levels**: Peak, Balance and each domain score get a tier from the same ladder applied to score / 100 (`scoreTier`), with a progress bar and the points to the next tier. Scores are shown rounded down so the number, its tier and the gap agree.
 - **Scores**: event score = 100 × percentile (× decay after 24 months, −25 %/year); domain = mean of the best 3 events; Leanness = 100 × (1 − NHANES body-fat percentile), secondary. Peak = mean of the best 2 performance domains; Balance = geometric mean of all performance domains logged (≥ 3).
 
 ## Refreshing the benchmark data (yearly is enough)

@@ -32,7 +32,7 @@ export function radar(vals, W = 300) {
   for (const f of [0.25, 0.5, 0.75, 1]) g += `<polygon class="${f === 0.5 ? 'ring mid' : 'ring'}" points="${vals.map((_, i) => pt(i, f).join(',')).join(' ')}"/>`;
   vals.forEach((_, i) => { const [x, y] = pt(i, 1); g += `<line class="spoke" x1="${c}" y1="${c}" x2="${x}" y2="${y}"/>`; });
   g += `<polygon class="shape" points="${vals.map((v, i) => pt(i, Math.max(0.02, (v.v || 0) / 100)).join(',')).join(' ')}"/>`;
-  vals.forEach((v, i) => { const [x, y] = pt(i, Math.max(0.02, (v.v || 0) / 100)); g += `<circle class="dot" cx="${x}" cy="${y}" r="3.5"/>`; const [lx, ly] = pt(i, 1.22); g += `<text class="rl" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${esc(v.label)}</text><text class="rv" x="${lx}" y="${ly + 13}" text-anchor="middle">${v.v == null ? '–' : Math.round(v.v)}</text>`; });
+  vals.forEach((v, i) => { const [x, y] = pt(i, Math.max(0.02, (v.v || 0) / 100)); g += `<circle class="dot" cx="${x}" cy="${y}" r="3.5"/>`; const [lx, ly] = pt(i, 1.22); g += `<text class="rl" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${esc(v.label)}</text><text class="rv" x="${lx}" y="${ly + 13}" text-anchor="middle">${v.v == null ? '–' : Math.floor(v.v + 1e-9)}</text>`; });
   return g + '</svg>';
 }
 

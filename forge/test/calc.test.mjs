@@ -95,4 +95,8 @@ t('RMR: smart-scale body fat gets half weight', () => {
   const full = C.rmrEnsemble(p).value, half = C.rmrEnsemble({ ...p, bfSd: 6 }).value, bw = C.rmrEnsemble({ ...p, ffm: null }).value;
   near(half, (full + bw) / 2, 0.01, 'half weight');
 });
+t('overall levels', () => {
+  assert.equal(C.scoreTier(87), 4, 'Peak 87 = Spartan'); assert.equal(C.scoreTier(76), 3, 'Balance 76 = Viking');
+  assert.equal(C.scoreTier(95), 5); assert.equal(C.scoreTier(4.9), 0); assert.equal(C.scoreTier(null), null);
+});
 console.log(`\n${n} test groups passed`);

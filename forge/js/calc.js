@@ -274,6 +274,8 @@ export function valueAtP(p, A) {
   return A[i].v + (zp - z[i]) / (z[i + 1] - z[i]) * (A[i + 1].v - A[i].v);
 }
 export const tierOf = p => TIER_P.filter(b => p >= b).length;
+/* Overall level for a 0–100 score (domain, Peak, Balance): same ladder as single records, applied to the score. */
+export const scoreTier = s => s == null ? null : tierOf(s / 100);
 
 /* Anchors for each event. Each returns { A, enc, dec } where enc converts a raw result to the anchor scale
    (higher = better) and dec converts back for display. */

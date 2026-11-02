@@ -84,7 +84,8 @@ const EN = {
   arena: {
     title: 'Arena', lead: 'Your records ranked against people who do the same thing.', peak: 'Peak', balance: 'Balance',
     peakText: 'Average of your two best domains: your ceiling.', balanceText: 'Geometric mean of every domain: it drops hard when one is weak.', gapText: 'The gap between them shows how specialised you are.',
-    needMore: 'Log records in at least three domains to get a Balance score.', limiter: '{d} is holding your Balance back. Reaching the next tier there lifts Balance from {a} to {b}.',
+    needMore: 'Log records in at least three domains to get a Balance score.', limiter: '{d} is holding your Balance back. Reaching the next tier there lifts Balance from {a} to {b}.', limiterUp: '{d} is holding your Balance back. Reaching the next tier there lifts Balance from {a} to {b}, and makes you {tier} overall.', toNext: '{gap} points to {tier}',
+    overallNote: 'Overall levels use the same ladder as single records, applied to the score: they show where your domains sit on average, not a ranking against everyone.',
     dom: { strength: 'Strength', explosive: 'Explosive power', speed: 'Speed', power: 'Power endurance', aerobic: 'Aerobic', upper: 'Upper-body endurance', lean: 'Leanness' },
     domS: { strength: 'Strength', explosive: 'Explosive', speed: 'Speed', power: 'Power end.', aerobic: 'Aerobic', upper: 'Upper body' },
     leanTitle: 'Leanness (secondary score)', leanText: 'Shown for reference. Peak and Balance measure performance only.', repsU: 'reps', timeLong: 'Time (mm:ss or h:mm:ss)', cm: 'Jump height', jumpMethod: 'Measured with',
@@ -239,7 +240,8 @@ const FR = {
   arena: {
     title: 'Arène', lead: 'Tes records comparés aux personnes qui pratiquent la même chose.', peak: 'Pic', balance: 'Équilibre',
     peakText: 'Moyenne de tes deux meilleurs domaines : ton plafond.', balanceText: 'Moyenne géométrique de tous les domaines : elle chute dès qu’un domaine est faible.', gapText: 'L’écart entre les deux montre à quel point tu es spécialisé.',
-    needMore: 'Enregistre des records dans au moins trois domaines pour obtenir un score d’Équilibre.', limiter: '{d} freine ton Équilibre. Atteindre le palier suivant le ferait passer de {a} à {b}.',
+    needMore: 'Enregistre des records dans au moins trois domaines pour obtenir un score d’Équilibre.', limiter: '{d} freine ton Équilibre. Atteindre le palier suivant le ferait passer de {a} à {b}.', limiterUp: '{d} freine ton Équilibre. Atteindre le palier suivant le ferait passer de {a} à {b}, et te ferait passer {tier} au global.', toNext: '{gap} points pour {tier}',
+    overallNote: 'Les niveaux globaux utilisent la même échelle que les records, appliquée au score : ils montrent où se situent tes domaines en moyenne, pas un classement face à tout le monde.',
     dom: { strength: 'Force', explosive: 'Explosivité', speed: 'Vitesse', power: 'Puissance-endurance', aerobic: 'Aérobie', upper: 'Endurance haut du corps', lean: 'Sécheresse' },
     domS: { strength: 'Force', explosive: 'Explosivité', speed: 'Vitesse', power: 'Puiss.-end.', aerobic: 'Aérobie', upper: 'Haut du corps' },
     leanTitle: 'Sécheresse (score secondaire)', leanText: 'Affichée pour info. Le Pic et l’Équilibre ne mesurent que la performance.', repsU: 'rép.', timeLong: 'Temps (mm:ss ou h:mm:ss)', cm: 'Hauteur du saut', jumpMethod: 'Mesurée avec',

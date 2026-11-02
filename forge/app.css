@@ -80,3 +80,4 @@ pre{white-space:pre-wrap;font-size:12px}
 .src{font-style:normal;font-size:9px;font-weight:700;margin-left:4px;padding:1px 4px;border-radius:4px;vertical-align:1px}.s-renpho{color:#fff;background:#3b7fe0}.s-health{color:#fff;background:#d4644a}.s-manual{color:var(--ink);background:var(--card2);border:1px solid var(--line)}
 .flagline{color:var(--warn);font-size:13px;font-weight:600;margin:8px 0}
 .srcmap th{width:34%;text-transform:none;letter-spacing:0;font-size:12px;vertical-align:top;color:var(--ink)}.srcmap td{font-size:13px;color:var(--muted)}
+.flav{margin:4px 0 2px;font-size:12px;color:var(--muted)}.score .tier{margin-top:4px}.score small.nxt{color:var(--muted);margin-bottom:6px}h2 .tier{font-size:11px;vertical-align:3px;margin-left:4px}
