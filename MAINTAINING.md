@@ -66,11 +66,11 @@ Example (the Seebensee line from the catalogue, plus the fields new hikes should
 Strike an idea out (or delete the line) when it is added.
 
 **Near the favourite areas**
-- Ramsau: Soleleitungsweg (easy balcony path), Taubensee, Halsalm
+- Ramsau: ~~Soleleitungsweg (easy balcony path)~~, Taubensee, Halsalm
 - Berchtesgaden: Kärlingerhaus and Funtensee via the Saugasse, Toter Mann, Untersberg (Berchtesgadener Hochthron), Predigtstuhl from Bad Reichenhall
-- Wilder Kaiser: Stripsenjochhaus from the Griesner Alm, Walleralm, Brentenjoch, Steinerne Rinne (expert)
-- Reutte: Frauensee and Urisee, Gehrenspitze from the Reuttener Seilbahn, Gaichtspitze
-- Tegernsee and Schliersee: Roß- and Buchstein with the Tegernseer Hütte, Setzberg, Brecherspitz, Jägerkamp, Spitzingsee circuit
+- Wilder Kaiser: ~~Stripsenjochhaus from the Griesner Alm~~, ~~Walleralm~~, Brentenjoch, Steinerne Rinne (expert)
+- Reutte: ~~Frauensee~~ and Urisee, Gehrenspitze from the Reuttener Seilbahn, Gaichtspitze
+- Tegernsee and Schliersee: ~~Roß- and Buchstein with the Tegernseer Hütte~~, Setzberg, Brecherspitz, Jägerkamp, Spitzingsee circuit
 - Garmisch and Eibsee: Kreuzeck and Osterfelderkopf, Krottenkopf, Grainau to the Riessersee
 - Walchensee and Kochel: Rabenkopf, Lainbach waterfalls, Walchensee shore walk
 
@@ -81,7 +81,7 @@ Strike an idea out (or delete the line) when it is added.
 - Bayrischzell: Tatzelwurm waterfalls
 
 **Austria**
-- Serfaus-Fiss-Ladis: Hexenseen from Serfaus, Furgler
+- Serfaus-Fiss-Ladis: ~~Hexenseen from Serfaus~~, Furgler
 - Pitztal and Kaunertal: Rifflsee, Gepatschhaus
 - Stubai: Wilde Wasser Weg to the Grawa waterfall, Pinnistal to the Karalm, Starkenburger Hütte
 - Zillertal: Berliner Hütte, Schlegeis reservoir to the Pfitscher Joch
