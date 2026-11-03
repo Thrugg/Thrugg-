@@ -50,6 +50,7 @@
       <button role="tab" id="tab-find" data-tab="find" aria-selected="false">Find</button>
       <button role="tab" id="tab-weather" data-tab="weather" aria-selected="false">Weather</button>
       <button role="tab" id="tab-log" data-tab="log" aria-selected="false">Logbook</button>
+      <button role="tab" id="tab-photos" data-tab="photos" aria-selected="false">Photos</button>
     </nav>
     <div class="views" id="views">
       <section class="view" id="view-hikes" data-view="hikes">
@@ -159,6 +160,8 @@
         <div id="badges" class="badges"></div>
       </section>
 
+      <section class="view" id="view-photos" data-view="photos" hidden></section>
+
       <section class="view detail" id="view-detail" data-view="detail" hidden></section>
       <section class="view build" id="view-build" data-view="build" hidden></section>
     </div>
@@ -199,4 +202,5 @@
   <form method="dialog" id="dlgForm" class="dlg-inner"></form>
 </dialog>
 <input type="file" id="fileGpx" accept=".gpx,application/gpx+xml,application/octet-stream" multiple hidden>
+<input type="file" id="filePhotos" accept="image/*" multiple hidden>
 <input type="file" id="fileBackup" accept=".json,application/json" hidden>

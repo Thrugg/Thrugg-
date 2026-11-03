@@ -42,6 +42,12 @@ Every Monday morning an update adds the hikes on the wish list, then about six m
 
 **Draw a route** (pencil button on the map, or under the hike list): search or tap the start and the finish, tap any place you pass, and the line follows the trails on OpenStreetMap. Distance, ascent, descent, signposted time, your time, the grade (from the trail difficulty tags on the map) and what's underfoot are worked out automatically; one way, out and back or loop. Turn off "Follow the trails" for a path that isn't on the map. After the hike, **Mark as done** takes the numbers from your watch, typed in or read from a screenshot of the summary (the text is recognised on the phone; nothing is uploaded).
 
+## Your photos
+
+Add as many photos as you like to any day in the logbook: in **Mark as done** (or **Edit** on an entry), or with **Add photos** in the **Photos** tab. The Photos tab shows them all, grouped by hike and filterable by year; tap one to see the whole day: the hike, date, distance, ascent, your time and pace, who came, the dog, your rating and note, the weather at the top that day (Open-Meteo history), and every other photo from that outing. Photos taken on one day also fill in the date of a new entry.
+
+Photos are made smaller on the device (about 0.3–0.6 MB each) and kept in the browser. When signed in, they are also stored privately in your Supabase project (bucket `cordee-photos`, one folder per account), so they appear on every device. This needs the photo part of `tools/supabase-setup.sql` run once (also under Settings → Photos). Photos are never put in this repository and are not in the JSON backup.
+
 ## Good to know
 
 - Route lines are traced on OpenStreetMap paths the first time and then cached (and synced). The app traces the rest slowly in the background so it doesn't overload the free routing server.

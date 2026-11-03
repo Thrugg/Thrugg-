@@ -24,6 +24,7 @@ const Dlg = {
     const est = h ? yourTime(h) : 0, dur = preset.dur ?? L?.dur ?? est;
     let who = (L?.who || [0, 1]).slice(), rating = L?.rating || 0;
     const wkm = preset.km ?? L?.km ?? '', wup = preset.up ?? L?.up ?? '', wdn = preset.dn ?? L?.dn ?? '';
+    let photos = (L?.photos || []).slice(), added = [], removed = [], saved = false, closed = false, busy = 0;
     this.open({
       title: logId ? 'Edit entry' : 'Mark as done',
       body: `${h ? `<div class="field">Hike<b style="font:500 18px var(--f-display);text-transform:none;letter-spacing:0;color:var(--ink)">${esc(h.n)}</b><input type="hidden" name="hike" value="${h.id}"></div>` : `<label class="field">Hike<select name="hike" required>${this.hikeOptions()}</select></label>`}
@@ -38,13 +39,48 @@ const Dlg = {
           <input type="file" id="wFile" accept="image/*" hidden>
           ${h && h.custom ? `<label class="chk"><input type="checkbox" name="wUpd" ${h.auto !== false ? 'checked' : ''}> Use these numbers for the hike as well</label>` : ''}
         </details>
+        <div class="field">Photos<div class="ph-edit" id="fPh"></div><small class="muted" id="fPhMsg">${photos.length ? '' : 'As many as you like. They are made smaller on this device first.'}</small><input type="file" id="fPhFile" accept="image/*" multiple hidden></div>
         <label class="field">Note<textarea name="note" placeholder="Conditions, the view, where we had lunch…">${esc(L?.note || '')}</textarea></label>`,
       foot: `${logId ? '<button type="button" class="btn ghost left" id="logDel">Delete entry</button>' : ''}<button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary" type="submit">Save</button>`,
       onOpen: f => {
         f.querySelectorAll('#fWho button').forEach(b => b.onclick = () => { const i = +b.dataset.i; who = who.includes(i) ? who.filter(x => x !== i) : [...who, i].sort(); b.setAttribute('aria-pressed', who.includes(i)); });
         f.querySelectorAll('#fStars button').forEach(b => b.onclick = () => { rating = +b.dataset.v === rating ? 0 : +b.dataset.v; f.querySelectorAll('#fStars button').forEach(x => x.classList.toggle('on', +x.dataset.v <= rating)); });
         const del = f.querySelector('#logDel');
-        if (del) this.confirmBtn(del, 'Tap again to delete', () => { delItem(logId); $('#dlg').close(); afterLog(); toast('Entry deleted'); });
+        if (del) this.confirmBtn(del, 'Tap again to delete', () => { delItem(logId); Album.forget((L?.photos || []).map(p => p.id)); $('#dlg').close(); afterLog(); toast('Entry deleted'); });
+        const box = f.querySelector('#fPh'), pmsg = f.querySelector('#fPhMsg'), pfile = f.querySelector('#fPhFile');
+        const paintPh = () => {
+          box.innerHTML = photos.map(p => `<div class="ph ph-e"><img data-ph="${p.id}" alt=""><button type="button" class="ph-rm" data-rm="${p.id}" aria-label="Remove this photo">${ic('i-close')}</button></div>`).join('') +
+            `<button type="button" class="ph ph-add" id="fPhAdd">${ic('i-plus')}<span>${photos.length ? 'More' : 'Add photos'}</span></button>`;
+          box.querySelectorAll('img[data-ph]').forEach(img => Album.load(img));
+          box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
+            const id = b.dataset.rm; photos = photos.filter(p => p.id !== id);
+            if (added.includes(id)) { added = added.filter(x => x !== id); Album.discard([id]); } else removed.push(id);
+            paintPh();
+          });
+          box.querySelector('#fPhAdd').onclick = () => pfile.click();
+        };
+        const addFiles = async list => {
+          list = list.filter(x => /^image\//.test(x.type) || /\.(jpe?g|png|heic|heif|webp)$/i.test(x.name || ''));
+          if (!list.length) return;
+          busy++; let ok = 0; const errs = [];
+          for (const [i, file] of list.entries()) {
+            pmsg.textContent = `Preparing ${list.length > 1 ? `photo ${i + 1} of ${list.length}` : 'the photo'}…`;
+            try { const p = await Album.add(file); if (closed) { Album.discard([p.id]); continue; } photos.push(p); added.push(p.id); ok++; paintPh(); }
+            catch (e) { errs.push(e.message || String(e)); }
+          }
+          busy--;
+          let m = ok ? `${ok} photo${ok > 1 ? 's' : ''} added.` : '';
+          if (!logId && !preset.date) {
+            const ds = [...new Set(photos.map(p => p.t && p.t.slice(0, 10)).filter(Boolean))];
+            if (ds.length === 1 && ds[0] <= todayISO() && f.date.value === todayISO() && ds[0] !== f.date.value) { f.date.value = ds[0]; m += ` Date set to ${fmtDate(ds[0], { wd: true, y: true })} from the photos.`; }
+          }
+          if (errs.length) m += ` ${errs.length} could not be added: ${errs[0]}`;
+          pmsg.textContent = m.trim();
+        };
+        pfile.onchange = () => { const fl = [...pfile.files]; pfile.value = ''; addFiles(fl); };
+        paintPh();
+        if (preset.files) addFiles(preset.files);
+        $('#dlg').addEventListener('close', () => { closed = true; if (!saved && added.length) Album.discard(added); }, { once: true });
         const msg = f.querySelector('#wMsg'), file = f.querySelector('#wFile');
         f.querySelector('#wShot').onclick = () => file.click();
         file.onchange = async () => {
@@ -62,17 +98,37 @@ const Dlg = {
       onSubmit: f => {
         const fd = new FormData(f), hike = fd.get('hike');
         if (!who.length) { toast('Pick at least one of you'); return false; }
+        if (busy) { toast('One moment, the photos are still being prepared'); return false; }
         const dur = (+fd.get('hh') || 0) * 60 + (+fd.get('mm') || 0);
         const data = { hike, date: fd.get('date'), dur: dur || null, who, dog: !!fd.get('dog'), rating, note: (fd.get('note') || '').trim() };
         const n = k => fd.get(k) === '' || fd.get(k) == null ? null : +fd.get(k);
         const km = n('wkm'), up = n('wup'), dn = n('wdn');
         if (km > 0) Object.assign(data, { km: Math.round(km * 100) / 100, up: up ?? null, dn: dn ?? up ?? null });
+        if (photos.length) data.photos = photos;
         putItem(logId || 'log:' + uid(), 'log', data);
+        saved = true;
+        if (removed.length) Album.forget(removed);
+        if (added.length) Album.upload();
         const hk = HBY[hike];
         if (fd.get('wUpd') && hk && hk.custom && km > 0) {
           saveHike(hk, { km: Math.round(km * 10) / 10, up: up ?? hk.up, dn: hk.ty === 'trav' ? (dn ?? hk.dn) : null, auto: false });
         }
         afterLog(); toast(logId ? 'Entry updated' : 'Logged. Well walked!');
+      }
+    });
+  },
+  addPhotos() {
+    const L = logs();
+    if (!L.length) { toast('Log the hike first; you can add its photos in the same step.', 3600); Dlg.log(null); return; }
+    this.open({
+      title: 'Add photos',
+      body: `<label class="field">To which day<select name="lg">${L.map(l => `<option value="${l.id}">${fmtDate(l.date, { y: true })} · ${esc(HBY[l.hike].n)}${l.photos && l.photos.length ? ' (' + l.photos.length + ' photos)' : ''}</option>`).join('')}</select></label>
+        <small class="muted">A hike that isn't in the logbook yet: Logbook → Log a hike, and add the photos there.</small>`,
+      foot: `<button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary" type="submit">${ic('i-camera')}Choose photos</button>`,
+      onSubmit: f => {
+        const id = f.lg.value, inp = $('#filePhotos');
+        inp.onchange = () => { const files = [...inp.files]; inp.value = ''; const it = ITEMS[id]; if (files.length && it && it.d) Dlg.log(HBY[it.d.hike], id, { files }); };
+        inp.click();
       }
     });
   },
@@ -200,7 +256,10 @@ const Dlg = {
           <div class="row2"><label class="field">Email<input name="se" type="email" value="${esc(S.sync.email)}" autocomplete="username"></label><label class="field">Password<input name="sp" type="password" autocomplete="current-password"></label></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn ghost small" id="sConnect">Save and sign in</button><button type="button" class="btn ghost small" id="sNow">Sync now</button><button type="button" class="btn ghost small" id="sOut">Sign out</button><span class="muted" id="syncStatus">${esc(Sync.msg || (Sync.configured() ? '' : 'Not set up'))}</span></div>
           <details><summary class="muted" style="cursor:pointer">SQL for the Supabase SQL editor</summary><div class="codebox" id="sqlBox">${esc(sql)}</div><button type="button" class="btn ghost small" id="sqlCopy" style="margin-top:6px">Copy SQL</button></details></div>`}
-        <div class="set-sec"><h3>Backup</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost small" id="sExport">${ic('i-upload')}Export our data</button><button type="button" class="btn ghost small" id="sImport">Import a backup</button></div></div>
+        <div class="set-sec"><h3>Photos</h3><small class="muted">Photos are made smaller on the device (about 0.3–0.6 MB each) and kept here. When you're signed in, they are also stored privately in your Supabase project, so they show on every device and survive a new phone.</small>
+          <p class="muted" id="sPhStat" style="margin:6px 0 4px;font-size:13px">Counting…</p>
+          <details><summary class="muted" style="cursor:pointer">SQL for photo storage (run once in the Supabase SQL editor)</summary><div class="codebox" id="phSqlBox">${esc(ALBUM_SQL)}</div><button type="button" class="btn ghost small" id="phSqlCopy" style="margin-top:6px">Copy SQL</button></details></div>
+        <div class="set-sec"><h3>Backup</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost small" id="sExport">${ic('i-upload')}Export our data</button><button type="button" class="btn ghost small" id="sImport">Import a backup</button></div><small class="muted">The backup file holds the logbook and settings. Photos are not in it; they stay on your devices and in your account.</small></div>
         <div class="set-sec"><h3>How difficulty is graded</h3><div class="tablewrap"><table class="grade-table"><thead><tr><th>Cordée</th><th>Switzerland (SAC)</th><th>Austria / Bavaria</th><th>Italy (CAI)</th></tr></thead><tbody>
           <tr><td><span class="gchip g-easy">Easy</span></td><td>T1 · yellow trail</td><td>valley and blue trails</td><td>T</td></tr>
           <tr><td><span class="gchip g-moderate">Moderate</span></td><td>T2 · red-white</td><td>red mountain trails</td><td>E</td></tr>
@@ -216,6 +275,8 @@ const Dlg = {
         $('#sNow').onclick = () => { saveSync(); Sync.run(true); };
         $('#sOut').onclick = () => Sync.signOut();
         if ($('#sqlCopy')) $('#sqlCopy').onclick = async () => { try { await navigator.clipboard.writeText(sql); toast('SQL copied'); } catch (e) { const r = document.createRange(); r.selectNodeContents($('#sqlBox')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selected, copy it with ⌘C'); } };
+        $('#phSqlCopy').onclick = async () => { try { await navigator.clipboard.writeText(ALBUM_SQL); toast('SQL copied'); } catch (e) { const r = document.createRange(); r.selectNodeContents($('#phSqlBox')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selected, copy it with ⌘C'); } };
+        Album.counts().then(c => { const el = $('#sPhStat'); if (el) el.textContent = c.total ? `${c.total} photo${c.total > 1 ? 's' : ''} in the logbook · ${c.here} on this device · ${c.wait ? c.wait + ' waiting to upload. ' + (Album.cloud.msg || '') : 'all saved to your account.'}` : 'No photos yet.'; });
         $('#sExport').onclick = () => Backup.export();
         $('#sImport').onclick = () => $('#fileBackup').click();
       },
@@ -240,7 +301,7 @@ const Dlg = {
     });
   }
 };
-function afterLog() { UI.refresh(); if (UI.detailId) UI.openHike(UI.detailId, { noFly: true }); if (UI.state.tab === 'log') UI.renderLog(); }
+function afterLog() { UI.refresh(); if (UI.detailId) UI.openHike(UI.detailId, { noFly: true }); if (UI.state.tab === 'log') UI.renderLog(); if (UI.state.tab === 'photos') Album.render(); }
 function brandLine() {
   const n = S.names.map(x => (x || '').trim()).filter(Boolean);
   $('#brandSub').textContent = n.length ? n.join(' & ') + (dogName() ? ' & ' + dogName() : '') : 'Our rope team in the Alps';
@@ -261,7 +322,7 @@ const Backup = {
       if (j.app !== 'cordee' || !j.items) throw new Error('Not a Cordée backup');
       let n = 0;
       for (const [id, v] of Object.entries(j.items)) { const cur = ITEMS[id]; if (!cur || new Date(v.u) > new Date(cur.u)) { ITEMS[id] = { ...v, dirty: true }; n++; } }
-      LS.set('items', ITEMS); rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); Sync.soon();
+      LS.set('items', ITEMS); rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); if (UI.state.tab === 'photos') Album.render(); Sync.soon();
       toast(`Imported ${n} entries`);
     } catch (e) { toast('Import failed: ' + e.message, 4000); }
   }
@@ -741,7 +802,8 @@ const Sync = {
         part.forEach(([id, v]) => { if (ITEMS[id] && ITEMS[id].u === v.u) ITEMS[id].dirty = false; });
       }
       LS.set('lastPull', maxU); LS.set('items', ITEMS);
-      if (changed) { applyCloudSettings(); rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); }
+      if (changed) { applyCloudSettings(); rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); if (UI.state.tab === 'photos') Album.render(); }
+      setTimeout(() => Album.upload(), 500);
       this.setStatus('ok', 'Synced at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { console.warn('sync', e); this.setStatus('err', 'Sync failed: ' + (e.message || e)); }
     finally { this.busy = false; }
@@ -793,7 +855,7 @@ function bindControls() {
   $('#mapMsgCancel').onclick = () => Pick.stop();
   $('#editUndo').onclick = () => Edit.undo(); $('#editCancel').onclick = () => Edit.stop(); $('#editSave').onclick = () => Edit.save();
   document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape' || $('#dlg').open) return;
+    if (e.key !== 'Escape' || $('#dlg').open || ($('#pv') && $('#pv').open)) return;
     if (Builder.on) { if (Builder.popup) { Builder.popup.remove(); Builder.popup = null; } return; }
     if (Fly.on) Fly.stop(); else if (Pick.on) Pick.stop(); else if (Edit.on) Edit.stop(); else if (UI.detailId) UI.closeDetail();
   });
@@ -804,7 +866,7 @@ function boot() {
   applyTheme(); rebuildHikes(); brandLine();
   UI.buildFind(); bindControls(); Sheet.init();
   UI.compute();
-  UI.setTab(['hikes', 'find', 'weather', 'log'].includes(UI.state.tab) ? UI.state.tab : 'hikes');
+  UI.setTab(['hikes', 'find', 'weather', 'log', 'photos'].includes(UI.state.tab) ? UI.state.tab : 'hikes');
   if (window.maplibregl) initMap();
   else $('#map').innerHTML = '<div class="empty" style="padding-top:30vh"><strong>The map library did not load</strong>Check the internet connection and reload.</div>';
   UI.refresh();
@@ -814,6 +876,7 @@ function boot() {
   wx(); setInterval(wx, 30 * 6e4);
   loadDrive().then(() => UI.refresh());
   Sync.start();
+  setTimeout(() => Album.upload(), 6000);
   setTimeout(() => Routes.background(), 3500);
   loadCatalogue().then(changed => {
     if (!changed) return;

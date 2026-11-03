@@ -124,6 +124,7 @@ const UI = {
     $$('.views > .view').forEach(v => v.hidden = v.dataset.view !== tab);
     if (tab === 'weather') this.renderWeather();
     if (tab === 'log') this.renderLog();
+    if (tab === 'photos') Album.render();
     if (tab === 'hikes') this.renderList();
     this.save();
   },
@@ -232,11 +233,12 @@ const UI = {
       const h = HBY[l.hike], [y, m, d] = l.date.split('-');
       const who = (l.who || [0, 1]).map(i => esc(personName(i))).join(' & ');
       return `<li class="log-item"><div class="log-date"><b>${+d}</b>${MONTHS[+m - 1]} ${y}</div>
-        <div><div class="log-name" data-id="${h.id}">${esc(h.n)}</div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' · ' : ''}${who}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' ↑ ' + fmtM(l.up) : '') : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}</div>
+        <div><div class="log-name" data-id="${h.id}">${esc(h.n)}</div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' · ' : ''}${who}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' ↑ ' + fmtM(l.up) : '') : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}${Album.strip(l)}</div>
         <button class="icon-btn" data-edit="${l.id}" aria-label="Edit this entry">${ic('i-edit')}</button></li>`;
     }).join('') : `<li class="empty"><strong>Nothing logged yet</strong>Open a hike and press “Mark as done”, or import a GPX from Komoot, Strava or Apple Health.</li>`;
     $$('#logList .log-name').forEach(el => el.onclick = () => this.openHike(el.dataset.id));
     $$('#logList [data-edit]').forEach(b => b.onclick = () => Dlg.log(HBY[ITEMS[b.dataset.edit].d.hike], b.dataset.edit));
+    Album.bindStrips($('#logList'));
     const wl = HK.filter(h => isWish(h.id) && !dm[h.id]);
     $('#wishList').innerHTML = wl.length ? wl.map(h => this.row(h, dm)).join('') : `<li class="empty">Tap the star on any hike to add it here.</li>`;
     this.bindRows($('#wishList'));
@@ -310,7 +312,7 @@ const UI = {
       <a class="btn ghost" href="https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
     </div>
     ${h.lf ? `<div class="note-box">${esc(h.lf)}</div>` : ''}
-    ${done.length ? `<div class="d-sec"><h3>Our visits</h3><ol class="log-list">${done.map(l => `<li class="log-item"><div class="log-date"><b>${+l.date.slice(8)}</b>${MONTHS[+l.date.slice(5, 7) - 1]} ${l.date.slice(0, 4)}</div><div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' (signposted ' + fmtDur(logDin(l)) + ')' : 'No time logged'}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' · ↑ ' + fmtM(l.up) : '') : ''}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}</div><button class="icon-btn" data-edit="${l.id}" aria-label="Edit entry">${ic('i-edit')}</button></li>`).join('')}</ol></div>` : ''}
+    ${done.length ? `<div class="d-sec"><h3>Our visits</h3><ol class="log-list">${done.map(l => `<li class="log-item"><div class="log-date"><b>${+l.date.slice(8)}</b>${MONTHS[+l.date.slice(5, 7) - 1]} ${l.date.slice(0, 4)}</div><div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' (signposted ' + fmtDur(logDin(l)) + ')' : 'No time logged'}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' · ↑ ' + fmtM(l.up) : '') : ''}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}${Album.strip(l)}</div><button class="icon-btn" data-edit="${l.id}" aria-label="Edit entry">${ic('i-edit')}</button></li>`).join('')}</ol></div>` : ''}
     <div class="d-sec"><h3>Elevation profile <span class="r" id="dProfNote"></span></h3><div class="profile" id="dProfile"><p class="muted">Tracing the route on the trail network…</p></div></div>
     <div class="d-sec"><h3>Weather <span class="r">trailhead ${fmtM(h.lo)} · top ${fmtM(h.mx)}</span></h3><div id="dWx"><p class="muted">Loading the forecast…</p></div></div>
     <div class="d-sec"><h3>${ic('i-paw')} Dog</h3>
@@ -343,6 +345,7 @@ const UI = {
     $('#dFly').onclick = () => Fly.hike(h);
     $('#dOsm').onclick = () => Explore.checkRules(h);
     v.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => Dlg.log(h, b.dataset.edit));
+    Album.bindStrips(v);
     const top = $('#dTop');
     v.onscroll = () => top.classList.toggle('stuck', v.scrollTop > 60);
   },

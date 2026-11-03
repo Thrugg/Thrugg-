@@ -41,3 +41,22 @@ create trigger cordee_touch before insert or update on public.cordee_items
 drop trigger if exists app_state_touch on public.app_state;
 create trigger app_state_touch before insert or update on public.app_state
   for each row execute function public.touch_updated_at();
+
+-- Cordée photos (added Nov 2026). Safe to run again on its own if the tables above already exist.
+-- Cordée photos: a private bucket, each account only sees its own folder
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('cordee-photos', 'cordee-photos', false, 10485760, array['image/jpeg'])
+on conflict (id) do nothing;
+drop policy if exists "cordee photos read" on storage.objects;
+create policy "cordee photos read" on storage.objects for select to authenticated
+  using (bucket_id = 'cordee-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "cordee photos add" on storage.objects;
+create policy "cordee photos add" on storage.objects for insert to authenticated
+  with check (bucket_id = 'cordee-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "cordee photos change" on storage.objects;
+create policy "cordee photos change" on storage.objects for update to authenticated
+  using (bucket_id = 'cordee-photos' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'cordee-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "cordee photos delete" on storage.objects;
+create policy "cordee photos delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'cordee-photos' and (storage.foldername(name))[1] = auth.uid()::text);
