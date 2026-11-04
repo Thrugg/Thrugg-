@@ -4,6 +4,8 @@ This is the rulebook for the weekly update, and for anyone adding a hike by hand
 
 ## The weekly update, step by step
 
+0. **Our own photos.** Trail-sign or route photos we share go through `data/inbox.md`: each one already handled is listed there, so only new photos get researched. Every destination on a sign becomes a hike unless it is already in the app (then say so). The photos themselves never go into this repository.
+
 1. **Wish list first.** Read `data/requests.md`. Every line under **Waiting** gets handled this week: add the hike (or the best-known version of it, plus an easier variant when one is popular), or say why not. Then move the line to **Done** with the date and the name it got in the app.
 2. **Then grow the catalogue by 6 hikes.** Pick from the ideas list at the bottom, or from good gaps you find. Cover at least two countries each week. Order of preference:
    - places close to areas already loved: Eibsee and Garmisch, Tegernsee, Ramsau and Berchtesgaden, Wilder Kaiser, Reutte and the Tannheimer Tal;
@@ -68,7 +70,7 @@ Strike an idea out (or delete the line) when it is added.
 **Near the favourite areas**
 - Ramsau: ~~Soleleitungsweg (easy balcony path)~~, Taubensee, Halsalm
 - Berchtesgaden: Kärlingerhaus and Funtensee via the Saugasse, Toter Mann, Untersberg (Berchtesgadener Hochthron), Predigtstuhl from Bad Reichenhall
-- Wilder Kaiser: ~~Stripsenjochhaus from the Griesner Alm~~, ~~Walleralm~~, Brentenjoch, Steinerne Rinne (expert)
+- Wilder Kaiser: ~~Stripsenjochhaus from the Griesner Alm~~, ~~Walleralm~~, Brentenjoch, ~~Steinerne Rinne (expert)~~
 - Reutte: ~~Frauensee~~ and Urisee, Gehrenspitze from the Reuttener Seilbahn, Gaichtspitze
 - Tegernsee and Schliersee: ~~Roß- and Buchstein with the Tegernseer Hütte~~, Setzberg, Brecherspitz, Jägerkamp, Spitzingsee circuit
 - Garmisch and Eibsee: Kreuzeck and Osterfelderkopf, Krottenkopf, Grainau to the Riessersee
