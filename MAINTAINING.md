@@ -4,7 +4,7 @@ This is the rulebook for the weekly update, and for anyone adding a hike by hand
 
 ## The weekly update, step by step
 
-0. **Our own photos.** Trail-sign or route photos we share go through `data/inbox.md`: each one already handled is listed there, so only new photos get researched. Every destination on a sign becomes a hike unless it is already in the app (then say so). The photos themselves never go into this repository.
+0. **Our inbox.** Trail-sign photos, route screenshots and spreadsheet rows we drop into the "Cordée hikes inbox" Drive folder are handled by a daily check and listed in `data/inbox.md`, so only new ones get researched. Every destination on a sign becomes a hike unless it is already in the app (then say so). The photos themselves never go into this repository.
 
 1. **Wish list first.** Read `data/requests.md`. Every line under **Waiting** gets handled this week: add the hike (or the best-known version of it, plus an easier variant when one is popular), or say why not. Then move the line to **Done** with the date and the name it got in the app.
 2. **Then grow the catalogue by 6 hikes.** Pick from the ideas list at the bottom, or from good gaps you find. Cover at least two countries each week. Order of preference:
