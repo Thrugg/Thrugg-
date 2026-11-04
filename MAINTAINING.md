@@ -68,7 +68,7 @@ Example (the Seebensee line from the catalogue, plus the fields new hikes should
 Strike an idea out (or delete the line) when it is added.
 
 **Near the favourite areas**
-- Ramsau: ~~Soleleitungsweg (easy balcony path)~~, Taubensee, Halsalm
+- Ramsau: ~~Soleleitungsweg (easy balcony path)~~, Taubensee, ~~Halsalm~~
 - Berchtesgaden: Kärlingerhaus and Funtensee via the Saugasse, Toter Mann, Untersberg (Berchtesgadener Hochthron), Predigtstuhl from Bad Reichenhall
 - Wilder Kaiser: ~~Stripsenjochhaus from the Griesner Alm~~, ~~Walleralm~~, Brentenjoch, ~~Steinerne Rinne (expert)~~
 - Reutte: ~~Frauensee~~ and Urisee, Gehrenspitze from the Reuttener Seilbahn, Gaichtspitze
@@ -78,7 +78,7 @@ Strike an idea out (or delete the line) when it is added.
 
 **Bavaria**
 - Chiemgau: Hochfelln, Hochgern, Geigelstein, Taubensee at Reit im Winkl
-- Allgäu: Nebelhorn and the Seealpsee in the Oytal, Hochgrat ridge, Grünten, Gaisalpsee, Rappensee hut
+- Allgäu: Nebelhorn and the Seealpsee in the Oytal, Hochgrat ridge, Grünten, ~~Gaisalpsee~~, Rappensee hut
 - Füssen: Tegelberg, Alatsee, Pöllat gorge
 - Bayrischzell: Tatzelwurm waterfalls
 
@@ -87,7 +87,7 @@ Strike an idea out (or delete the line) when it is added.
 - Pitztal and Kaunertal: Rifflsee, Gepatschhaus
 - Stubai: Wilde Wasser Weg to the Grawa waterfall, Pinnistal to the Karalm, Starkenburger Hütte
 - Zillertal: Berliner Hütte, Schlegeis reservoir to the Pfitscher Joch
-- Achensee and Karwendel: Bärenkopf, Seeberg- and Seekarspitze ridge, Dalfaz waterfall, Hallerangerhaus, Falkenhütte, Karwendelhaus
+- Achensee and Karwendel: ~~Bärenkopf~~, Seeberg- and Seekarspitze ridge, Dalfaz waterfall, Hallerangerhaus, Falkenhütte, Karwendelhaus
 - Kitzbühel: Kitzbüheler Horn, Schwarzsee
 - Arlberg and Lech: Formarinsee and the Freiburger Hütte, Spullersee
 - Montafon and Silvretta: Silvretta reservoir to the Wiesbadener Hütte

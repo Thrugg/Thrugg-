@@ -2,6 +2,14 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 4 Nov 2026 (2) · 151 hikes
+
+- From our Hikes List spreadsheet (first batch, 32 rows).
+- Added, Berchtesgaden & Ramsau: Malerwinkel loop, Wimbachklamm & Wimbachschloss, Kühroint & Archenkanzel from Hammerstiel, St. Bartholomä to the Eiskapelle, Halsalm loop, Ramsau to the Hintersee through the Zauberwald, Jenner from Hinterbrand via the Wasserfallalm, Jenner to the Mittelstation via the Schneibsteinhaus.
+- Added, Innsbruck and Karwendel: Hafelekarspitze & down to the Seegrube, Höttinger Bild & Rauschbrunnen, Gleirschklamm loop from Scharnitz, Bärenkopf via the Bärenbadalm and Weißenbachsattel.
+- Added, elsewhere: Stuiben falls, Frauenbrünnele & Kleiner Plansee from Reutte; Rigi Panorama Trail; Unterer Gaisalpsee, Rubihorn, and the Oytal on the Dr.-Hohenadel-Weg (Allgäu); Seebensee from the Ehrwalder Almbahn.
+- Changed: Jenner is now "Jenner via the Königsbachalm" with its route points; Obersee & Fischunkelalm gets route points and sources.
+
 ## 4 Nov 2026 · 133 hikes
 
 - From our own trail-sign photos (Wochenbrunner Alm, Griesen, the Partnach at Garmisch): every destination on the signs that wasn't in the app yet.
