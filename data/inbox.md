@@ -31,7 +31,7 @@ We drop trail-sign photos, route screenshots and a spreadsheet of hikes we'd lik
 | 2026-11-04 | Hikes List.xlsx | Pertisau - Gaisalm via Gaisalmsteig | already in: Achensee: Pertisau to Gaisalm |
 | 2026-11-04 | Hikes List.xlsx | Gleirsch Gorge Loop | added: Gleirschklamm loop from Scharnitz |
 | 2026-11-04 | Hikes List.xlsx | Bärenbadalm - Bärenkopf - Weißenbachsattel | added: Bärenkopf via the Bärenbadalm and Weißenbachsattel |
-| 2026-11-04 | Hikes List.xlsx | Schönjöchl (Reutte) | not added: no Schönjöchl found near Reutte; the Fiss ones are in. Needs a link |
+| 2026-11-04 | Hikes List.xlsx | Schönjöchl | not added: no Schönjöchl found near Reutte; the Fiss ones are in. Needs a link |
 | 2026-11-04 | Hikes List.xlsx | Frauenbrünnele - Plansee - Gratle | added as Stuiben falls, Frauenbrünnele & Kleiner Plansee; "Gratle" not identified, needs a link |
 | 2026-11-04 | Hikes List.xlsx | Rigi Panorama Trail | added: Rigi Panorama Trail |
 | 2026-11-04 | Hikes List.xlsx | Jochbergweg (Walchensee) | already in: Jochberg |
