@@ -2,6 +2,12 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 4 Nov 2026 (3) · Parking
+
+- New: select a hike and its car parks appear around the start as P icons with their names, with Waze, Google Maps and Apple Maps links (also in the new Parking section of the hike). Directions now goes to the main car park.
+- 125 hikes have researched car parks with fees and access rules (Braies and Tovel bookings, Auronzo, Eng and Schlegeis toll roads, Vilsalpsee closure, Swiss valley stations…); 37 positions are checked against the operator or a route description. For lift and boat hikes it's the valley station (Täsch for Zermatt, Stechelberg for Mürren, Königssee for the boats).
+- The car parks mapped on OpenStreetMap near the start are added for every hike and move approximate points onto the mapped car park, so new hikes get parking automatically.
+
 ## 4 Nov 2026 (2) · 151 hikes
 
 - From our Hikes List spreadsheet (first batch, 32 rows).

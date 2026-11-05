@@ -511,3 +511,30 @@ a.btn{text-decoration:none}
   .pv-info h2{font-size:23px}
   .log-ph{max-width:none}
 }
+
+/* Parking: car parks around the selected hike */
+.pkm{display:flex;align-items:center;gap:5px;background:none;border:0;padding:0;cursor:pointer;font:600 11.5px/1.15 var(--f-ui);color:var(--ink)}
+.pkm b,.pk-ico{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:#2563C9;color:#fff;font:800 14px/1 var(--f-ui);border:2px solid #fff;box-shadow:var(--shadow-sm)}
+.pkm span{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 6px;box-shadow:var(--shadow-sm)}
+.pkm-osm b{width:18px;height:18px;font-size:11.5px;background:#5B84C9}
+.pkm-osm span{font-weight:500;color:var(--ink-2)}
+.pkm-approx b,.pk-ico.pkm-approx{border-style:dashed;border-color:#fff;opacity:.9}
+.pk-far .pkm span{display:none}
+.pk-far .pkm-osm{display:none}
+.pk-pop b{display:block;font-size:14px}
+.pk-pop small{display:block;color:var(--ink-3);margin-top:1px}
+.pk-pop p{margin:6px 0 0;font-size:12.5px;color:var(--ink-2)}
+.pk-fee{margin-top:4px;font-weight:600;font-size:13px}
+.pk-nav{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pk-nav a{padding:4px 9px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;font-weight:600;color:var(--lake-ink);text-decoration:none;background:var(--surface)}
+.pk-nav a:hover{border-color:var(--lake)}
+.pk-row{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.pk-row:first-child{border-top:0;padding-top:2px}
+.pk-ico{cursor:pointer;margin-top:1px}
+.pk-ico:disabled{background:var(--ink-3);cursor:default}
+.pk-row-osm .pk-ico{background:#5B84C9}
+.pk-body{min-width:0;flex:1}
+.pk-body small{display:block;color:var(--ink-3);font-size:12px}
+.pk-name{background:none;border:0;padding:0;font-weight:700;font-size:14px;text-align:left;cursor:pointer;color:var(--ink)}
+.pk-name:disabled{cursor:default}
+.pk-x{font-size:12.5px;color:var(--ink-2);margin-top:2px}

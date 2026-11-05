@@ -309,9 +309,10 @@ const UI = {
     <div class="d-actions">
       <button class="btn glow grow" id="dDone">${ic('i-check')}${done.length ? 'Log again' : 'Mark as done'}</button>
       <button class="btn ghost" id="dFly">${ic('i-play')}Fly over</button>
-      <a class="btn ghost" href="https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
+      <a class="btn ghost" id="dDir" href="${(() => { const b = Parking.best(h); return b ? Parking.nav(b, h).g : `https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}`; })()}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
     </div>
     ${h.lf ? `<div class="note-box">${esc(h.lf)}</div>` : ''}
+    <div class="d-sec" id="dPark"><h3>${ic('i-car')} Parking <span class="r" id="dParkNote"></span></h3><div id="dParkList"><p class="muted">Looking for car parks near the start…</p></div></div>
     ${done.length ? `<div class="d-sec"><h3>Our visits</h3><ol class="log-list">${done.map(l => `<li class="log-item"><div class="log-date"><b>${+l.date.slice(8)}</b>${MONTHS[+l.date.slice(5, 7) - 1]} ${l.date.slice(0, 4)}</div><div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' (signposted ' + fmtDur(logDin(l)) + ')' : 'No time logged'}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' · ↑ ' + fmtM(l.up) : '') : ''}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}${Album.strip(l)}</div><button class="icon-btn" data-edit="${l.id}" aria-label="Edit entry">${ic('i-edit')}</button></li>`).join('')}</ol></div>` : ''}
     <div class="d-sec"><h3>Elevation profile <span class="r" id="dProfNote"></span></h3><div class="profile" id="dProfile"><p class="muted">Tracing the route on the trail network…</p></div></div>
     <div class="d-sec"><h3>Weather <span class="r">trailhead ${fmtM(h.lo)} · top ${fmtM(h.mx)}</span></h3><div id="dWx"><p class="muted">Loading the forecast…</p></div></div>

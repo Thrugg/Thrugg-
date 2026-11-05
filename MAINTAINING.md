@@ -13,7 +13,7 @@ This is the rulebook for the weekly update, and for anyone adding a hike by hand
    - famous mountain and lake hikes further away (Switzerland, the Dolomites, Salzburg, Hohe Tauern).
    - Mix the grades: roughly two easy, two moderate, one or two hard, and an expert one now and then.
 3. **No duplicates.** Before adding, search `data/hikes.json` for the place names. A different route to the same summit is fine if it is a distinct, well-known route (different start, or a loop instead of out-and-back). The build warns when two hikes share both their start and their top.
-4. **Research each hike** from at least two sources, and put one to three of them in `ref`. Good sources: official tourism boards, the Alpine clubs (alpenvereinaktiv.com, sac-cas.ch, cai.it), Outdooractive, Bergfex, hikr.org, the hut's own website, Wikipedia for coordinates and elevations.
+4. **Research each hike** from at least two sources, and put one to three of them in `ref`. Research its car parks as well (`pk`, see **Parking**). Good sources: official tourism boards, the Alpine clubs (alpenvereinaktiv.com, sac-cas.ch, cai.it), Outdooractive, Bergfex, hikr.org, the hut's own website, Wikipedia for coordinates and elevations.
 5. **Check and build:** `python3 tools/build.py`. Fix every error. Read the warnings and fix them unless they are clearly fine.
 6. **Record it:** add a section at the top of `data/changelog.md` (date, hike count, what was added or changed).
 7. **Commit and push** to `main` with a message like `Weekly hikes: +7 (Hexenseen, Taubensee, …)`. GitHub Pages publishes within a minute or two.
@@ -51,6 +51,7 @@ Example (the Seebensee line from the catalogue, plus the fields new hikes should
 | `b` | One or two sentences on why it's worth it. Plain, specific, no hype. |
 | `ref` | One to three https links to the sources used. |
 | `ad` | Date the hike was added (`YYYY-MM-DD`). The app shows a **New** badge for 30 days and a "new hikes" strip. |
+| `pk` | Car parks, 1 to 4, the one people drive to first (see **Parking** below). |
 
 **Difficulty**
 
@@ -60,6 +61,13 @@ Example (the Seebensee line from the catalogue, plus the fields new hikes should
 | moderate | T2, red-white | red mountain trails | E |
 | hard | T3, demanding red-white | red to black, sure-footed | EE |
 | expert | T4–T6, blue-white | black, alpine routes | EE+, EEA (via ferrata) |
+
+**Parking.** Every new hike gets `pk`: the car parks you actually drive to for it, the main one first. Each is `{"n": name, "p": [lat, lon], "v": 1, "f": fee, "x": note, "r": role, "s": source}`:
+- `n` exactly as Google Maps, Waze or OpenStreetMap name it ("Wanderparkplatz Hammerstiel", "Parcheggio Lago di Braies P4").
+- `p` the car park itself (not the village or the summit). Add `v: 1` only when the position comes from a source that gives the car park's coordinates (the operator, the tourism board, alpenvereinaktiv, hoehenrausch, bergtour-online and similar) and put that page in `s`. Without `v`, the position is a hint: the app moves it onto the matching car park mapped on OpenStreetMap. Leave `p` out if you only know the name.
+- `f` fee in a few words ("€6 per day", "Toll road €7 incl. parking", "Free"), and any booking rule or road closure in `x`. Fees change often: take the newest official figure.
+- `r` only when it isn't the start: `valley` (lift or boat hikes: the valley station where you leave the car, e.g. Täsch for Zermatt, Stechelberg for Mürren), `finish` (one-way hikes where a second car is left at the end), `alt` (another good option).
+In the app, the car parks appear as P icons with their names around the selected hike, with Waze, Google Maps and Apple Maps links; the car parks mapped on OpenStreetMap nearby are added automatically.
 
 **Coordinates.** Take summit, hut and lake positions from Wikipedia, Wikidata or the hut's website, and car parks from the tourism board or the trail description. Trailhead elevations come from the same source or from the nearest village. If you can open `https://nominatim.openstreetmap.org/search?q=NAME&format=jsonv2`, use it to confirm; if not, the `pq` names let the app correct the points.
 

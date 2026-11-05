@@ -42,6 +42,10 @@ Every Monday morning an update adds the hikes on the wish list, then about six m
 
 **Draw a route** (pencil button on the map, or under the hike list): search or tap the start and the finish, tap any place you pass, and the line follows the trails on OpenStreetMap. Distance, ascent, descent, signposted time, your time, the grade (from the trail difficulty tags on the map) and what's underfoot are worked out automatically; one way, out and back or loop. Turn off "Follow the trails" for a path that isn't on the map. After the hike, **Mark as done** takes the numbers from your watch, typed in or read from a screenshot of the summary (the text is recognised on the phone; nothing is uploaded).
 
+## Parking
+
+Select a hike and the car parks for it appear around the start as P icons with their names: the ones researched for that hike (from tourism boards, lift operators and route descriptions, with fees and access rules), plus the other car parks mapped on OpenStreetMap nearby. For lift and boat hikes it's the car park at the valley station. Tap one for Waze, Google Maps or Apple Maps; **Directions** goes to the main one. The icons disappear when no hike is selected. New hikes get their car parks in the weekly update.
+
 ## Your photos
 
 Add as many photos as you like to any day in the logbook: in **Mark as done** (or **Edit** on an entry), or with **Add photos** in the **Photos** tab. The Photos tab shows them all, grouped by hike and filterable by year; tap one to see the whole day: the hike, date, distance, ascent, your time and pace, who came, the dog, your rating and note, the weather at the top that day (Open-Meteo history), and every other photo from that outing. Photos taken on one day also fill in the date of a new entry.

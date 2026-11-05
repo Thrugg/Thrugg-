@@ -21,8 +21,10 @@ TAGS = {'lake', 'swim', 'summit', 'hut', 'waterfall', 'gorge', 'ridge', 'views',
         'train', 'castle', 'meadow', 'viaferrata'}  # the last four are searchable but not shown as filters
 KINDS = {'peak', 'hut', 'lake', 'pass', 'view', 'ridge', 'fall', 'gorge'}
 TYPES = {'loop', 'out', 'trav'}
-KEYS = ['id', 'n', 'ar', 'rg', 'c', 'p', 'pq', 'hi', 'tn', 'tk', 'ty', 'km', 'up', 'dn', 'mx', 'lo', 'g', 'sc', 'tg', 'ss', 'd', 'lf', 'b', 'ref', 'ad']
+KEYS = ['id', 'n', 'ar', 'rg', 'c', 'p', 'pq', 'hi', 'tn', 'tk', 'ty', 'km', 'up', 'dn', 'mx', 'lo', 'g', 'sc', 'tg', 'ss', 'd', 'lf', 'b', 'ref', 'ad', 'pk']
 DOG_KEYS = {'r', 't', 'cow', 'h2o', 'n', 'src'}
+PARK_KEYS = {'n', 'p', 'v', 'f', 'x', 'r', 's'}
+PARK_ROLES = {'start', 'finish', 'valley', 'alt'}
 
 
 def hav(a, b):
@@ -93,9 +95,34 @@ def check(hikes):
             if d.get('src', 'gen') not in ('rule', 'gen'): E('dog "src" must be rule or gen')
         if 'ref' in h and (not isinstance(h['ref'], list) or not all(isinstance(u, str) and u.startswith('https://') for u in h['ref'])):
             E('"ref" must be a list of https:// links')
+        if 'pk' in h:
+            pk = h['pk']
+            if not isinstance(pk, list) or not pk or len(pk) > 6: E('"pk" (parking) must be a list of 1 to 6 car parks')
+            else:
+                for j, c in enumerate(pk):
+                    W2 = lambda msg: E(f'car park {j + 1}: {msg}')
+                    if not isinstance(c, dict): W2('not an object'); continue
+                    for k in c:
+                        if k not in PARK_KEYS: W2(f'unknown field "{k}"')
+                    if not isinstance(c.get('n'), str) or not c['n'].strip(): W2('"n" (name) is required')
+                    q = c.get('p')
+                    if q is not None:
+                        if not (isinstance(q, list) and len(q) == 2 and all(num(x) for x in q) and 45.3 <= q[0] <= 48.9 and 5.8 <= q[1] <= 16.5): W2('"p" must be [lat, lon] in the Alps area')
+                        elif p:
+                            dmin = min(hav(q, w) for w in p)
+                            if dmin > 15: W2(f'is {dmin:.0f} km from the hike')
+                            elif dmin > 8: W(f'car park {c.get("n")} is {dmin:.1f} km from the nearest waypoint')
+                    elif c.get('v'): W2('"v" (verified) needs a position "p"')
+                    if 'v' in c and c['v'] != 1: W2('"v" must be 1 (position checked against a source)')
+                    if 'r' in c and c['r'] not in PARK_ROLES: W2(f'"r" must be one of {sorted(PARK_ROLES)}')
+                    for k in ('f', 'x'):
+                        if k in c and (not isinstance(c[k], str) or not c[k].strip()): W2(f'"{k}" must be a non-empty text')
+                    if 's' in c and (not isinstance(c['s'], str) or not c['s'].startswith('https://')): W2('"s" must be an https:// link')
         if 'ad' in h:
             try: date.fromisoformat(h['ad'])
             except Exception: E('"ad" must be a date like 2026-11-02')
+            else:
+                if h['ad'] >= '2026-11-05' and not h.get('pk'): W('new hike without car parks: add "pk" (see Parking in MAINTAINING.md)')
     # near-duplicates: same start and same top
     ok = [h for h in hikes if isinstance(h, dict) and isinstance(h.get('p'), list) and len(h['p']) >= 2 and all(isinstance(q, list) and len(q) == 2 for q in h['p'])]
     for a_i, a in enumerate(ok):
@@ -119,7 +146,7 @@ def build(hikes):
     tpl = (SRC / 'index.template.html').read_text()
     css = (SRC / 'styles.css').read_text()
     body = (SRC / 'body.html').read_text()
-    js = '\n'.join((SRC / 'js' / f).read_text() for f in ['core.js', 'map.js', 'ui.js', 'builder.js', 'album.js', 'extras.js'])
+    js = '\n'.join((SRC / 'js' / f).read_text() for f in ['core.js', 'map.js', 'ui.js', 'builder.js', 'album.js', 'parking.js', 'extras.js'])
     data = 'let HIKES = ' + serialise(hikes).rstrip() + ';'
     html = tpl.replace('{{CSS}}', css).replace('{{BODY}}', body).replace('{{DATA}}', data).replace('{{JS}}', js)
     (ROOT / 'index.html').write_text(html)

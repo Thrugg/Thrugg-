@@ -232,11 +232,13 @@ function showSelected(h) {
   const r = h && Routes.cached(h);
   setSrc('sel', r ? { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: r.c.map(c => [c[0], c[1]]) }, properties: { g: h.g } }] } : EMPTY);
   setSrc('prog', EMPTY); setSrc('pos', EMPTY);
+  Parking.show(h);
 }
 function flyToHike(h) {
   const r = Routes.cached(h);
   const b = new maplibregl.LngLatBounds();
   (r ? r.c : h.p.map(q => [q[1], q[0]])).forEach(c => b.extend([c[0], c[1]]));
+  (h.pk || []).forEach(c => { if (c.p && hav(c.p, h.start) < 10) b.extend([c.p[1], c.p[0]]); }); // the car park you drive to stays in view
   map.fitBounds(b, { padding: mapPadding(), pitch: S.threeD ? 58 : 0, bearing: map.getBearing(), maxZoom: 14.3, duration: 1600 });
 }
 function setBase(base) { S.base = base; saveSettings(); restyle(); }
