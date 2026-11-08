@@ -2,6 +2,12 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 8 Nov 2026 · 153 hikes
+
+- From our Hikes List spreadsheet (2 new rows).
+- Added, Garmisch & Zugspitze: Kramerspitz loop via St. Martin and the Stepbergalm (the full round; the out-and-back Kramerspitz stays).
+- Added, Zugspitz Arena (Ehrwald): Zugspitzplatt to the Ehrwalder Alm over the Gatterl, the Knorrhütte–Ehrwald stage as a day walk with the lifts at both ends.
+
 ## 4 Nov 2026 (3) · Parking
 
 - New: select a hike and its car parks appear around the start as P icons with their names, with Waze, Google Maps and Apple Maps links (also in the new Parking section of the hike). Directions now goes to the main car park.

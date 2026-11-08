@@ -47,3 +47,5 @@ We drop trail-sign photos, route screenshots and a spreadsheet of hikes we'd lik
 | 2026-11-04 | Hikes List.xlsx | Jenner via Wasserfallalm | added: Jenner from Hinterbrand via the Wasserfallalm |
 | 2026-11-04 | Hikes List.xlsx | Erwalder Almbahn - Seebensee | added: Seebensee from the Ehrwalder Almbahn |
 | 2026-11-04 | Hikes List.xlsx | Coburger Hütte and Drachensee Lake from Tiroler Haus | already in: Seebensee & Coburger Hütte (from the Almbahn valley station) |
+| 2026-11-08 | Hikes List.xlsx | Zugspitze Tour Stage 3: Knorrhütte – Ehrwald | added: Zugspitzplatt to the Ehrwalder Alm over the Gatterl |
+| 2026-11-08 | Hikes List.xlsx | Kramerspitz Loop | added: Kramerspitz loop via St. Martin and the Stepbergalm (Kramerspitz out-and-back already in) |
