@@ -53,4 +53,11 @@ const series = C.trendSeries(Object.entries(L).filter(([, v]) => v.w > 0).map(([
 assert.equal(series.length, 32); // 30 Renpho days + 1 Health day before + 1 typed day after
 const st = renphoStats(p.rows);
 assert.equal(st.last, '2026-10-30'); assert.ok(st.rWeightFat > 0.95, 'lockstep detected'); assert.ok(Math.abs(st.fatPerKg + st.lostSplit - 1) < 0.02, 'fat + fat-free split sums to 1');
-console.log('renpho tests passed');
+// DEXA calibration: only Renpho readings within 7 days of the scan count
+import('../js/renpho.js').then(({ dxaCalibration }) => {
+  const rowsC = { '2026-12-27': { bf: 18.9, ffm: 77.0 }, '2026-12-29': { bf: 18.7, ffm: 77.1 }, '2027-01-20': { bf: 18.0 } };
+  const cal = dxaCalibration(rowsC, [{ method: 'dxa', date: '2026-12-28', bf: 16.8, lean: 74.0, bmc: 3.5 }, { method: 'dxa', date: '2025-03-10', bf: 15.0 }]);
+  assert.ok(Math.abs(cal.offset - (16.8 - 18.8)) < 1e-9); assert.equal(cal.n, 2); assert.ok(Math.abs(cal.ffmGap - (77.05 - 77.5)) < 1e-9);
+  assert.equal(dxaCalibration({ '2025-04-20': { bf: 17.0 } }, [{ method: 'dxa', date: '2025-03-10', bf: 15.0 }]), null, '41 days apart: not used');
+  console.log('renpho tests passed');
+});

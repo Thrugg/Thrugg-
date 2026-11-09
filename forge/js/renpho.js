@@ -170,3 +170,19 @@ export function renphoStats(rows) {
     lostSplit: recent.length >= 8 && recent.every(d => rows[d].ffm != null) ? slope(W, recent.map(d => rows[d].ffm)) : null
   };
 }
+
+/* Personal correction from a DEXA: Renpho readings within `maxDays` of a DEXA scan (mean of them) against the scan.
+   Uses the most recent DEXA that has such readings. Readings further apart are not used: weight and water shift
+   too much over a few weeks. */
+export function dxaCalibration(rows, scans, maxDays = 7) {
+  const dxas = (scans || []).filter(s => s.method === 'dxa' && s.bf > 0 && s.date).sort((a, b) => a.date < b.date ? 1 : -1);
+  for (const s of dxas) {
+    const near = Object.entries(rows || {}).filter(([d, r]) => r.bf > 0 && Math.abs(dn(d) - dn(s.date)) <= maxDays);
+    if (!near.length) continue;
+    const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const rb = mean(near.map(([, r]) => r.bf)), ffm = near.filter(([, r]) => r.ffm > 0);
+    const dxaFfm = s.lean > 0 ? s.lean + (s.bmc || 0) : (s.weight > 0 ? s.weight * (1 - s.bf / 100) : null);
+    return { offset: s.bf - rb, dxaDate: s.date, dxaBf: s.bf, renphoBf: rb, n: near.length, ffmGap: ffm.length && dxaFfm ? mean(ffm.map(([, r]) => r.ffm)) - dxaFfm : null };
+  }
+  return null;
+}
