@@ -10,6 +10,13 @@ We drop trail-sign photos, route screenshots and a spreadsheet of hikes we'd lik
 | 2026-11-04 | 9544390E-DEDE-4E80-9A2F-CCF33A7C9AE0_1_105_c.jpeg | Sign at the Jägersteig–Gaudeamushütte fork | Wilder Kaiser crossing (Steinerne Rinne) added |
 | 2026-11-04 | A3EA0F91-3A1F-420B-977A-9CE05511557B_1_105_c.jpeg | Sign at Griesen (Loisach) | Schellschlicht, Friederspitz added; Plansee is our own drawn route |
 | 2026-11-04 | D2B1DE4D-A041-4647-A7B5-D24B52D13FCC_1_105_c.jpeg | Sign on the Partnach at Garmisch (Reintal) | Reintalangerhütte, Schachen via Oberreintal added; Zugspitze via Reintal already in |
+| 2026-11-09 | 76FD61F3-4858-4DBA-8692-F0AAA6A4643F_1_105_c.jpeg | Sign below the Kesselberg towards Urfeld (Jochberg, Herzogstand, Kochel, Schlehdorf, "Um den Herzogstand") | Jochberg and Herzogstand already in; "Um den Herzogstand" circuit not found in any published source, not added; villages are not hikes |
+| 2026-11-09 | 2D8191C8-FF72-4A21-BFC5-DC6574DF0665_1_105_c.jpeg | Sign near the Kesselberg (Jocheralm, Jochberg, Tutzinger Hütte über Staffelalm) | Jochberg loop via the Jocheralm and Rabenkopf via the Staffelalm added; Tutzinger Hütte already in (Benediktenwand) |
+| 2026-11-09 | 8B9A78C8-A1A1-4EF6-8989-2D16B4BAA176_1_105_c.jpeg | Sign at Urfeld (Herzogstandbahn, Herzogstand, Kesselberg, Jochberg, Lovis-Corinth-Rundweg) | Lovis-Corinth-Weg added; Herzogstand and Jochberg already in |
+| 2026-11-09 | EB780459-A279-4C50-B39C-BD55199374D6_1_105_c.jpeg | Sign at Sachenbach on the Walchensee (Jocheralm, Jochberg 452, Urfeld, Kesselberg) | Covered by the new Jochberg loop via the Jocheralm and Sachenbach |
+| 2026-11-09 | 857928F5-BEFE-4AC9-87F5-D8AA8C992AF5_1_102_o.jpeg | Sign at the Jocheralm (Hirschhörnlkopf ü. Kotalm, Kochel, Tutzinger Hütte) | Hirschhörnlkopf from Jachenau via the Kotalm added; Tutzinger Hütte already in |
+| 2026-11-09 | 78292E50-0C64-4D04-9E79-8B5F965FEB57_1_102_o.jpeg | Sign on the Jochberg path (Jochberg, Kesselberg Passhöhe, Urfeld) | Jochberg already in; loop added from the sign above |
+| 2026-11-09 | 34E9697B-9C94-403C-97ED-1A799F7BF106_4_5005_c.jpeg | Screenshot of the signpost at the Axamer Lizum car park | Nockspitze over the Halsl, Birgitzköpfl round, Ampferstein & Marchreisenspitze added; Mutterer/Götzner Alm loop waits for a second source; Schneiderspitze and one Alm unreadable |
 
 ## Spreadsheet rows
 

@@ -2,6 +2,14 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 9 Nov 2026 · 160 hikes
+
+- From our own trail-sign photos around the Jochberg and the Kesselberg (Walchensee) and a screenshot of the signpost at the Axamer Lizum car park.
+- Added, Walchensee & Kochelsee: Jochberg loop via the Jocheralm and Sachenbach, Hirschhörnlkopf from Jachenau via the Pfundalm and Kotalm, Rabenkopf from Pessenbach via the Staffelalm, Lovis-Corinth-Weg at Urfeld.
+- Added, Innsbruck: Nockspitze (Saile) from Axamer Lizum over the Halsl, Birgitzköpfl round from Axamer Lizum, Ampferstein & Marchreisenspitze over the Lustige-Bergler-Steig (expert).
+- Already in the app from the same signs: Jochberg, Herzogstand, Tutzinger Hütte (on the Benediktenwand hike).
+- Changed: Kesselberg parking fee updated to the Kochel municipal ticket (€8 per day; the old €2 Kurbeitrag no longer applies to hikers) on Jochberg and Herzogstand from Kesselberg.
+
 ## 8 Nov 2026 · 153 hikes
 
 - From our Hikes List spreadsheet (2 new rows).

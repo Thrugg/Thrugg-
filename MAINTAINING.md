@@ -82,7 +82,7 @@ Strike an idea out (or delete the line) when it is added.
 - Reutte: ~~Frauensee~~ and Urisee, Gehrenspitze from the Reuttener Seilbahn, Gaichtspitze
 - Tegernsee and Schliersee: ~~Roß- and Buchstein with the Tegernseer Hütte~~, Setzberg, Brecherspitz, Jägerkamp, Spitzingsee circuit
 - Garmisch and Eibsee: Kreuzeck and Osterfelderkopf, Krottenkopf, Grainau to the Riessersee
-- Walchensee and Kochel: Rabenkopf, Lainbach waterfalls, Walchensee shore walk
+- Walchensee and Kochel: ~~Rabenkopf~~, Lainbach waterfalls, Walchensee shore walk
 
 **Bavaria**
 - Chiemgau: Hochfelln, Hochgern, Geigelstein, Taubensee at Reit im Winkl
