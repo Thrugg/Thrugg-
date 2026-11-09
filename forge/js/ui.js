@@ -191,7 +191,8 @@ function screenPhysique(M) {
   const E = M.bfx.ens;
   if (E && !S.safety.ed) {
     const lo = Math.max(3, E.lo), hi = E.hi;
-    h += card(t('phys.bf'), `<div class="kpi">${nf(E.value, 1)}<small> %</small></div><p>${t('phys.bfRange', { lo: nf(lo, 0), hi: nf(hi, 0) })}</p>${confChip(E.sd < 2.5 ? 'high' : E.sd < 4 ? 'medium' : 'low')}
+    const sq = M.src === 'renpho' ? renphoStats(S.renpho.rows)?.latest?.subq : null;
+    h += card(t('phys.bf'), `<div class="kpi">${nf(E.value, 1)}<small> %</small></div><p>${t('phys.bfRange', { lo: nf(lo, 0), hi: nf(hi, 0) })}</p>${sq != null ? `<p class="muted">${t('phys.subqLine', { v: nf(sq, 1) })}</p>` : ''}${confChip(E.sd < 2.5 ? 'high' : E.sd < 4 ? 'medium' : 'low')}
       <h3>${t('phys.methods')}</h3><ul class="meth">${E.items.map(i => `<li><span>${i.renpho ? t('phys.m.biaRenpho', { n: i.n }) : t('phys.m.' + i.method)}${i.cal ? ' ✓' : ''}</span><b>${nf(i.value, 1)} %</b><small>±${nf(i.sd * 1.96, 1)} · ${df(i.date)} · ${t('phys.weight')} ${Math.round(i.weight * 100)} %</small></li>`).join('')}${M.bfx.stale.map(i => `<li class="stale"><span>${t('phys.m.' + i.method)}</span><b>${nf(i.value, 1)} %</b><small>${df(i.date)} · ${t('phys.stale')}</small></li>`).join('')}</ul>`, 'hero');
   } else if (!S.safety.ed) h += card(t('phys.bf'), `<p class="muted">${t('phys.bfNone')}</p>`, 'hero');
   // comparisons
@@ -341,13 +342,20 @@ async function importRenpho(file) {
 function smartScaleCard() {
   const st = renphoStats(S.renpho.rows); if (!st) return '';
   const L = st.latest, P = st.prev, kg = v => `${nf(kgShow(v), 1)} ${kgU()}`, kg2 = v => `${nf(kgShow(v), 2)} ${kgU()}`, pct = v => `${nf(v, 1)} %`;
-  const rows = [['w', 'today.weight', kg2], ['bf', 'phys.rp.bf', pct], ['fm', 'phys.rp.fm', kg], ['ffm', 'phys.rp.ffm', kg], ['sm', 'phys.rp.sm', kg], ['mus', 'phys.rp.mus', kg], ['waterPct', 'phys.rp.water', pct], ['bone', 'phys.rp.bone', kg], ['protPct', 'phys.rp.prot', pct], ['subq', 'phys.rp.subq', pct], ['vis', 'phys.rp.vis', v => nf(v)], ['bmr', 'phys.rp.bmr', v => nf(v) + ' kcal'], ['mage', 'phys.rp.mage', v => nf(v)]]
+  const rows = [['w', 'today.weight', kg2], ['bf', 'phys.rp.bfTotal', pct], ['fm', 'phys.rp.fm', kg], ['ffm', 'phys.rp.ffm', kg], ['sm', 'phys.rp.sm', kg], ['mus', 'phys.rp.mus', kg], ['waterPct', 'phys.rp.water', pct], ['bone', 'phys.rp.bone', kg], ['protPct', 'phys.rp.prot', pct], ['bmr', 'phys.rp.bmr', v => nf(v) + ' kcal'], ['mage', 'phys.rp.mage', v => nf(v)]]
     .filter(([k]) => L[k] != null);
   const dec = { w: 2, vis: 0, bmr: 0, mage: 0 };
   const delta = (k, f) => { if (!P || P[k] == null) return '–'; const step = 10 ** -(dec[k] ?? 1), d = Math.round((L[k] - P[k]) / step) * step; if (Math.abs(d) < step / 2) return '0'; return (d > 0 ? '+' : '−') + f(Math.abs(d)); };
+  // headline: subcutaneous fat (the visible part) with its change and its fixed share of total body fat
+  let head = '';
+  if (L.subq != null) {
+    const ks = Object.keys(S.renpho.rows).filter(d => C.dayNum(d) >= C.dayNum(st.last) - 90 && S.renpho.rows[d].subq != null && S.renpho.rows[d].bf > 0);
+    const rs = ks.map(d => S.renpho.rows[d].subq / S.renpho.rows[d].bf), share = rs.length >= 8 && Math.max(...rs) - Math.min(...rs) < 0.03 ? C.mean(rs) : null;
+    head = `<p class="eyebrow">${t('phys.rp.subqHead')}</p><div class="kpi">${nf(L.subq, 1)}<small> %</small></div>${P?.subq != null ? `<p class="muted">${delta('subq', pct) === '0' ? t('phys.rp.same') : delta('subq', pct)} ${t('phys.rp.change', { d: df(st.ref, { day: 'numeric', month: 'short' }) })}</p>` : ''}<p class="muted xs">${t('phys.rp.subqLead')}${share ? ' ' + t('phys.rp.subqShare', { k: nf(share * 100) }) : ''}</p>`;
+  }
   let note = '';
   if (st.rWeightFat != null && st.rWeightFat > 0.9) note = `<p class="tip">${t('phys.rp.lockstep', { r: nf(st.rWeightFat, 2), f: nf(st.fatPerKg, 2), l: nf(st.lostSplit, 2) })}</p>`;
-  return card(t('phys.rp.title'), `<p class="muted xs">${t('phys.rp.lead', { d: df(st.last), t: esc((L.t || '').slice(0, 5)) })}</p><table class="tbl"><thead><tr><th></th><th>${t('phys.rp.latest')}</th><th>${P ? t('phys.rp.change', { d: df(st.ref, { day: 'numeric', month: 'short' }) }) : ''}</th></tr></thead><tbody>${rows.map(([k, lbl, f]) => `<tr><td>${t(lbl)}</td><td>${f(L[k])}</td><td>${delta(k, f)}</td></tr>`).join('')}</tbody></table>${note}${heightNote()}<p class="muted xs">${t('phys.rp.caveat')}</p>`);
+  return card(t('phys.rp.title'), `<p class="muted xs">${t('phys.rp.lead', { d: df(st.last), t: esc((L.t || '').slice(0, 5)) })}</p>${head}<table class="tbl"><thead><tr><th></th><th>${t('phys.rp.latest')}</th><th>${P ? t('phys.rp.change', { d: df(st.ref, { day: 'numeric', month: 'short' }) }) : ''}</th></tr></thead><tbody>${rows.map(([k, lbl, f]) => `<tr><td>${t(lbl)}</td><td>${f(L[k])}</td><td>${delta(k, f)}</td></tr>`).join('')}</tbody></table>${note}${heightNote()}<p class="muted xs">${t('phys.rp.caveat')}</p>`);
 }
 
 /* ---------- sheets ---------- */
