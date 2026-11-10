@@ -2,6 +2,15 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 10 Nov 2026 · All apps
+
+- Sync (Safety Net Score, Gains & Greeks, Forge): devices are now merged field by field. A phone with old numbers can no longer replace newer ones, and the open tab or filter no longer counts as a change.
+- Offline: Cordée, Safety Net Score and Gains & Greeks now open without signal. Cordée keeps the map areas you have looked at (default style and terrain), the catalogue and the last forecast.
+- Cordée: **Follow me** shows your position on the route with distance and climb to go; snow depth at the top of every hike and a **Snow-free now** filter; the latest time to leave the car for the daylight of the day; a visible warning if the device cannot save; badges stay once earned; dog advice follows the dog size in Settings.
+- Safety Net Score: optional severance amount; a notice when the rules are from last year; the text about where your data is kept is corrected.
+- Gains & Greeks: the comparison ranks the verified countries and lists the others separately; a Swiss loss year no longer shows a tax saving; the six shared exchange rates now match Safety Net Score.
+- New: automatic checks (`tests/`) and a yearly rule update in January (`RULES.md`).
+
 ## 9 Nov 2026 · 160 hikes
 
 - From our own trail-sign photos around the Jochberg and the Kesselberg (Walchensee) and a screenshot of the signpost at the Axamer Lizum car park.

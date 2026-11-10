@@ -25,6 +25,14 @@ Everything you enter is saved automatically on the device. Sign in once on each 
 
 Your logbook, names, settings and inputs live in your browser and your own Supabase project, never in this repository.
 
+Two devices are merged field by field: a change made on one device never undoes a different change made on the other, and when both changed the same field the later one wins. Which tab or filter is open stays on each device.
+
+## Checks and the yearly rule update
+
+`node --test tests/*.mjs` runs the checks: sync between two simulated devices, and both finance engines against published reference figures. Run it before every change to `cloud.js`, Safety Net Score or Gains & Greeks.
+
+The rules in Safety Net Score and Gains & Greeks are updated once a year, in January: see [`RULES.md`](RULES.md).
+
 ## New hikes every week
 
 Every Monday morning an update adds the hikes on the wish list, then about six more, each checked against published route descriptions and placed on OpenStreetMap. New hikes get a **New** badge for 30 days.
@@ -52,8 +60,15 @@ Add as many photos as you like to any day in the logbook: in **Mark as done** (o
 
 Photos are made smaller on the device (about 0.3–0.6 MB each) and kept in the browser. When signed in, they are also stored privately in your Supabase project (bucket `cordee-photos`, one folder per account), so they appear on every device. This needs the photo part of `tools/supabase-setup.sql` run once (also under Settings → Photos). Photos are never put in this repository and are not in the JSON backup.
 
+## On the trail and in winter
+
+- **Follow me** (on any hike): a blue dot shows where you are on the route, with the distance and climb still to go, and it says so when you are off the marked line. It works while the app is open with the screen on; the phone is kept awake while it runs.
+- **Without signal** the app still opens with the catalogue, your logbook, the last forecast you loaded and the map areas you looked at before (default map style and 3D terrain only; satellite and the other map styles need signal). Open the hike once at home and it is there on the mountain.
+- **Snow**: each hike shows the snow depth at its top right now (a weather-model estimate, so a guide and not a measurement), and Find has **Snow-free at the top now**.
+- **Daylight**: the forecast of a hike tells you the latest time to leave the car and still be back an hour before sunset, at your own pace.
+
 ## Good to know
 
 - Route lines are traced on OpenStreetMap paths the first time and then cached (and synced). The app traces the rest slowly in the background so it doesn't overload the free routing server.
-- The browser can't record GPS in the background or work offline in the mountains. Record in Komoot, Strava or Apple Health and import the GPX (Logbook → Import GPX), and carry a proper offline map.
+- The browser can't record a GPS track in the background. Record in Komoot, Strava or Apple Health and import the GPX (Logbook → Import GPX), and carry a proper offline map as well: the app only keeps the map areas you have already looked at.
 - Grades, dog rules and conditions are indicative. Check signs and bulletins on the day.

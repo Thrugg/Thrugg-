@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Copy claude.ai artifacts into the site as home-screen apps with cloud sync.
+   "screen" lists the saved fields that are only about the screen (open tab, filters): they are not synced.
+   The live pages have since been edited in place (language tag, offline worker sw.js, fixes), so re-porting
+   an artifact over them would lose those edits; port only a new app this way.
    python3 tools/port_apps.py <slug> <artifact.html>   (slug: safety-net | gains-greeks)"""
 import sys, pathlib, json
 from PIL import Image, ImageDraw, ImageFont
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 APPS = {
-  'safety-net': dict(name='Safety Net Score', short='Safety Net', key='safetyNetScore.v1', bg=(37, 106, 191), fg=(255, 255, 255), mark='SN', theme='#eef1f2'),
-  'gains-greeks': dict(name='Gains & Greeks', short='Gains & Greeks', key='gg.v1', bg=(13, 84, 101), fg=(215, 165, 71), mark='G&G', theme='#fafcfb'),
+  'safety-net': dict(name='Safety Net Score', short='Safety Net', key='safetyNetScore.v1', bg=(37, 106, 191), fg=(255, 255, 255), mark='SN', theme='#eef1f2', screen=['tab', 'basis', 'span']),
+  'gains-greeks': dict(name='Gains & Greeks', short='Gains & Greeks', key='gg.v1', bg=(13, 84, 101), fg=(215, 165, 71), mark='G&G', theme='#fafcfb', screen=['ui']),
 }
 def icon(a, size, out):
     W = size * 4; im = Image.new('RGB', (W, W), a['bg']); d = ImageDraw.Draw(im)
@@ -19,7 +22,7 @@ html = src.read_text()
 head = f'''<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="{a['short']}"><meta name="theme-color" content="{a['theme']}">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
-<script src="../cloud.js"></script><script>Cloud.mirror({json.dumps(slug)}, {json.dumps(a['key'])});</script>
+<script src="../cloud.js"></script><script>Cloud.mirror({json.dumps(slug)}, {json.dumps(a['key'])}, {{ignore:{json.dumps(a['screen'])}}});if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(function(){{}});</script>
 '''
 assert html.count('</head>') == 1
 html = html.replace('</head>', head + '</head>', 1)

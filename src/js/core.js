@@ -83,7 +83,14 @@ const repoUrl = (path = '') => `https://github.com/${REPO.owner}/${REPO.name}${p
 /* Synced items: logs, marks (bucket list), hike edits/custom hikes, traced routes.
    ITEMS[id] = { k: kind, d: data, x: deleted, u: client timestamp, dirty } */
 const ITEMS = LS.get('items', {});
-const saveItems = debounce(() => { LS.set('items', ITEMS); }, 400);
+let saveWarned = false;
+/* A full or blocked browser store must never fail silently: the logbook would look saved and be gone on the next visit. */
+function storeItems() {
+  if (LS.set('items', ITEMS)) { saveWarned = false; return true; }
+  if (!saveWarned) { saveWarned = true; toast(Sync.configured() ? 'This device could not save. Keep the app open until it has synced, then free some browser storage.' : 'This device could not save: its browser storage is full or blocked. Export a backup in Settings.', 9000); }
+  return false;
+}
+const saveItems = debounce(storeItems, 400);
 function putItem(id, k, d) {
   ITEMS[id] = { k, d, x: false, u: new Date().toISOString(), dirty: true };
   saveItems(); Sync.soon();
@@ -197,9 +204,10 @@ function dogReasons(h) {
   if (d.r === 'banned') out.push(['bad', 'Dogs are banned here, even on a leash.']);
   else if (d.r === 'leash') out.push(['warn', 'Leash required' + (d.src === 'rule' ? ' (park or local rule).' : ' (protected area).')]);
   else out.push(['good', 'No known dog ban. Leash near wildlife, livestock and crowds.']);
-  if (d.t === 'no') out.push(['bad', 'Terrain unsuitable for a medium-size dog (ladders, chains, scrambling or steep metal stairs).']);
-  else if (d.t === 'care') out.push(['warn', 'Some sections need care: exposed, narrow, scree or grated steps.']);
-  else out.push(['good', 'Terrain fine for a medium-size dog.']);
+  const size = ['small', 'medium', 'large'].includes(S.dogSize) ? S.dogSize : 'medium';
+  if (d.t === 'no') out.push(['bad', `Terrain unsuitable for a ${size} dog (ladders, chains, scrambling or steep metal stairs).${size === 'small' ? ' A small dog can be carried over a short step, not over a whole section.' : ''}`]);
+  else if (d.t === 'care') out.push(['warn', 'Some sections need care: exposed, narrow, scree or grated steps.' + (size === 'large' ? ' A large dog cannot be lifted past them, so turn back if in doubt.' : size === 'small' ? ' A small dog can be carried over the worst steps.' : '')]);
+  else out.push(['good', `Terrain fine for a ${size} dog.`]);
   if (d.cow) out.push(['warn', 'Cattle pastures in summer: dog on a short leash, keep distance from mother cows, let go of the leash if cows charge.']);
   if (d.h2o) out.push(['good', 'Water along the way.']); else if (h.km > 8) out.push(['warn', 'Little or no water on the route: carry enough for the dog.']);
   if (h.din > 360 || h.up > 1200) out.push(['warn', 'Long, big day. Build up to it and watch the paws on rock.']);
@@ -306,3 +314,30 @@ async function loadDetailWx(h) {
   return (WXD[k] = { ts: Date.now(), th: a, top: b || a });
 }
 const wxOf = h => WX && WX.by[h.id];
+
+/* ───────────── Snow on the ground (model estimate at the top of each hike) ─────────────
+   Asked for separately from the forecast, so a problem here can never take the weather down with it. */
+let SNOW = LS.get('snow', null);
+const SNOW_MIN = 3; // cm; below this the path is treated as snow-free
+function snowCm(h) { const v = SNOW && SNOW.by ? SNOW.by[h.id] : null; return v == null ? null : v; }
+async function loadSnow() {
+  if (SNOW && Date.now() - SNOW.ts < 6 * 3600e3 && HK.every(h => h.id in SNOW.by)) return SNOW;
+  const by = {};
+  for (let i = 0; i < HK.length; i += 50) {
+    const ch = HK.slice(i, i + 50);
+    const qs = new URLSearchParams({ latitude: ch.map(h => h.top[0].toFixed(4)).join(','), longitude: ch.map(h => h.top[1].toFixed(4)).join(','), elevation: ch.map(h => Math.round(h.mx || 1000)).join(','), current: 'snow_depth', timezone: 'Europe/Berlin' });
+    const r = await fetchT(OM + '?' + qs, {}, 25000);
+    if (!r.ok) throw new Error('Snow data answered ' + r.status);
+    toArr(await r.json()).forEach((res, k) => { const m = res.current && res.current.snow_depth; by[ch[k].id] = m == null ? null : Math.round(m * 100); });
+  }
+  SNOW = { ts: Date.now(), by };
+  LS.set('snow', SNOW);
+  return SNOW;
+}
+/* Daylight: the latest time to leave the car and still be back a good hour before sunset. */
+const DAY_MARGIN = 60;
+function latestStart(sunsetHHMM, minutes) {
+  const m = /^(\d\d):(\d\d)/.exec(sunsetHHMM || ''); if (!m) return null;
+  const t = +m[1] * 60 + +m[2] - DAY_MARGIN - minutes;
+  return { min: t, text: t < 0 ? null : String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') };
+}

@@ -1,9 +1,8 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<!doctype html><html lang="en"><head><title>Safety Net Score</title><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Safety Net"><meta name="theme-color" content="#eef1f2">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
-<script src="../cloud.js"></script><script>Cloud.mirror("safety-net", "safetyNetScore.v1");</script>
+<script src="../cloud.js"></script><script>Cloud.mirror("safety-net", "safetyNetScore.v1", {ignore:["tab","basis","span"]});if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </head><body>
-<title>Safety Net Score</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,650&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -241,6 +240,7 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
     </div>
     <div class="asof">
       <span class="chip"><span class="dot"></span>Rules as of 26 Sep 2026</span>
+      <span class="chip" id="staleChip" hidden style="background:#fdf1dc;border-color:#e3b963;color:#6b4a00"></span>
       <span class="chip">FX: ECB, 25 Sep 2026</span>
     </div>
   </header>
@@ -261,7 +261,7 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
           <select id="country" class="country-select"></select>
         </div>
         <div id="convNote" class="note warn" style="margin-top:12px" hidden></div>
-        <div id="exNote" class="note" style="margin-top:12px" hidden>Example profile: an employee in Germany. Replace these numbers with yours. They stay in this browser only.</div>
+        <div id="exNote" class="note" style="margin-top:12px" hidden>Example profile: an employee in Germany. Replace these numbers with yours. They are saved on this device and, once you sign in to sync, privately in your own account.</div>
         <div class="fields">
           <div class="row2">
             <div class="field"><label for="grossAnnual">Gross pay per year</label><div class="inp"><input id="grossAnnual" type="number" inputmode="decimal" min="0" step="1000"><span class="unit" data-cur></span></div></div>
@@ -276,6 +276,8 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
             <div class="field"><label for="savings">Cash savings now</label><div class="inp"><input id="savings" type="number" inputmode="decimal" min="0" step="500"><span class="unit" data-cur></span></div></div>
             <div class="field"><label for="monthlySaving">You save per month</label><div class="inp"><input id="monthlySaving" type="number" inputmode="decimal" min="0" step="50"><span class="unit" data-cur></span></div></div>
           </div>
+          <div class="field"><label for="severance">Severance you can count on</label><div class="inp"><input id="severance" type="number" inputmode="decimal" min="0" step="500"><span class="unit" data-cur></span></div>
+            <span class="hint">Optional, after tax. Counted only if you are let go, not if you resign. Leave at 0 for the cautious view. In some countries a large payout delays the benefit.</span></div>
           <div class="row3">
             <div class="field"><label for="age">Age</label><div class="inp"><input id="age" class="nounit" type="number" min="16" max="70" step="1"></div></div>
             <div class="field"><label for="years">Years insured</label><div class="inp"><input id="years" class="nounit" type="number" min="0" max="45" step="0.5"></div></div>
@@ -406,7 +408,7 @@ This leaves margin for friction the rules do not capture.</div>
         <h2>What is not modelled</h2>
         <ul>
           <li>Long illness, disability, self-employment and fixed-term contract ends. Sick pay and disability cover are better handled with insurance than with cash.</li>
-          <li>Severance, notice periods and garden leave. They usually shorten the gap, so leaving them out makes the result more conservative. Italy's TFR and Austria's Abfertigung are mentioned in the rules.</li>
+          <li>Notice periods and garden leave. They give you search time before pay stops, so leaving them out makes the result more conservative. Severance is optional: enter the after-tax amount you can count on and it is set against the gap after a job loss (never after a resignation). Italy's TFR and Austria's Abfertigung are mentioned in the rules.</li>
           <li>Means-tested support after benefits end, such as Grundsicherung, bijstand or kontanthjælp. Your savings would have to be used up first, so the model counts it as zero. Austria's Notstandshilfe is included because it is not means-tested on partner income.</li>
           <li>Exact tax. Germany and Austria pay tax-free benefits, and the other countries use the editable rate. Germany's Progressionsvorbehalt can still create a tax bill the following spring.</li>
           <li>Special cases: the extensions for older workers apart from those listed, Belgian 55+ exemptions, frontier workers, and the Swiss extra allowances before retirement.</li>
@@ -419,7 +421,7 @@ This leaves margin for friction the rules do not capture.</div>
     </div>
   </section>
 
-  <p class="foot">Built for planning. Official calculators and your benefit office take precedence. Your inputs are stored only in this browser.</p>
+  <p class="foot">Built for planning. Official calculators and your benefit office take precedence. Your inputs are saved on this device and, when you are signed in to sync, privately in your own account.</p>
 </div>
 
 <script>
@@ -1196,10 +1198,11 @@ This leaves margin for friction the rules do not capture.</div>
     const simB = simulate(pl, 'B', need, lag, horizon);
     const maxTo = (sim, h) => { let m = 0; for (let d = 1; d <= h; d++) if (sim.dd[d] > m) m = sim.dd[d]; return m; };
     const shock = A.shockMonths * E;
+    const sev = Math.max(0, Number(pr.severance || 0)); // cash paid out when you are let go; it covers the first part of the gap
     const raw = {
-      basic: shock + need * (pl.waitDays + lag) / DPM,
-      good: shock + maxTo(simA, hT),
-      vgood: shock + maxTo(simA, hL),
+      basic: shock + Math.max(0, need * (pl.waitDays + lag) / DPM - sev),
+      good: shock + Math.max(0, maxTo(simA, hT) - sev),
+      vgood: shock + Math.max(0, maxTo(simA, hL) - sev),
       excellent: shock + maxTo(simB, hL)
     };
     const step = A.minStep * E;
@@ -1220,7 +1223,7 @@ This leaves margin for friction the rules do not capture.</div>
     return {
       code, plan: pl, sims: { A: simA, B: simB }, raw, T, months: T.map(t => E > 0 ? t / E : null),
       score, scoreInt: Math.floor(score + 1e-9), band, next, excess, oppCost: excess * A.spread,
-      firstGross: first.gross, firstNet: first.net,
+      firstGross: first.gross, firstNet: first.net, severance: sev,
       replNet: pr.netMonthly > 0 ? first.net / pr.netMonthly : null,
       coverE: E > 0 ? first.net / E : null, E, H, need, A, hT, hL, lag
     };
@@ -1229,7 +1232,7 @@ This leaves margin for friction the rules do not capture.</div>
   function convertProfile(pr, fromCur, toCur) {
     const f = D.FX[toCur] / D.FX[fromCur];
     const o = Object.assign({}, pr);
-    ['grossAnnual', 'netMonthly', 'essential', 'otherIncome', 'savings', 'monthlySaving'].forEach(k => { if (o[k] != null) o[k] = Math.round(Number(o[k]) * f); });
+    ['grossAnnual', 'netMonthly', 'essential', 'otherIncome', 'savings', 'monthlySaving', 'severance'].forEach(k => { if (o[k] != null) o[k] = Math.round(Number(o[k]) * f); });
     o.netBenefitOverride = null;
     return o;
   }
@@ -1292,7 +1295,7 @@ This leaves margin for friction the rules do not capture.</div>
   function compact(x, code) { return fmtC(x, code); }
 
   // ---------- inputs ----------
-  const MONEY = ['grossAnnual', 'netMonthly', 'essential', 'otherIncome', 'savings', 'monthlySaving'];
+  const MONEY = ['grossAnnual', 'netMonthly', 'essential', 'otherIncome', 'savings', 'monthlySaving', 'severance'];
   const NUMS = ['age', 'years', 'dkMemberYears', 'seMemberMonths'];
   const SELS = ['children', 'deTaxClass', 'beCategory'];
   const ASM = { 'a-typ': 'typicalMonths', 'a-long': 'longMonths', 'a-shock': 'shockMonths', 'a-lag': 'lagDays', 'a-step': 'minStep', 'a-spread': 'spread' };
@@ -1718,6 +1721,7 @@ This leaves margin for friction the rules do not capture.</div>
   }
 
   // ---------- wire up ----------
+  (function () { const y = Number(D.ASOF.slice(0, 4)), now = new Date().getFullYear(), c = $('staleChip'); if (c && now > y) { c.hidden = false; c.textContent = 'These are the ' + y + ' rules. Ceilings and caps change each January; the ' + now + ' update is due.'; } })();
   fillCountrySelect();
   writeInputs();
   let timer = null;

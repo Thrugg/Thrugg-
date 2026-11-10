@@ -1,5 +1,5 @@
 /* ───────────── UI ───────────── */
-const F_DEFAULT = { grades: [], km: [0, 26], up: 2300, drive: 480, dog: 'any', status: 'all', countries: [], tags: [], season: false, loop: false, lift: false, wx: false, area: '' };
+const F_DEFAULT = { grades: [], km: [0, 26], up: 2300, drive: 480, dog: 'any', status: 'all', countries: [], tags: [], season: false, loop: false, lift: false, wx: false, nosnow: false, area: '' };
 const UI = {
   state: Object.assign({ tab: 'hikes', q: '', sort: 'weather', inView: false, wxOnMap: false, dDay: null }, LS.get('ui', {})),
   filtered: null, detailId: null,
@@ -25,6 +25,7 @@ const UI = {
     if (f.lift && !h.lift) return false;
     if (f.area && h.ar !== f.area) return false;
     if (f.wx && WX) { const s = dayScore(wxOf(h), wxDay); if (s == null || s < 55) return false; }
+    if (f.nosnow && SNOW) { const cm = snowCm(h); if (cm != null && cm >= SNOW_MIN) return false; }
     const q = norm(this.state.q).trim();
     if (q && !q.split(/\s+/).every(t => h.q.includes(t))) return false;
     return true;
@@ -56,7 +57,7 @@ const UI = {
       <div class="row-main">
         <div class="row-name">${esc(h.n)}${isNewHike(h) ? '<span class="badge-new">New</span>' : ''}${done ? `<span class="badge-done" title="Done ${done.length}×">${ic('i-check')}</span>` : isWish(h.id) ? `<span class="badge-wish" title="On the bucket list">${ic('i-star')}</span>` : ''}</div>
         <div class="row-meta"><span>${fmtKm(h.km)}</span><span>↑ ${fmtM(h.up)}</span><span>${fmtDur(yourTime(h))}</span><span>${ic('i-car')} ${fmtDur(driveMin(h))}</span></div>
-        <div class="row-area">${esc(h.ar)} · ${h.c}${!inSeason(h) ? ' · <em>out of season</em>' : ''}</div>
+        <div class="row-area">${esc(h.ar)} · ${h.c}${!inSeason(h) ? ' · <em>out of season</em>' : ''}${snowCm(h) >= SNOW_MIN ? ` · <em title="Model estimate at the top">snow ${snowCm(h)} cm</em>` : ''}</div>
       </div>
       <div class="row-side">${extra}${wx}<span class="dog-mini dog-${st.s}" title="${esc(st.label)}">${ic('i-paw')}</span></div>
     </li>`;
@@ -110,6 +111,7 @@ const UI = {
     if (f.loop) add('Loops', () => f.loop = false);
     if (f.lift) add('Lift or boat', () => f.lift = false);
     if (f.wx) add('Good weather', () => f.wx = false);
+    if (f.nosnow) add('Snow-free now', () => f.nosnow = false);
     if (f.area) add(f.area, () => f.area = '');
     const box = $('#activeFilters');
     box.innerHTML = chips.map((c, i) => `<span class="chip">${esc(c.label)}<button data-i="${i}" aria-label="Remove filter ${esc(c.label)}">${ic('i-close')}</button></span>`).join('');
@@ -150,7 +152,7 @@ const UI = {
       this.syncFind(); this.refreshSoon();
     };
     ['#fKmMin', '#fKmMax', '#fUp', '#fDrive'].forEach(s => $(s).addEventListener('input', rng));
-    [['#fSeason', 'season'], ['#fLoop', 'loop'], ['#fLift', 'lift'], ['#fWx', 'wx']].forEach(([s, k]) => $(s).addEventListener('change', e => { this.f()[k] = e.target.checked; this.refresh(); }));
+    [['#fSeason', 'season'], ['#fLoop', 'loop'], ['#fLift', 'lift'], ['#fWx', 'wx'], ['#fSnow', 'nosnow']].forEach(([s, k]) => $(s).addEventListener('change', e => { this.f()[k] = e.target.checked; this.refresh(); }));
     $('#fReset').onclick = () => { this.state.f = structuredClone(F_DEFAULT); this.syncFind(); this.refresh(); };
     $('#fShow').onclick = () => { this.setTab('hikes'); fitRegion(); };
     this.syncFind();
@@ -168,7 +170,7 @@ const UI = {
     $('#oKm').textContent = `${f.km[0]}–${f.km[1] < 26 ? f.km[1] : '25+'} km`;
     $('#oUp').textContent = f.up < 2300 ? '≤ ' + fmtM(f.up) : 'Any';
     $('#oDrive').textContent = f.drive < 480 ? '≤ ' + fmtDur(f.drive) : 'Any';
-    $('#fSeason').checked = f.season; $('#fLoop').checked = f.loop; $('#fLift').checked = f.lift; $('#fWx').checked = f.wx;
+    $('#fSeason').checked = f.season; $('#fLoop').checked = f.loop; $('#fLift').checked = f.lift; $('#fWx').checked = f.wx; $('#fSnow').checked = f.nosnow;
     $('#fWxDay').textContent = WX ? fmtDate(WX.days[wxDay], { wd: true }) : 'today';
     const n = this.filtered ? this.filtered.length : HK.length;
     $('#fShow').textContent = `Show ${n} hike${n === 1 ? '' : 's'}`;
@@ -242,7 +244,7 @@ const UI = {
     const wl = HK.filter(h => isWish(h.id) && !dm[h.id]);
     $('#wishList').innerHTML = wl.length ? wl.map(h => this.row(h, dm)).join('') : `<li class="empty">Tap the star on any hike to add it here.</li>`;
     this.bindRows($('#wishList'));
-    $('#badges').innerHTML = badges(L, dm).map(b => `<div class="badge${b.on ? ' on' : ''}" title="${esc(b.how)}"><i>${b.on ? '✓' : b.n}</i>${esc(b.t)}</div>`).join('');
+    $('#badges').innerHTML = keepBadges(badges(L, dm)).map(b => `<div class="badge${b.on ? ' on' : ''}" title="${esc(b.how)}"><i>${b.on ? '✓' : b.n}</i>${esc(b.t)}</div>`).join('');
   },
 
   /* Detail */
@@ -309,6 +311,7 @@ const UI = {
     <div class="d-actions">
       <button class="btn glow grow" id="dDone">${ic('i-check')}${done.length ? 'Log again' : 'Mark as done'}</button>
       <button class="btn ghost" id="dFly">${ic('i-play')}Fly over</button>
+      <button class="btn ghost" id="dTrail">${ic('i-pin')}Follow me</button>
       <a class="btn ghost" id="dDir" href="${(() => { const b = Parking.best(h); return b ? Parking.nav(b, h).g : `https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}`; })()}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
     </div>
     ${h.lf ? `<div class="note-box">${esc(h.lf)}</div>` : ''}
@@ -344,6 +347,7 @@ const UI = {
     const dr = $('#dRoute'); if (dr) dr.onclick = () => Builder.start(h);
     $('#dDone').onclick = () => Dlg.log(h);
     $('#dFly').onclick = () => Fly.hike(h);
+    $('#dTrail').onclick = () => Trail.start(h);
     $('#dOsm').onclick = () => Explore.checkRules(h);
     v.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => Dlg.log(h, b.dataset.edit));
     Album.bindStrips(v);
@@ -419,6 +423,10 @@ const UI = {
     if ((T.wind_gusts_10m_max[i] || 0) >= 60) flags.push(['warn', `Gusts up to ${Math.round(T.wind_gusts_10m_max[i])} km/h at the top`]);
     if ((B.temperature_2m_max[i] || 0) >= 28) flags.push(['warn', `Hot at the start (${Math.round(B.temperature_2m_max[i])}°): go early, mind hot ground for paws`]);
     if (!inSeason(h)) flags.push(['warn', `Outside the usual season (${seasonText(h)}): huts and lifts may be closed`]);
+    const cm = snowCm(h);
+    if (i <= 1 && cm != null) flags.push(cm >= 30 ? ['bad', `About ${cm} cm of snow at the top now (model estimate): a winter tour, check the avalanche bulletin`] : cm >= SNOW_MIN ? ['warn', `About ${cm} cm of snow at the top now (model estimate): expect snow or ice on the upper path`] : ['good', 'No snow cover at the top now (model estimate)']);
+    const ls = B.sunset[i] ? latestStart(B.sunset[i].slice(11), yourTime(h)) : null, srMin = B.sunrise[i] ? +B.sunrise[i].slice(11, 13) * 60 + +B.sunrise[i].slice(14, 16) : 0;
+    if (ls) flags.push(ls.min < srMin ? ['bad', `Not enough daylight: ${fmtDur(yourTime(h))} of walking does not fit between sunrise and an hour before sunset`] : [ls.min < srMin + 120 ? 'warn' : '', `Leave the car by ${ls.text} to be back an hour before sunset (${B.sunset[i].slice(11)})`]);
     const col = (title, D, elev, extra) => { const [icn, lbl] = wmo(D.weather_code[i]); return `<div class="wx-col"><h4>${title} · ${fmtM(elev)}</h4>
       <div class="wx-big">${ic(icn)}<div><b>${Math.round(D.temperature_2m_max[i])}°</b><span>${lbl} · low ${Math.round(D.temperature_2m_min[i])}°</span></div></div>
       <dl class="wx-kv"><dt>Rain</dt><dd>${(D.precipitation_sum[i] ?? 0).toFixed(1)} mm · ${D.precipitation_probability_max[i] ?? 0}%</dd><dt>Gusts</dt><dd>${Math.round(D.wind_gusts_10m_max[i] ?? 0)} km/h</dd><dt>Sun</dt><dd>${((D.sunshine_duration[i] ?? 0) / 3600).toFixed(1)} h</dd>${extra}</dl></div>`; };
@@ -445,6 +453,13 @@ const UI = {
   }
 };
 
+/* A badge once earned stays earned, even when the weekly update adds hikes to an area. */
+function keepBadges(list) {
+  const it = ITEMS['cfg:badges'], had = new Set(it && !it.x && it.d && Array.isArray(it.d.earned) ? it.d.earned : []);
+  const now = list.filter(b => b.on).map(b => b.t), fresh = now.filter(t => !had.has(t));
+  if (fresh.length) putItem('cfg:badges', 'cfg', { earned: [...had, ...fresh] });
+  return list.map(b => b.on || !had.has(b.t) ? b : Object.assign({}, b, { on: true }));
+}
 function badges(L, dm) {
   const hs = Object.keys(dm).map(id => HBY[id]);
   const lakes = hs.filter(h => h.tg.includes('lake')).length, peaks = hs.filter(h => h.tg.includes('summit')).length;
