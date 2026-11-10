@@ -640,10 +640,10 @@ const DEF={
     cap:50000,gain:8000,hold:730,veh:'eqETF',div:600,wht:15,
     tCap:15000,opt:3200,swing:1500,trades:60,tHold:12,turnover:180000,margin:false,hedgeOnly:false,idx:false},
  m:{dest:'CH,DK,NO,PL,FR',V:60000,U:12000,g:6,y:1.5,N:10,before:false,stepDK:true,stepNO:false},
- o:null, ui:{cmpF:'ver',cmpS:'total',stF:'mine'}
+ o:null, ui:{cmpF:'ver',cmpS:'total',stF:'mine'}, ledger:{}
 };
 let state=JSON.parse(JSON.stringify(DEF));
-try{const s=JSON.parse(localStorage.getItem('gg.v1')||'null');if(s){for(const k of ['p','m','ui'])Object.assign(state[k],s[k]||{});if(s.o)state.o=s.o;if(s.fx&&s.fxv===2)Object.assign(FX,s.fx);}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('gg.v1')||'null');if(s){for(const k of ['p','m','ui','ledger'])Object.assign(state[k],s[k]||{});if(s.o)state.o=s.o;if(s.fx&&s.fxv===2)Object.assign(FX,s.fx);}}catch(e){}
 function save(){try{localStorage.setItem('gg.v1',JSON.stringify({...state,fx:FX,fxv:2}));}catch(e){}}
 
 function getI(){const p=state.p,n=k=>+p[k]||0;return{res:p.res,broker:p.broker,filing:p.filing,income:n('income'),church:+p.church||0,allowUsed:n('allowUsed'),lossCF:n('lossCF'),lossCFSh:n('lossCFSh'),wealthOther:n('wealthOther'),
@@ -706,6 +706,30 @@ function linesTable(r){
  </tbody></table></div>`;
 }
 function ksPanel(ks){return `<div class="card"><h2>Swiss safe harbour · ESTV Kreisschreiben Nr. 36</h2><div class="ks">${ks.map(k=>`<div class="${k.ok?'ok':'no'}"><b>${k.ok?'Met':'Failed'}</b>${k.t}<br><span class="muted">${esc(k.d)}</span></div>`).join('')}</div></div>`;}
+/* Tax years: keep each year's result, and start the next year with its losses carried forward. */
+function carryOut(I){
+ if(I.res!=='DE')return null;
+ const tfs={shares:0,eqETF:.3,mixFund:.15,bondFund:0}[I.veh],isSh=I.veh==='shares';
+ const sPot=(isSh?I.gain:0)+I.swing-I.lossCFSh,gPot=(isSh?0:I.gain*(1-tfs))+I.div+I.opt-I.lossCF;
+ return{lossCF:Math.max(0,Math.round(-gPot)),lossCFSh:Math.max(0,Math.round(-sPot))};
+}
+function ledgerCard(I,r){
+ const y=new Date().getFullYear(),L=state.ledger||{},E=x=>Math.round(x).toLocaleString('de-DE')+' €',ys=Object.keys(L).sort().reverse(),co=carryOut(I);
+ const rows=ys.map(k=>{const e=L[k];return`<tr><td>${k}</td><td>${esc(COUNTRIES[e.res]?COUNTRIES[e.res].n:e.res)}</td><td class="r">${E(e.profit)}</td><td class="r"><b>${E(e.total)}</b></td><td class="r">${e.cf?E(e.cf.lossCF)+' / '+E(e.cf.lossCFSh):'—'}</td></tr>`}).join('');
+ return `<div class="card"><h2>Tax years</h2>
+ ${ys.length?`<table class="t"><thead><tr><th>Year</th><th>Residence</th><th class="r">Profit</th><th class="r">Tax</th><th class="r">Losses carried on (general / shares)</th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="sm muted" style="margin:0 0 10px">Nothing kept yet. At the end of the year, keep the result here so next year starts from the right loss carry-forwards.</p>'}
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn" data-ledger="keep">${L[y]?'Update':'Keep'} ${y} with the current numbers</button>${L[y]?`<button type="button" class="btn" data-ledger="next">Start ${y+1} from ${y}</button>`:''}</div>
+ <p class="sm muted" style="margin:8px 0 0">${co?`Starting the next year sets the realised results back to zero, the used allowance to zero, and the carry-forwards to what ${y} leaves over (now ${E(co.lossCF)} general, ${E(co.lossCFSh)} shares).`:'Starting the next year sets the realised results back to zero. Loss carry-forwards are worked out for Germany only so far: for this country, enter them yourself.'}</p></div>`;
+}
+document.addEventListener('click',ev=>{
+ const b=ev.target.closest&&ev.target.closest('[data-ledger]');if(!b)return;
+ const y=new Date().getFullYear(),I=getI(),r=evaluate(I.res,I);
+ if(b.dataset.ledger==='keep'){state.ledger[y]={res:I.res,profit:r.profit,total:r.total,cf:carryOut(I),p:{...state.p},at:new Date().toISOString().slice(0,10)};save();renderDeskOut();return;}
+ if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Tap again to reset the results and start '+(y+1);return;}
+ const e=state.ledger[y];if(!e)return;
+ Object.assign(state.p,{gain:0,div:0,opt:0,swing:0,allowUsed:0},e.cf?{lossCF:e.cf.lossCF,lossCFSh:e.cf.lossCFSh}:{});
+ save();renderDeskIn();renderDeskOut();
+});
 /* Year-end desk: what is worth doing before 31 December, worked out from the Tax desk inputs. */
 function yearEnd(I,r){
  const E=x=>Math.round(Math.abs(x)).toLocaleString('de-DE')+' €',items=[],now=new Date(),y=now.getFullYear(),soon=now.getMonth()>=10;
@@ -755,6 +779,7 @@ function renderDeskOut(){
  ${r.ks36?ksPanel(r.ks36):''}
  <div class="card"><h2>Breakdown · ${esc(C.srcN)}</h2>${linesTable(r)}</div>
  ${yearEnd(I,r)}
+ ${ledgerCard(I,r)}
  <div class="card"><h2>What to know</h2><ul class="notes">${notes.map(n=>`<li class="${n.t}">${esc(n.x)}</li>`).join('')||'<li>No special notes for this profile.</li>'}</ul></div>
  <div class="card"><h2>Same results in the top 6</h2>
   <p class="sm muted" style="margin:0 0 10px">${C.n} ranks #${rank} of 38 on this year's tax. Brass = annual wealth tax on top.</p>

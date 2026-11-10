@@ -46,5 +46,19 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 </ul>
 <p class="note">Forkcast and Prüfstand use Claude itself (photo analysis, the live car database), so they open in Claude and need you to be signed in there.</p>
 </main>
+<script>
+/* One live line per app, read from what the apps saved on this device. Nothing is sent anywhere. */
+(function () {
+  const get = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const line = (href, text) => { const el = document.querySelector('a.app[href="' + href + '"] small'); if (el && text) el.textContent = text; };
+  const y = String(new Date().getFullYear());
+  const items = get('cordee.items');
+  if (items) { const logs = Object.values(items).filter(i => i && !i.x && i.k === 'log' && i.d && String(i.d.date || '').startsWith(y)); if (logs.length) line('../', logs.length + ' hike' + (logs.length === 1 ? '' : 's') + ' logged in ' + y + ' · open for this weekend\'s pick'); }
+  const sn = get('safetyNetScore.v1');
+  if (sn && sn.history && sn.history[sn.active]) { const h = sn.history[sn.active], k = Object.keys(h).sort().pop(); if (k) line('../safety-net/', 'Safety score ' + h[k].s + ' of 100 · last updated ' + new Date(k + '-01T12:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })); }
+  const now = new Date(), days = Math.ceil((new Date(now.getFullYear(), 11, 31) - now) / 864e5);
+  if (now.getMonth() >= 10) line('../gains-greeks/', days + ' days left for year-end tax moves · see Before 31 December');
+})();
+</script>
 </body>
 </html>

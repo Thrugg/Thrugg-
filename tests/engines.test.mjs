@@ -67,3 +67,12 @@ test('Gains & Greeks: every country runs on edge profiles without errors', () =>
 test('The two finance apps use the same exchange rates', () => {
   for (const k of ['CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'GBP']) assert.equal(gg.FX[k], sn.DATA.FX[k], k);
 });
+
+test('Safety Net: the move planner pieces behave (gap cost with and without the old benefit, new country with and without earlier years)', () => {
+  const need = 2000, gap = 180;
+  const sim = sn.simulate(sn.plan('DE', EX), 'B', need, 15, gap); let worst = 0; for (let d = 1; d <= gap; d++) worst = Math.max(worst, sim.dd[d]);
+  assert.ok(worst > 0 && worst < need * gap / sn.DPM, 'a long gap is cheaper with the benefit than without');
+  const short = sn.simulate(sn.plan('DE', EX), 'B', need, 15, 31); assert.ok(Math.abs(short.dd[31] - need * 31 / sn.DPM) < 1, 'inside the 12-week penalty nothing is paid');
+  const pb = sn.convertProfile(EX, 'EUR', 'CHF');
+  assert.ok(sn.compute('CH', { ...pb, years: 0 }, {}).T[1] > sn.compute('CH', pb, {}).T[1], 'without counted years the fund must be larger');
+});
