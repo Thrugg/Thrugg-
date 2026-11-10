@@ -10,6 +10,8 @@ if (window.Cloud) {
   window.Cloud.on(() => paintSync());
 }
 init();
+/* Ask the browser to keep Forge's data (granted most readily to apps on the Home Screen). People who onboarded before this existed get it too. */
+if (S.profile.onboarded) navigator.storage?.persist?.().catch(() => { });
 
 /* A bar at the top, never a silent swap: when a new version has been installed in the background, or when the
    device refuses to store data, the person is told and decides when to reload. */
