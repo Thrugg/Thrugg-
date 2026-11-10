@@ -706,6 +706,32 @@ function linesTable(r){
  </tbody></table></div>`;
 }
 function ksPanel(ks){return `<div class="card"><h2>Swiss safe harbour · ESTV Kreisschreiben Nr. 36</h2><div class="ks">${ks.map(k=>`<div class="${k.ok?'ok':'no'}"><b>${k.ok?'Met':'Failed'}</b>${k.t}<br><span class="muted">${esc(k.d)}</span></div>`).join('')}</div></div>`;}
+/* Year-end desk: what is worth doing before 31 December, worked out from the Tax desk inputs. */
+function yearEnd(I,r){
+ const E=x=>Math.round(Math.abs(x)).toLocaleString('de-DE')+' €',items=[],now=new Date(),y=now.getFullYear(),soon=now.getMonth()>=10;
+ const due=r.total-(I.div>0?I.div*I.wht:0);
+ if(I.res==='DE'){
+  const tfs={shares:0,eqETF:.3,mixFund:.15,bondFund:0}[I.veh],isSh=I.veh==='shares';
+  const sPot=(isSh?I.gain:0)+I.swing-I.lossCFSh,gPot=(isSh?0:I.gain*(1-tfs))+I.div+I.opt-I.lossCF;
+  const allowMax=I.filing==='joint'?2000:1000,line=r.lines.find(l=>/^Sparerpauschbetrag/.test(l.label)),left=Math.max(0,allowMax-I.allowUsed-(line?-line.base:0));
+  if(left>1)items.push(['tip',`Allowance: ${E(left)} of your Sparerpauschbetrag is unused and cannot be carried over. Realising that much gain before year end costs no tax${isSh?'':` (for an equity ETF that is about ${E(left/(1-tfs))} of gain, because ${Math.round(tfs*100)} % is exempt)`}.`]);
+  else items.push(['info','Allowance: your Sparerpauschbetrag is fully used this year.']);
+  if(sPot>0)items.push(['tip',`Share pot: ${E(sPot)} of taxable share gains so far. A share you hold at a loss and no longer want would cut this euro for euro if sold this year (about ${E(Math.min(sPot,1000)*.26375)} of tax per 1.000 € of loss).`]);
+  else if(sPot<0)items.push(['info',`Share pot: ${E(sPot)} of share losses. They offset share gains only. Realising up to that much gain on shares this year is tax-free; otherwise the loss carries forward.`]);
+  if(gPot>0)items.push(['info',`General pot (funds, options, dividends): ${E(gPot)} taxable before the allowance. Losses on funds or options realised this year reduce it; share losses do not.`]);
+  else if(gPot<0)items.push(['info',`General pot: ${E(gPot)} of losses, which carry forward against any capital income.`]);
+  if(!isSh&&I.cap>0&&I.veh!=='bondFund'){const t=I.cap*.032*.7*(1-tfs)*.26375;items.push(['warn',`January cash: about ${E(t)} for the Vorabpauschale on accumulating funds, deemed received in early January.${I.broker==='ibkr'?' IBKR does not deduct it; you declare it yourself.':' A German broker debits it from your cash account, so keep that much uninvested.'}`]);}
+  if(I.opt)items.push(['warn','Short options still open on 31 Dec: the premium is taxed in the year you received it, even though the position is not closed.']);
+  if(I.broker==='ibkr'&&due>1)items.push(['info',`Nothing is withheld at IBKR: set aside about ${E(due)} for the ${y} assessment.`]);
+  items.push(['info','Place year-end sales a few trading days before the last session, so that they also settle in December.']);
+ }else{
+  if(due>1)items.push(['info',`On these inputs about ${E(due)} of tax is due for ${y}${I.broker==='ibkr'?', and a foreign broker withholds none of it: set it aside':''}.`]);
+  const cf=r.notes.filter(n=>/carr(y|ies) forward|ring-fenced|expire/.test(n.x)).map(n=>n.x);
+  cf.forEach(x=>items.push(['info',x]));
+  items.push(['info',`Allowances and loss rules differ by country: see ${COUNTRIES[I.res].n} under Rules & sources before selling for tax reasons. The detailed year-end list is built for Germany so far.`]);
+ }
+ return `<div class="card"${soon?' style="border-color:var(--brass,#b8862a)"':''}><h2>Before 31 December${soon?' · '+Math.max(0,Math.ceil((new Date(y,11,31)-now)/864e5))+' days left':''}</h2><ul class="notes">${items.map(([t,x])=>`<li class="${t}">${esc(x)}</li>`).join('')}</ul><p class="sm muted" style="margin:8px 0 0">Built from the numbers in the Tax desk. It cannot see positions you have not sold: unrealised gains and losses are yours to check.</p></div>`;
+}
 function renderDeskOut(){
  const I=getI(),C=COUNTRIES[I.res],r=evaluate(I.res,I);
  const eff=r.profit>0?r.total/r.profit:NaN,effI=r.invProfit>0?r.invTax/r.invProfit:NaN,effT=r.trdProfit>0?r.trdTax/r.trdProfit:NaN;
@@ -728,6 +754,7 @@ function renderDeskOut(){
  </div>
  ${r.ks36?ksPanel(r.ks36):''}
  <div class="card"><h2>Breakdown · ${esc(C.srcN)}</h2>${linesTable(r)}</div>
+ ${yearEnd(I,r)}
  <div class="card"><h2>What to know</h2><ul class="notes">${notes.map(n=>`<li class="${n.t}">${esc(n.x)}</li>`).join('')||'<li>No special notes for this profile.</li>'}</ul></div>
  <div class="card"><h2>Same results in the top 6</h2>
   <p class="sm muted" style="margin:0 0 10px">${C.n} ranks #${rank} of 38 on this year's tax. Brass = annual wealth tax on top.</p>

@@ -113,6 +113,11 @@ a{color:var(--lake-ink)}
 .row-name svg{width:14px;height:14px}
 .row-meta{font:500 13px var(--f-data);color:var(--ink-2);letter-spacing:.2px;margin-top:2px;display:flex;flex-wrap:wrap;gap:2px 10px;font-variant-numeric:tabular-nums}
 .row-area{font-size:12px;color:var(--ink-3);margin-top:1px}
+.pick-why{list-style:none;font:500 12px var(--f-ui);color:var(--ink-3);padding:8px 2px 0}
+.yr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}.yr-grid div{background:var(--surface-2);border-radius:10px;padding:10px 8px;text-align:center}.yr-grid b{display:block;font:600 20px var(--f-display)}.yr-grid span{font-size:11.5px;color:var(--ink-3)}
+.yr-list{margin:0 0 14px;padding:0;list-style:none}.yr-list li{padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}.yr-list li span{color:var(--ink-3);font-size:12.5px;display:block}
+.yr-months{display:flex;align-items:flex-end;gap:4px;height:64px;margin:0 0 4px}.yr-months i{flex:1;background:var(--glow);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}.yr-mlabels{display:flex;gap:4px;font-size:10px;color:var(--ink-3);margin-bottom:14px}.yr-mlabels span{flex:1;text-align:center}
+.yr-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:6px}.yr-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;background:var(--surface-2)}
 .row-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:52px}
 .wx-mini{display:flex;align-items:center;gap:3px;font:600 14px var(--f-data);font-variant-numeric:tabular-nums}
 .wx-mini svg{width:22px;height:22px;stroke-width:1.4}
@@ -702,6 +707,7 @@ a.btn{text-decoration:none}
           <label class="chk"><input type="checkbox" id="wxOnMap"> Show on map</label>
           <span class="muted" id="wxUpdated"></span>
         </div>
+        <div id="wxWeekend"></div>
         <h3 class="sec-title">Best picks <span class="muted" id="wxScope"></span></h3>
         <ol class="hike-list" id="wxBest"></ol>
         <h3 class="sec-title">By area</h3>
@@ -715,6 +721,7 @@ a.btn{text-decoration:none}
           <button class="btn primary" id="btnLogNew"><svg><use href="#i-check"/></svg>Log a hike</button>
           <button class="btn ghost" id="btnGpx"><svg><use href="#i-upload"/></svg>Import GPX</button>
           <button class="btn ghost" id="btnYear"><svg><use href="#i-play"/></svg>Play our year</button>
+          <button class="btn ghost" id="btnReview"><svg><use href="#i-star"/></svg>Year in review</button>
         </div>
         <div class="pace-card" id="paceCard"></div>
         <h3 class="sec-title">Areas</h3>
@@ -1946,6 +1953,7 @@ const UI = {
     if (!WX) { $('#wxBest').innerHTML = '<li class="empty">Forecast is loading…</li>'; return; }
     const age = Math.round((Date.now() - WX.ts) / 6e4);
     $('#wxUpdated').textContent = age < 2 ? 'Updated just now' : `Updated ${age} min ago`;
+    this.renderWeekend();
     const list = (this.filtered || HK).map(h => ({ h, s: dayScore(wxOf(h), wxDay) })).filter(x => x.s != null)
       .sort((a, b) => (b.s - (inSeason(b.h) ? 0 : 40)) - (a.s - (inSeason(a.h) ? 0 : 40)));
     $('#wxScope').textContent = `· ${fmtDate(WX.days[wxDay], { wd: true })}, from your ${list.length} filtered hikes`;
@@ -1958,6 +1966,38 @@ const UI = {
       const s = Math.round(xs.reduce((t, x) => t + x.s, 0) / xs.length), w = wxOf(xs[0].h);
       return { a, s, html: `<div class="wx-area"><span>${esc(a)} <span class="muted">· ${xs.length}</span></span><span class="wx-mini">${ic(wmo(w.code[wxDay])[0])}${Math.round(w.tx[wxDay])}°</span><span class="score ${scoreCls(s)}">${s}</span></div>` };
     }).sort((p, q) => q.s - p.s).map(x => x.html).join('');
+  },
+  /* Weekend pick: three hikes for the coming Saturday or Sunday, weighing the forecast, the drive, snow,
+     season, the dog and what you have not done yet. One per area, so the three are real alternatives. */
+  renderWeekend() {
+    const box = $('#wxWeekend'); if (!box) return;
+    if (!WX || !WX.days) { box.innerHTML = ''; return; }
+    const days = WX.days.map((t, i) => ({ i, wd: new Date(t + 'T12:00').getDay() })).filter(d => d.wd === 6 || d.wd === 0).slice(0, 2);
+    if (!days.length) { box.innerHTML = ''; return; }
+    const dm = doneMap(), withDog = !!dogName(), cand = [];
+    for (const h of HK) {
+      if (h.g === 'expert' && !isWish(h.id)) continue;
+      const cm = snowCm(h); if (cm != null && cm >= 30) continue;
+      if (withDog && dogStatus(h).s === 'no') continue;
+      let best = null;
+      for (const d of days) { const s = dayScore(wxOf(h), d.i); if (s != null && (!best || s > best.s)) best = { s, i: d.i }; }
+      if (!best || best.s < 55) continue;
+      const drive = driveMin(h), why = [];
+      let v = best.s - Math.max(0, drive - 60) / 6;
+      if (!inSeason(h)) v -= 25;
+      if (cm != null && cm >= SNOW_MIN) { v -= 15; why.push(`${cm} cm of snow at the top`); } else if (cm != null) why.push('snow-free');
+      if (dm[h.id]) v -= 12; else why.push('not done yet');
+      if (isWish(h.id)) { v += 8; why.push('on your bucket list'); }
+      if (withDog && dogStatus(h).s === 'good') { v += 4; why.push('good with ' + dogName()); }
+      cand.push({ h, v, s: best.s, i: best.i, drive, why });
+    }
+    cand.sort((a, b) => b.v - a.v);
+    const picks = [], seen = new Set();
+    for (const c of cand) { if (seen.has(c.h.ar)) continue; seen.add(c.h.ar); picks.push(c); if (picks.length === 3) break; }
+    if (!picks.length) { box.innerHTML = `<h3 class="sec-title">Weekend pick</h3><p class="muted" style="margin:0 0 14px">No hike has a good enough forecast for this weekend yet. Look again nearer the day.</p>`; return; }
+    box.innerHTML = `<h3 class="sec-title">Weekend pick <span class="muted">· ${days.map(d => fmtDate(WX.days[d.i], { wd: true })).join(' and ')}</span></h3><ol class="hike-list" id="wxPicks" style="margin-bottom:16px">${picks.map(c =>
+      `<li class="pick-why">${fmtDate(WX.days[c.i], { wd: true })} · ${fmtDur(c.drive)} drive · ${esc(c.why.join(' · '))}</li>` + this.row(c.h, dm, `<span class="score ${scoreCls(c.s)}" title="${scoreWord(c.s)} day">${c.s}</span>`)).join('')}</ol>`;
+    this.bindRows($('#wxPicks'));
   },
   renderMapDaybar() {
     const bar = $('#wxMapbar'); bar.hidden = !this.state.wxOnMap || !WX;
@@ -3995,9 +4035,9 @@ const Fly = {
     };
     this.raf = requestAnimationFrame(step);
   },
-  async year() {
+  async year(want) {
     const L = logs(); if (!L.length) return toast('Log a few hikes first, then play them back here.');
-    const y = L[0].date.slice(0, 4), list = L.filter(l => l.date.startsWith(y)).reverse();
+    const y = typeof want === 'string' && L.some(l => l.date.startsWith(want)) ? want : L[0].date.slice(0, 4), list = L.filter(l => l.date.startsWith(y)).reverse();
     this.stop(); this.on = true; if (!S.threeD) set3D(true); if (isPhone()) Sheet.to(0);
     UI.closeDetail();
     for (let k = 0; k < list.length && this.on; k++) {
@@ -4060,6 +4100,43 @@ const Trail = {
     if (this.watch != null) { navigator.geolocation.clearWatch(this.watch); this.watch = null; }
     if (this.lock) { this.lock.release().catch(() => { }); this.lock = null; }
     $('#trailHud').hidden = true; setSrc('me', EMPTY);
+  }
+};
+
+/* ───────────── Year in review ───────────── */
+const Review = {
+  open(year) {
+    const all = logs(); if (!all.length) return toast('Log a few hikes first, then look back at the year here.');
+    const years = [...new Set(all.map(l => l.date.slice(0, 4)))].sort().reverse(), y = year && years.includes(year) ? year : years[0];
+    const L = all.filter(l => l.date.startsWith(y)).reverse(), H = l => HBY[l.hike];
+    const km = l => l.km || H(l).km, up = l => l.up ?? H(l).up;
+    const tot = (f) => L.reduce((s, l) => s + f(l), 0), maxBy = f => L.reduce((b, l) => !b || f(l) > f(b) ? l : b, null);
+    const before = new Set(all.filter(l => l.date < y).map(l => H(l).ar)), newAreas = [...new Set(L.map(l => H(l).ar))].filter(a => !before.has(a));
+    const big = maxBy(up), long = maxBy(km), high = maxBy(l => H(l).mx);
+    const timed = L.filter(l => l.dur > 0 && logDin(l) > 0), fast = timed.reduce((b, l) => !b || l.dur / logDin(l) < b.dur / logDin(b) ? l : b, null);
+    const stars = L.filter(l => l.rating === 5), dogDays = L.filter(l => l.dog).length;
+    const months = Array(12).fill(0); L.forEach(l => months[+l.date.slice(5, 7) - 1]++); const mMax = Math.max(1, ...months);
+    const photos = L.flatMap(l => l.photos || []).slice(0, 8);
+    const li = (label, l, extra) => l ? `<li>${esc(label)}: <b>${esc(H(l).n)}</b><span>${fmtDate(l.date, { wd: true })} · ${extra}</span></li>` : '';
+    Dlg.open({
+      title: `${hasNames() ? S.names.filter(Boolean).join(' & ') + ': ' : ''}${y} in the mountains`,
+      body: `${years.length > 1 ? `<label class="field">Year<select id="yrSel">${years.map(v => `<option ${v === y ? 'selected' : ''}>${v}</option>`).join('')}</select></label>` : ''}
+        <div class="yr-grid"><div><b>${L.length}</b><span>outing${L.length === 1 ? '' : 's'}</span></div><div><b>${Math.round(tot(km))}</b><span>kilometres</span></div><div><b>${nf.format(Math.round(tot(up)))}</b><span>metres up</span></div>
+        <div><b>${Math.round(tot(l => l.dur || 0) / 60)}</b><span>hours out</span></div><div><b>${new Set(L.map(l => H(l).c)).size}</b><span>countr${new Set(L.map(l => H(l).c)).size === 1 ? 'y' : 'ies'}</span></div><div><b>${dogDays}</b><span>with ${esc(dogName() || 'the dog')}</span></div></div>
+        <div class="yr-months" aria-hidden="true">${months.map(n => `<i style="height:${Math.round(n / mMax * 100)}%" title="${n}"></i>`).join('')}</div><div class="yr-mlabels">${MONTHS.map(m => `<span>${m[0]}</span>`).join('')}</div>
+        <ul class="yr-list">${li('Biggest climb', big, '↑ ' + fmtM(big ? up(big) : 0))}${li('Longest day', long, fmtKm(long ? km(long) : 0))}${li('Highest point', high, fmtM(high ? H(high).mx : 0))}
+        ${fast ? li('Fastest against the signpost', fast, `${fmtDur(fast.dur)} for a ${fmtDur(logDin(fast))} signpost`) : ''}
+        ${stars.length ? `<li>Five stars: <b>${stars.slice(0, 4).map(l => esc(H(l).n)).join(', ')}</b>${stars.length > 4 ? `<span>and ${stars.length - 4} more</span>` : ''}</li>` : ''}
+        ${newAreas.length ? `<li>New ground: <b>${newAreas.map(esc).join(', ')}</b></li>` : ''}</ul>
+        ${photos.length ? `<div class="yr-photos">${photos.map(p => `<img data-ph="${p.id}" alt="">`).join('')}</div>` : ''}`,
+      foot: `<button type="button" class="btn ghost" data-close>Close</button><button type="button" class="btn primary" id="yrPlay">${ic('i-play')}Play it on the map</button>`,
+      onOpen: f => {
+        f.querySelectorAll('img[data-ph]').forEach(img => Album.load(img));
+        const sel = f.querySelector('#yrSel'); if (sel) sel.onchange = () => Review.open(sel.value);
+        f.querySelector('#yrPlay').onclick = () => { $('#dlg').close(); Fly.year(y); };
+      },
+      onSubmit: () => false
+    });
   }
 };
 
@@ -4196,6 +4273,7 @@ function bindControls() {
   $('#fileGpx').onchange = e => { Gpx.import([...e.target.files]); e.target.value = ''; };
   $('#fileBackup').onchange = e => { if (e.target.files[0]) Backup.import(e.target.files[0]); e.target.value = ''; };
   $('#btnYear').onclick = () => Fly.year();
+  $('#btnReview').onclick = () => Review.open();
   $('#flyStop').onclick = () => Fly.stop();
   $('#trailStop').onclick = () => Trail.stop();
   $('#mapMsgCancel').onclick = () => Pick.stop();

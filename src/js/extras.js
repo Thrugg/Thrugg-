@@ -701,9 +701,9 @@ const Fly = {
     };
     this.raf = requestAnimationFrame(step);
   },
-  async year() {
+  async year(want) {
     const L = logs(); if (!L.length) return toast('Log a few hikes first, then play them back here.');
-    const y = L[0].date.slice(0, 4), list = L.filter(l => l.date.startsWith(y)).reverse();
+    const y = typeof want === 'string' && L.some(l => l.date.startsWith(want)) ? want : L[0].date.slice(0, 4), list = L.filter(l => l.date.startsWith(y)).reverse();
     this.stop(); this.on = true; if (!S.threeD) set3D(true); if (isPhone()) Sheet.to(0);
     UI.closeDetail();
     for (let k = 0; k < list.length && this.on; k++) {
@@ -766,6 +766,43 @@ const Trail = {
     if (this.watch != null) { navigator.geolocation.clearWatch(this.watch); this.watch = null; }
     if (this.lock) { this.lock.release().catch(() => { }); this.lock = null; }
     $('#trailHud').hidden = true; setSrc('me', EMPTY);
+  }
+};
+
+/* ───────────── Year in review ───────────── */
+const Review = {
+  open(year) {
+    const all = logs(); if (!all.length) return toast('Log a few hikes first, then look back at the year here.');
+    const years = [...new Set(all.map(l => l.date.slice(0, 4)))].sort().reverse(), y = year && years.includes(year) ? year : years[0];
+    const L = all.filter(l => l.date.startsWith(y)).reverse(), H = l => HBY[l.hike];
+    const km = l => l.km || H(l).km, up = l => l.up ?? H(l).up;
+    const tot = (f) => L.reduce((s, l) => s + f(l), 0), maxBy = f => L.reduce((b, l) => !b || f(l) > f(b) ? l : b, null);
+    const before = new Set(all.filter(l => l.date < y).map(l => H(l).ar)), newAreas = [...new Set(L.map(l => H(l).ar))].filter(a => !before.has(a));
+    const big = maxBy(up), long = maxBy(km), high = maxBy(l => H(l).mx);
+    const timed = L.filter(l => l.dur > 0 && logDin(l) > 0), fast = timed.reduce((b, l) => !b || l.dur / logDin(l) < b.dur / logDin(b) ? l : b, null);
+    const stars = L.filter(l => l.rating === 5), dogDays = L.filter(l => l.dog).length;
+    const months = Array(12).fill(0); L.forEach(l => months[+l.date.slice(5, 7) - 1]++); const mMax = Math.max(1, ...months);
+    const photos = L.flatMap(l => l.photos || []).slice(0, 8);
+    const li = (label, l, extra) => l ? `<li>${esc(label)}: <b>${esc(H(l).n)}</b><span>${fmtDate(l.date, { wd: true })} · ${extra}</span></li>` : '';
+    Dlg.open({
+      title: `${hasNames() ? S.names.filter(Boolean).join(' & ') + ': ' : ''}${y} in the mountains`,
+      body: `${years.length > 1 ? `<label class="field">Year<select id="yrSel">${years.map(v => `<option ${v === y ? 'selected' : ''}>${v}</option>`).join('')}</select></label>` : ''}
+        <div class="yr-grid"><div><b>${L.length}</b><span>outing${L.length === 1 ? '' : 's'}</span></div><div><b>${Math.round(tot(km))}</b><span>kilometres</span></div><div><b>${nf.format(Math.round(tot(up)))}</b><span>metres up</span></div>
+        <div><b>${Math.round(tot(l => l.dur || 0) / 60)}</b><span>hours out</span></div><div><b>${new Set(L.map(l => H(l).c)).size}</b><span>countr${new Set(L.map(l => H(l).c)).size === 1 ? 'y' : 'ies'}</span></div><div><b>${dogDays}</b><span>with ${esc(dogName() || 'the dog')}</span></div></div>
+        <div class="yr-months" aria-hidden="true">${months.map(n => `<i style="height:${Math.round(n / mMax * 100)}%" title="${n}"></i>`).join('')}</div><div class="yr-mlabels">${MONTHS.map(m => `<span>${m[0]}</span>`).join('')}</div>
+        <ul class="yr-list">${li('Biggest climb', big, '↑ ' + fmtM(big ? up(big) : 0))}${li('Longest day', long, fmtKm(long ? km(long) : 0))}${li('Highest point', high, fmtM(high ? H(high).mx : 0))}
+        ${fast ? li('Fastest against the signpost', fast, `${fmtDur(fast.dur)} for a ${fmtDur(logDin(fast))} signpost`) : ''}
+        ${stars.length ? `<li>Five stars: <b>${stars.slice(0, 4).map(l => esc(H(l).n)).join(', ')}</b>${stars.length > 4 ? `<span>and ${stars.length - 4} more</span>` : ''}</li>` : ''}
+        ${newAreas.length ? `<li>New ground: <b>${newAreas.map(esc).join(', ')}</b></li>` : ''}</ul>
+        ${photos.length ? `<div class="yr-photos">${photos.map(p => `<img data-ph="${p.id}" alt="">`).join('')}</div>` : ''}`,
+      foot: `<button type="button" class="btn ghost" data-close>Close</button><button type="button" class="btn primary" id="yrPlay">${ic('i-play')}Play it on the map</button>`,
+      onOpen: f => {
+        f.querySelectorAll('img[data-ph]').forEach(img => Album.load(img));
+        const sel = f.querySelector('#yrSel'); if (sel) sel.onchange = () => Review.open(sel.value);
+        f.querySelector('#yrPlay').onclick = () => { $('#dlg').close(); Fly.year(y); };
+      },
+      onSubmit: () => false
+    });
   }
 };
 
@@ -902,6 +939,7 @@ function bindControls() {
   $('#fileGpx').onchange = e => { Gpx.import([...e.target.files]); e.target.value = ''; };
   $('#fileBackup').onchange = e => { if (e.target.files[0]) Backup.import(e.target.files[0]); e.target.value = ''; };
   $('#btnYear').onclick = () => Fly.year();
+  $('#btnReview').onclick = () => Review.open();
   $('#flyStop').onclick = () => Fly.stop();
   $('#trailStop').onclick = () => Trail.stop();
   $('#mapMsgCancel').onclick = () => Pick.stop();
