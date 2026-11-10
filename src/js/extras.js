@@ -718,6 +718,57 @@ const Fly = {
   }
 };
 
+/* ───────────── Follow me: your position on the selected hike ─────────────
+   Works while the app is open and the screen is on (a web app cannot track in the background). Shows where you
+   are on the traced line, what is left, and says so when you have left the path. */
+const Trail = {
+  on: false, watch: null, lock: null, h: null, cum: null, c: null, first: true,
+  async start(h) {
+    if (this.on) this.stop();
+    if (!navigator.geolocation) return toast('This browser has no access to your location');
+    let r = Routes.cached(h);
+    if (!r) { toast('Tracing the route first…'); r = await Routes.get(h).catch(() => null); }
+    if (!r || r.c.length < 2) return toast('No route line for this hike yet. Open it once with signal so it can be traced.', 5000);
+    this.h = h; this.c = r.c; this.cum = [0]; this.first = true;
+    for (let i = 1; i < r.c.length; i++) this.cum.push(this.cum[i - 1] + havLL(r.c[i - 1], r.c[i]));
+    this.on = true; if (Fly.on) Fly.stop();
+    $('#trailHud').hidden = false; $('#trailTitle').innerHTML = `${esc(h.n)}<small>Looking for your position…</small>`; $('#trailProg').style.width = '0';
+    if (isPhone()) Sheet.to(0);
+    try { if (navigator.wakeLock) this.lock = await navigator.wakeLock.request('screen'); } catch (e) { }
+    this.watch = navigator.geolocation.watchPosition(p => this.fix(p), e => { $('#trailTitle').innerHTML = `${esc(h.n)}<small>${e.code === 1 ? 'Location is switched off for this app. Allow it in the phone settings.' : 'No position yet. It needs a view of the sky.'}</small>`; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  },
+  /* nearest point of the line: index of the segment, how far along it, and the distance to it in metres */
+  nearest(ll) {
+    const c = this.c, kx = Math.cos(ll[1] * Math.PI / 180) * 111320, ky = 110540; let best = { d: Infinity, i: 0, t: 0 };
+    for (let i = 0; i < c.length - 1; i++) {
+      const ax = (c[i][0] - ll[0]) * kx, ay = (c[i][1] - ll[1]) * ky, bx = (c[i + 1][0] - ll[0]) * kx, by = (c[i + 1][1] - ll[1]) * ky;
+      const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy, t = len ? clamp(-(ax * dx + ay * dy) / len, 0, 1) : 0;
+      const d = Math.hypot(ax + dx * t, ay + dy * t);
+      if (d < best.d) best = { d, i, t };
+    }
+    return best;
+  },
+  fix(p) {
+    if (!this.on) return;
+    const ll = [p.coords.longitude, p.coords.latitude], n = this.nearest(ll), c = this.c, h = this.h;
+    setSrc('me', { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: ll }, properties: {} }] });
+    const tot = this.cum[this.cum.length - 1], along = this.cum[n.i] + (this.cum[n.i + 1] - this.cum[n.i]) * n.t;
+    let up = 0; for (let i = n.i + 1; i < c.length; i++) { const a = c[i - 1][2], b = c[i][2]; if (a != null && b != null && b > a) up += (b - a) * (i === n.i + 1 ? 1 - n.t : 1); }
+    /* an out-and-back line is traced one way: the way back is the same line again */
+    const back = h.ty === 'out', leftKm = (tot - along) + (back ? tot : 0);
+    const off = n.d > Math.max(60, (p.coords.accuracy || 0) * 1.5);
+    $('#trailTitle').innerHTML = `${esc(h.n)}<small>${off ? `About ${Math.round(n.d / 10) * 10} m off the marked line. ` : ''}${back ? `${fmtKm(tot - along)} and ↑ ${fmtM(up)} to the top, ${fmtKm(leftKm)} in all` : `${fmtKm(leftKm)} and ↑ ${fmtM(up)} to go`}${p.coords.accuracy > 40 ? ` · position ±${Math.round(p.coords.accuracy)} m` : ''}</small>`;
+    $('#trailProg').style.width = (along / tot * 100).toFixed(1) + '%';
+    if (this.first && map) { this.first = false; map.easeTo({ center: ll, zoom: Math.max(map.getZoom(), 14), duration: 900 }); }
+  },
+  stop() {
+    this.on = false;
+    if (this.watch != null) { navigator.geolocation.clearWatch(this.watch); this.watch = null; }
+    if (this.lock) { this.lock.release().catch(() => { }); this.lock = null; }
+    $('#trailHud').hidden = true; setSrc('me', EMPTY);
+  }
+};
+
 /* Names, dog, home base and pace travel with the logbook, so a new device needs no setup. */
 function shareSettings() {
   putItem('cfg:settings', 'cfg', { names: S.names, dogName: S.dogName, dogSize: S.dogSize, home: S.home, pace: S.pace });
@@ -801,7 +852,7 @@ const Sync = {
         if (error) throw error;
         part.forEach(([id, v]) => { if (ITEMS[id] && ITEMS[id].u === v.u) ITEMS[id].dirty = false; });
       }
-      LS.set('lastPull', maxU); LS.set('items', ITEMS);
+      LS.set('lastPull', maxU); storeItems();
       if (changed) { applyCloudSettings(); rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); if (UI.state.tab === 'photos') Album.render(); }
       setTimeout(() => Album.upload(), 500);
       this.setStatus('ok', 'Synced at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -852,6 +903,7 @@ function bindControls() {
   $('#fileBackup').onchange = e => { if (e.target.files[0]) Backup.import(e.target.files[0]); e.target.value = ''; };
   $('#btnYear').onclick = () => Fly.year();
   $('#flyStop').onclick = () => Fly.stop();
+  $('#trailStop').onclick = () => Trail.stop();
   $('#mapMsgCancel').onclick = () => Pick.stop();
   $('#editUndo').onclick = () => Edit.undo(); $('#editCancel').onclick = () => Edit.stop(); $('#editSave').onclick = () => Edit.save();
   document.addEventListener('keydown', e => {
@@ -875,6 +927,10 @@ function boot() {
   const wx = () => loadOverview().then(() => { UI.syncFind(); UI.refresh(); UI.renderMapDaybar(); }).catch(e => toast('Weather unavailable: ' + e.message, 4000));
   wx(); setInterval(wx, 30 * 6e4);
   loadDrive().then(() => UI.refresh());
+  const snow = () => loadSnow().then(() => { UI.refresh(); if (UI.detailId && HBY[UI.detailId]) UI.loadDetailWeather(HBY[UI.detailId]); }).catch(e => console.warn('snow', e.message));
+  snow(); setInterval(snow, 3 * 3600e3);
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
   Sync.start();
   setTimeout(() => Album.upload(), 6000);
   setTimeout(() => Routes.background(), 3500);

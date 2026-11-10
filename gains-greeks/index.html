@@ -1,9 +1,8 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<!doctype html><html lang="en"><head><title>Gains &amp; Greeks</title><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Gains & Greeks"><meta name="theme-color" content="#fafcfb">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
-<script src="../cloud.js"></script><script>Cloud.mirror("gains-greeks", "gg.v1");</script>
+<script src="../cloud.js"></script><script>Cloud.mirror("gains-greeks", "gg.v1", {ignore:["ui"]});if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </head><body>
-<title>Gains & Greeks</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -240,7 +239,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
     <div class="vhead"><h1>Same results, 38 tax codes</h1><p>Your Tax desk inputs run through every OECD member's 2026 rules. The one-off tax on this year's results is ranked; recurring wealth tax is shown beside it because it compounds against you every year.</p></div>
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:12px">
-        <div class="seg" id="cmp-filter"><button data-v="all">All 38</button><button data-v="pri">Top 6</button><button data-v="eu">EU</button></div>
+        <div class="seg" id="cmp-filter"><button data-v="ver">Verified 9</button><button data-v="all">All 38</button><button data-v="pri">Top 6</button><button data-v="eu">EU</button></div>
         <div class="seg" id="cmp-sort"><button data-v="total">Total</button><button data-v="inv">Investing</button><button data-v="trd">Trading</button><button data-v="wealth">Wealth tax</button></div>
       </div>
       <div class="tw" id="cmp-table"></div>
@@ -290,7 +289,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
 
 <script>
 /*ENGINE-START*/
-const FX={EUR:1,USD:1.16,GBP:0.87,CHF:0.935,DKK:7.46,NOK:11.7,SEK:11.0,PLN:4.25,CZK:24.4,HUF:390,AUD:1.78,CAD:1.62,JPY:175,KRW:1650,NZD:1.98,ISK:142,ILS:3.9,MXN:21.5,CLP:1100,COP:4600,CRC:590,TRY:48};
+const FX={EUR:1,USD:1.16,GBP:0.86045,CHF:0.9445,DKK:7.4755,NOK:10.84,SEK:11.29,PLN:4.3718,CZK:24.4,HUF:390,AUD:1.78,CAD:1.62,JPY:175,KRW:1650,NZD:1.98,ISK:142,ILS:3.9,MXN:21.5,CLP:1100,COP:4600,CRC:590,TRY:48};
 const pct=x=>(Math.round(x*100000)/1000).toLocaleString('de-DE',{maximumFractionDigits:3})+' %';
 const dur=d=>d>=365?(Math.round(d/365*10)/10)+(d>=730?' years':' year'):Math.round(d/30.4)+' months';
 function prog(x,br){let t=0,p=0;for(const[u,r]of br){if(x<=p)break;t+=(Math.min(x,u)-p)*r;p=u;}return t;}
@@ -380,8 +379,10 @@ CH:{n:'Switzerland',cur:'CHF',conf:'V',pri:1,src:'https://www.estv2.admin.ch/dvs
   const met=crit.filter(x=>x.ok).length;
   if(met===5)c.add('Private capital gains: shares, ETFs and options are tax-free',totalG,0);
   else{
-   const g=c.L(totalG),it=stk(inc,g,zh),ahv=Math.max(0,g)*.10;
-   c.add('Reclassified as professional trading: income tax (Zurich marginal, est.)',totalG,c.E(it));
+   const g=c.L(totalG),it=totalG>0?stk(inc,g,zh):0,ahv=Math.max(0,g)*.10;
+   if(totalG<0){c.add('Net loss: private losses are not deductible, so no tax relief',totalG,0);
+    c.note('info',`Only if the canton formally treats you as a professional trader could this loss be set against other income (roughly ${Math.round(-c.E(stk(inc,g,zh))).toLocaleString('de-DE')} € at Zurich rates), together with AHV contributions on future gains. Cantons rarely grant that status in a loss year, so the model counts no relief.`);}
+   else c.add('Reclassified as professional trading: income tax (Zurich marginal, est.)',totalG,c.E(it));
    c.add('AHV/IV/EO self-employed contributions ≈ 10 %',Math.max(0,totalG),c.E(ahv));
    c.note('warn',`KS 36 safe harbour failed (${met}/5 criteria). Failing is not automatic reclassification; the canton then judges the overall picture. This model is conservative and shows the reclassified case.`);
   }
@@ -639,11 +640,11 @@ const DEF={
     cap:50000,gain:8000,hold:730,veh:'eqETF',div:600,wht:15,
     tCap:15000,opt:3200,swing:1500,trades:60,tHold:12,turnover:180000,margin:false,hedgeOnly:false,idx:false},
  m:{dest:'CH,DK,NO,PL,FR',V:60000,U:12000,g:6,y:1.5,N:10,before:false,stepDK:true,stepNO:false},
- o:null, ui:{cmpF:'all',cmpS:'total',stF:'mine'}
+ o:null, ui:{cmpF:'ver',cmpS:'total',stF:'mine'}
 };
 let state=JSON.parse(JSON.stringify(DEF));
-try{const s=JSON.parse(localStorage.getItem('gg.v1')||'null');if(s){for(const k of ['p','m','ui'])Object.assign(state[k],s[k]||{});if(s.o)state.o=s.o;if(s.fx)Object.assign(FX,s.fx);}}catch(e){}
-function save(){try{localStorage.setItem('gg.v1',JSON.stringify({...state,fx:FX}));}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('gg.v1')||'null');if(s){for(const k of ['p','m','ui'])Object.assign(state[k],s[k]||{});if(s.o)state.o=s.o;if(s.fx&&s.fxv===2)Object.assign(FX,s.fx);}}catch(e){}
+function save(){try{localStorage.setItem('gg.v1',JSON.stringify({...state,fx:FX,fxv:2}));}catch(e){}}
 
 function getI(){const p=state.p,n=k=>+p[k]||0;return{res:p.res,broker:p.broker,filing:p.filing,income:n('income'),church:+p.church||0,allowUsed:n('allowUsed'),lossCF:n('lossCF'),lossCFSh:n('lossCFSh'),wealthOther:n('wealthOther'),
  cap:n('cap'),gain:n('gain'),hold:n('hold'),veh:p.veh,div:Math.max(0,n('div')),wht:Math.min(.6,Math.max(0,n('wht')/100)),tCap:n('tCap'),opt:n('opt'),swing:n('swing'),trades:n('trades'),tHold:n('tHold'),turnover:n('turnover'),margin:!!p.margin,hedgeOnly:!!p.hedgeOnly,idx:!!p.idx};}
@@ -738,16 +739,20 @@ function renderDeskOut(){
 function renderCompare(){
  const I=getI(),f=state.ui.cmpF,s=state.ui.cmpS;
  document.querySelectorAll('#cmp-filter button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f));
+ {const nV=ORDER.filter(c=>COUNTRIES[c].conf==='V').length,bv=document.querySelector('#cmp-filter [data-v="ver"]'),ba=document.querySelector('#cmp-filter [data-v="all"]');if(bv)bv.textContent='Verified '+nV;if(ba)ba.textContent='All '+ORDER.length;}
  document.querySelectorAll('#cmp-sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===s));
- let list=ORDER.filter(c=>f==='all'||(f==='pri'?SHORT.includes(c):COUNTRIES[c].eu)).map(c=>({c,r:evaluate(c,I)}));
+ let list=ORDER.filter(c=>f==='all'||(f==='ver'?COUNTRIES[c].conf==='V':f==='pri'?SHORT.includes(c):COUNTRIES[c].eu)).map(c=>({c,r:evaluate(c,I)}));
  const key={total:x=>x.r.total,inv:x=>x.r.invTax,trd:x=>x.r.trdTax,wealth:x=>x.r.wealth}[s];
  list.sort((a,b)=>key(a)-key(b));
  const mx=Math.max(1,...list.map(x=>Math.max(0,x.r.total)+x.r.wealth));
  const prof=I.gain+I.div+I.opt+I.swing;
- $('#cmp-table').innerHTML=`<table class="t"><thead><tr><th>#</th><th>Country</th><th class="r">Investing</th><th class="r">Trading</th><th class="r">Total</th><th class="r">Effective</th><th class="r">Wealth/yr</th><th style="min-width:120px"></th><th>Status</th></tr></thead><tbody>
- ${list.map((x,i)=>`<tr class="${x.c===I.res?'me':''}"><td class="r muted">${i+1}</td><td style="white-space:nowrap"><span class="cc">${x.c}</span>${COUNTRIES[x.c].n}${SHORT.includes(x.c)&&x.c!==I.res?' <span class="pill b">shortlist</span>':''}</td>
+ /* Verified countries are ranked; the ones still to verify are listed below them, unranked and dimmed. */
+ const ver=list.filter(x=>COUNTRIES[x.c].conf==='V'),unv=list.filter(x=>COUNTRIES[x.c].conf!=='V');
+ const row=(x,rank)=>`<tr class="${x.c===I.res?'me':''}"${rank?'':' style="opacity:.62"'}><td class="r muted">${rank||'–'}</td><td style="white-space:nowrap"><span class="cc">${x.c}</span>${COUNTRIES[x.c].n}${SHORT.includes(x.c)&&x.c!==I.res?' <span class="pill b">shortlist</span>':''}</td>
  <td class="r">${eur(x.r.invTax)}</td><td class="r">${eur(x.r.trdTax)}</td><td class="r"><b>${eur(x.r.total)}</b></td><td class="r">${prof>0?pc(x.r.total/prof):'—'}</td><td class="r">${x.r.wealth?eur(x.r.wealth):'<span class="muted">—</span>'}</td>
- <td><div class="hbar" style="display:flex"><i style="width:${Math.max(0,x.r.total)/mx*100}%"></i><i class="w" style="width:${x.r.wealth/mx*100}%"></i></div></td><td>${stamp(COUNTRIES[x.c].conf)}${x.r.ks36&&x.r.ks36.some(k=>!k.ok)?' <span class="pill bad">KS 36 fail</span>':''}</td></tr>`).join('')}</tbody></table>
+ <td><div class="hbar" style="display:flex"><i style="width:${Math.max(0,x.r.total)/mx*100}%"></i><i class="w" style="width:${x.r.wealth/mx*100}%"></i></div></td><td>${stamp(COUNTRIES[x.c].conf)}${x.r.ks36&&x.r.ks36.some(k=>!k.ok)?' <span class="pill bad">KS 36 fail</span>':''}</td></tr>`;
+ $('#cmp-table').innerHTML=`<table class="t"><thead><tr><th>#</th><th>Country</th><th class="r">Investing</th><th class="r">Trading</th><th class="r">Total</th><th class="r">Effective</th><th class="r">Wealth/yr</th><th style="min-width:120px"></th><th>Status</th></tr></thead><tbody>
+ ${ver.map((x,i)=>row(x,i+1)).join('')}${unv.length?`<tr><td colspan="9" class="sm muted" style="padding-top:14px"><b>Still to verify (${unv.length})</b> · taken from established rules, not yet checked against 2026 sources. Shown for orientation and left out of the ranking.</td></tr>`+unv.map(x=>row(x,0)).join(''):''}</tbody></table>
  <p class="sm muted" style="margin:10px 0 0">Profit basis ${eur(prof)} (gain ${eur(I.gain)}, dividends ${eur(I.div)}, options ${eur(I.opt)}, swing ${eur(I.swing)}). Totals include foreign withholding. Wealth tax uses capital + trading capital + other wealth.</p>`;
 }
 
@@ -1369,6 +1374,8 @@ document.addEventListener('change',e=>{if(e.target.id==='o-sym'&&QF.ok)fetchQuot
 document.addEventListener('keydown',e=>{if(e.target.id==='o-sym'&&e.key==='Enter'){e.preventDefault();e.target.blur();}});
 window.addEventListener('hashchange',route);
 syncHeader();route();
+/* once the calendar year has moved on, say that these are last year's rules */
+(function(){const y=2026,now=new Date().getFullYear(),f=document.querySelector('p.foot');if(f&&now>y){const b=document.createElement('p');b.className='foot';b.style.cssText='color:#6b4a00;font-weight:600';b.textContent='These are the '+y+' rules. Rates, allowances and thresholds change each January; the '+now+' update is due.';f.parentNode.insertBefore(b,f);}})();
 </script>
 
 </body></html>

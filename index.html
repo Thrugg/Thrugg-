@@ -688,6 +688,7 @@ a.btn{text-decoration:none}
           <label class="chk"><input type="checkbox" id="fLoop"> Loops only</label>
           <label class="chk"><input type="checkbox" id="fLift"> Lift or boat helps</label>
           <label class="chk"><input type="checkbox" id="fWx"> Good weather on <span id="fWxDay">today</span></label>
+          <label class="chk"><input type="checkbox" id="fSnow"> Snow-free at the top now <small class="muted">model estimate</small></label>
         </div>
         <div class="f-actions">
           <button class="btn ghost" id="fReset" type="button">Reset</button>
@@ -752,6 +753,11 @@ a.btn{text-decoration:none}
   </div>
   <div class="wx-mapbar" id="wxMapbar" hidden></div>
   <div class="map-msg" id="mapMsg" hidden><span id="mapMsgText"></span><button class="btn ghost small" id="mapMsgCancel">Cancel</button></div>
+  <div class="fly-hud" id="trailHud" hidden>
+    <div class="fly-title" id="trailTitle"></div>
+    <div class="fly-bar"><i id="trailProg"></i></div>
+    <button class="btn ghost small" id="trailStop">Stop</button>
+  </div>
   <div class="fly-hud" id="flyHud" hidden>
     <div class="fly-title" id="flyTitle"></div>
     <div class="fly-bar"><i id="flyProg"></i></div>
@@ -1022,7 +1028,14 @@ const repoUrl = (path = '') => `https://github.com/${REPO.owner}/${REPO.name}${p
 /* Synced items: logs, marks (bucket list), hike edits/custom hikes, traced routes.
    ITEMS[id] = { k: kind, d: data, x: deleted, u: client timestamp, dirty } */
 const ITEMS = LS.get('items', {});
-const saveItems = debounce(() => { LS.set('items', ITEMS); }, 400);
+let saveWarned = false;
+/* A full or blocked browser store must never fail silently: the logbook would look saved and be gone on the next visit. */
+function storeItems() {
+  if (LS.set('items', ITEMS)) { saveWarned = false; return true; }
+  if (!saveWarned) { saveWarned = true; toast(Sync.configured() ? 'This device could not save. Keep the app open until it has synced, then free some browser storage.' : 'This device could not save: its browser storage is full or blocked. Export a backup in Settings.', 9000); }
+  return false;
+}
+const saveItems = debounce(storeItems, 400);
 function putItem(id, k, d) {
   ITEMS[id] = { k, d, x: false, u: new Date().toISOString(), dirty: true };
   saveItems(); Sync.soon();
@@ -1136,9 +1149,10 @@ function dogReasons(h) {
   if (d.r === 'banned') out.push(['bad', 'Dogs are banned here, even on a leash.']);
   else if (d.r === 'leash') out.push(['warn', 'Leash required' + (d.src === 'rule' ? ' (park or local rule).' : ' (protected area).')]);
   else out.push(['good', 'No known dog ban. Leash near wildlife, livestock and crowds.']);
-  if (d.t === 'no') out.push(['bad', 'Terrain unsuitable for a medium-size dog (ladders, chains, scrambling or steep metal stairs).']);
-  else if (d.t === 'care') out.push(['warn', 'Some sections need care: exposed, narrow, scree or grated steps.']);
-  else out.push(['good', 'Terrain fine for a medium-size dog.']);
+  const size = ['small', 'medium', 'large'].includes(S.dogSize) ? S.dogSize : 'medium';
+  if (d.t === 'no') out.push(['bad', `Terrain unsuitable for a ${size} dog (ladders, chains, scrambling or steep metal stairs).${size === 'small' ? ' A small dog can be carried over a short step, not over a whole section.' : ''}`]);
+  else if (d.t === 'care') out.push(['warn', 'Some sections need care: exposed, narrow, scree or grated steps.' + (size === 'large' ? ' A large dog cannot be lifted past them, so turn back if in doubt.' : size === 'small' ? ' A small dog can be carried over the worst steps.' : '')]);
+  else out.push(['good', `Terrain fine for a ${size} dog.`]);
   if (d.cow) out.push(['warn', 'Cattle pastures in summer: dog on a short leash, keep distance from mother cows, let go of the leash if cows charge.']);
   if (d.h2o) out.push(['good', 'Water along the way.']); else if (h.km > 8) out.push(['warn', 'Little or no water on the route: carry enough for the dog.']);
   if (h.din > 360 || h.up > 1200) out.push(['warn', 'Long, big day. Build up to it and watch the paws on rock.']);
@@ -1245,6 +1259,33 @@ async function loadDetailWx(h) {
   return (WXD[k] = { ts: Date.now(), th: a, top: b || a });
 }
 const wxOf = h => WX && WX.by[h.id];
+
+/* ───────────── Snow on the ground (model estimate at the top of each hike) ─────────────
+   Asked for separately from the forecast, so a problem here can never take the weather down with it. */
+let SNOW = LS.get('snow', null);
+const SNOW_MIN = 3; // cm; below this the path is treated as snow-free
+function snowCm(h) { const v = SNOW && SNOW.by ? SNOW.by[h.id] : null; return v == null ? null : v; }
+async function loadSnow() {
+  if (SNOW && Date.now() - SNOW.ts < 6 * 3600e3 && HK.every(h => h.id in SNOW.by)) return SNOW;
+  const by = {};
+  for (let i = 0; i < HK.length; i += 50) {
+    const ch = HK.slice(i, i + 50);
+    const qs = new URLSearchParams({ latitude: ch.map(h => h.top[0].toFixed(4)).join(','), longitude: ch.map(h => h.top[1].toFixed(4)).join(','), elevation: ch.map(h => Math.round(h.mx || 1000)).join(','), current: 'snow_depth', timezone: 'Europe/Berlin' });
+    const r = await fetchT(OM + '?' + qs, {}, 25000);
+    if (!r.ok) throw new Error('Snow data answered ' + r.status);
+    toArr(await r.json()).forEach((res, k) => { const m = res.current && res.current.snow_depth; by[ch[k].id] = m == null ? null : Math.round(m * 100); });
+  }
+  SNOW = { ts: Date.now(), by };
+  LS.set('snow', SNOW);
+  return SNOW;
+}
+/* Daylight: the latest time to leave the car and still be back a good hour before sunset. */
+const DAY_MARGIN = 60;
+function latestStart(sunsetHHMM, minutes) {
+  const m = /^(\d\d):(\d\d)/.exec(sunsetHHMM || ''); if (!m) return null;
+  const t = +m[1] * 60 + +m[2] - DAY_MARGIN - minutes;
+  return { min: t, text: t < 0 ? null : String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') };
+}
 
 /* ───────────── Map ───────────── */
 const OFM = 'https://tiles.openfreemap.org/planet';
@@ -1361,12 +1402,14 @@ function hikeLayers(C) {
     { id: 'hk-lbl', type: 'symbol', source: 'hikes', minzoom: 9.5, layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': zi(9.5, 10.5, 14, 12.5), 'text-offset': [0, 1], 'text-anchor': 'top', 'text-max-width': 9, 'text-optional': true }, paint: { 'text-color': C.ink, 'text-halo-color': C.halo, 'text-halo-width': 1.6 } },
     { id: 'home-pt', type: 'circle', source: 'home', paint: { 'circle-radius': 6, 'circle-color': C.lake, 'circle-stroke-color': C.case, 'circle-stroke-width': 2 } },
     { id: 'home-lbl', type: 'symbol', source: 'home', layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': 11, 'text-offset': [0, 1], 'text-anchor': 'top' }, paint: { 'text-color': C.lake, 'text-halo-color': C.halo, 'text-halo-width': 1.5 } },
+    { id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 16, 'circle-color': '#2f7fe0', 'circle-opacity': 0.18 } },
+    { id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 7, 'circle-color': '#2f7fe0', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5 } },
     { id: 'pos', type: 'circle', source: 'pos', paint: { 'circle-radius': 7, 'circle-color': C.glow, 'circle-stroke-color': C.case, 'circle-stroke-width': 2.5 } }
   ];
 }
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
-const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY, build: EMPTY, 'build-pre': EMPTY };
+const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, me: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY, build: EMPTY, 'build-pre': EMPTY };
 
 function buildStyle() {
   setupDem();
@@ -1712,7 +1755,7 @@ const Routes = {
 };
 
 /* ───────────── UI ───────────── */
-const F_DEFAULT = { grades: [], km: [0, 26], up: 2300, drive: 480, dog: 'any', status: 'all', countries: [], tags: [], season: false, loop: false, lift: false, wx: false, area: '' };
+const F_DEFAULT = { grades: [], km: [0, 26], up: 2300, drive: 480, dog: 'any', status: 'all', countries: [], tags: [], season: false, loop: false, lift: false, wx: false, nosnow: false, area: '' };
 const UI = {
   state: Object.assign({ tab: 'hikes', q: '', sort: 'weather', inView: false, wxOnMap: false, dDay: null }, LS.get('ui', {})),
   filtered: null, detailId: null,
@@ -1738,6 +1781,7 @@ const UI = {
     if (f.lift && !h.lift) return false;
     if (f.area && h.ar !== f.area) return false;
     if (f.wx && WX) { const s = dayScore(wxOf(h), wxDay); if (s == null || s < 55) return false; }
+    if (f.nosnow && SNOW) { const cm = snowCm(h); if (cm != null && cm >= SNOW_MIN) return false; }
     const q = norm(this.state.q).trim();
     if (q && !q.split(/\s+/).every(t => h.q.includes(t))) return false;
     return true;
@@ -1769,7 +1813,7 @@ const UI = {
       <div class="row-main">
         <div class="row-name">${esc(h.n)}${isNewHike(h) ? '<span class="badge-new">New</span>' : ''}${done ? `<span class="badge-done" title="Done ${done.length}×">${ic('i-check')}</span>` : isWish(h.id) ? `<span class="badge-wish" title="On the bucket list">${ic('i-star')}</span>` : ''}</div>
         <div class="row-meta"><span>${fmtKm(h.km)}</span><span>↑ ${fmtM(h.up)}</span><span>${fmtDur(yourTime(h))}</span><span>${ic('i-car')} ${fmtDur(driveMin(h))}</span></div>
-        <div class="row-area">${esc(h.ar)} · ${h.c}${!inSeason(h) ? ' · <em>out of season</em>' : ''}</div>
+        <div class="row-area">${esc(h.ar)} · ${h.c}${!inSeason(h) ? ' · <em>out of season</em>' : ''}${snowCm(h) >= SNOW_MIN ? ` · <em title="Model estimate at the top">snow ${snowCm(h)} cm</em>` : ''}</div>
       </div>
       <div class="row-side">${extra}${wx}<span class="dog-mini dog-${st.s}" title="${esc(st.label)}">${ic('i-paw')}</span></div>
     </li>`;
@@ -1823,6 +1867,7 @@ const UI = {
     if (f.loop) add('Loops', () => f.loop = false);
     if (f.lift) add('Lift or boat', () => f.lift = false);
     if (f.wx) add('Good weather', () => f.wx = false);
+    if (f.nosnow) add('Snow-free now', () => f.nosnow = false);
     if (f.area) add(f.area, () => f.area = '');
     const box = $('#activeFilters');
     box.innerHTML = chips.map((c, i) => `<span class="chip">${esc(c.label)}<button data-i="${i}" aria-label="Remove filter ${esc(c.label)}">${ic('i-close')}</button></span>`).join('');
@@ -1863,7 +1908,7 @@ const UI = {
       this.syncFind(); this.refreshSoon();
     };
     ['#fKmMin', '#fKmMax', '#fUp', '#fDrive'].forEach(s => $(s).addEventListener('input', rng));
-    [['#fSeason', 'season'], ['#fLoop', 'loop'], ['#fLift', 'lift'], ['#fWx', 'wx']].forEach(([s, k]) => $(s).addEventListener('change', e => { this.f()[k] = e.target.checked; this.refresh(); }));
+    [['#fSeason', 'season'], ['#fLoop', 'loop'], ['#fLift', 'lift'], ['#fWx', 'wx'], ['#fSnow', 'nosnow']].forEach(([s, k]) => $(s).addEventListener('change', e => { this.f()[k] = e.target.checked; this.refresh(); }));
     $('#fReset').onclick = () => { this.state.f = structuredClone(F_DEFAULT); this.syncFind(); this.refresh(); };
     $('#fShow').onclick = () => { this.setTab('hikes'); fitRegion(); };
     this.syncFind();
@@ -1881,7 +1926,7 @@ const UI = {
     $('#oKm').textContent = `${f.km[0]}–${f.km[1] < 26 ? f.km[1] : '25+'} km`;
     $('#oUp').textContent = f.up < 2300 ? '≤ ' + fmtM(f.up) : 'Any';
     $('#oDrive').textContent = f.drive < 480 ? '≤ ' + fmtDur(f.drive) : 'Any';
-    $('#fSeason').checked = f.season; $('#fLoop').checked = f.loop; $('#fLift').checked = f.lift; $('#fWx').checked = f.wx;
+    $('#fSeason').checked = f.season; $('#fLoop').checked = f.loop; $('#fLift').checked = f.lift; $('#fWx').checked = f.wx; $('#fSnow').checked = f.nosnow;
     $('#fWxDay').textContent = WX ? fmtDate(WX.days[wxDay], { wd: true }) : 'today';
     const n = this.filtered ? this.filtered.length : HK.length;
     $('#fShow').textContent = `Show ${n} hike${n === 1 ? '' : 's'}`;
@@ -1955,7 +2000,7 @@ const UI = {
     const wl = HK.filter(h => isWish(h.id) && !dm[h.id]);
     $('#wishList').innerHTML = wl.length ? wl.map(h => this.row(h, dm)).join('') : `<li class="empty">Tap the star on any hike to add it here.</li>`;
     this.bindRows($('#wishList'));
-    $('#badges').innerHTML = badges(L, dm).map(b => `<div class="badge${b.on ? ' on' : ''}" title="${esc(b.how)}"><i>${b.on ? '✓' : b.n}</i>${esc(b.t)}</div>`).join('');
+    $('#badges').innerHTML = keepBadges(badges(L, dm)).map(b => `<div class="badge${b.on ? ' on' : ''}" title="${esc(b.how)}"><i>${b.on ? '✓' : b.n}</i>${esc(b.t)}</div>`).join('');
   },
 
   /* Detail */
@@ -2022,6 +2067,7 @@ const UI = {
     <div class="d-actions">
       <button class="btn glow grow" id="dDone">${ic('i-check')}${done.length ? 'Log again' : 'Mark as done'}</button>
       <button class="btn ghost" id="dFly">${ic('i-play')}Fly over</button>
+      <button class="btn ghost" id="dTrail">${ic('i-pin')}Follow me</button>
       <a class="btn ghost" id="dDir" href="${(() => { const b = Parking.best(h); return b ? Parking.nav(b, h).g : `https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}`; })()}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
     </div>
     ${h.lf ? `<div class="note-box">${esc(h.lf)}</div>` : ''}
@@ -2057,6 +2103,7 @@ const UI = {
     const dr = $('#dRoute'); if (dr) dr.onclick = () => Builder.start(h);
     $('#dDone').onclick = () => Dlg.log(h);
     $('#dFly').onclick = () => Fly.hike(h);
+    $('#dTrail').onclick = () => Trail.start(h);
     $('#dOsm').onclick = () => Explore.checkRules(h);
     v.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => Dlg.log(h, b.dataset.edit));
     Album.bindStrips(v);
@@ -2132,6 +2179,10 @@ const UI = {
     if ((T.wind_gusts_10m_max[i] || 0) >= 60) flags.push(['warn', `Gusts up to ${Math.round(T.wind_gusts_10m_max[i])} km/h at the top`]);
     if ((B.temperature_2m_max[i] || 0) >= 28) flags.push(['warn', `Hot at the start (${Math.round(B.temperature_2m_max[i])}°): go early, mind hot ground for paws`]);
     if (!inSeason(h)) flags.push(['warn', `Outside the usual season (${seasonText(h)}): huts and lifts may be closed`]);
+    const cm = snowCm(h);
+    if (i <= 1 && cm != null) flags.push(cm >= 30 ? ['bad', `About ${cm} cm of snow at the top now (model estimate): a winter tour, check the avalanche bulletin`] : cm >= SNOW_MIN ? ['warn', `About ${cm} cm of snow at the top now (model estimate): expect snow or ice on the upper path`] : ['good', 'No snow cover at the top now (model estimate)']);
+    const ls = B.sunset[i] ? latestStart(B.sunset[i].slice(11), yourTime(h)) : null, srMin = B.sunrise[i] ? +B.sunrise[i].slice(11, 13) * 60 + +B.sunrise[i].slice(14, 16) : 0;
+    if (ls) flags.push(ls.min < srMin ? ['bad', `Not enough daylight: ${fmtDur(yourTime(h))} of walking does not fit between sunrise and an hour before sunset`] : [ls.min < srMin + 120 ? 'warn' : '', `Leave the car by ${ls.text} to be back an hour before sunset (${B.sunset[i].slice(11)})`]);
     const col = (title, D, elev, extra) => { const [icn, lbl] = wmo(D.weather_code[i]); return `<div class="wx-col"><h4>${title} · ${fmtM(elev)}</h4>
       <div class="wx-big">${ic(icn)}<div><b>${Math.round(D.temperature_2m_max[i])}°</b><span>${lbl} · low ${Math.round(D.temperature_2m_min[i])}°</span></div></div>
       <dl class="wx-kv"><dt>Rain</dt><dd>${(D.precipitation_sum[i] ?? 0).toFixed(1)} mm · ${D.precipitation_probability_max[i] ?? 0}%</dd><dt>Gusts</dt><dd>${Math.round(D.wind_gusts_10m_max[i] ?? 0)} km/h</dd><dt>Sun</dt><dd>${((D.sunshine_duration[i] ?? 0) / 3600).toFixed(1)} h</dd>${extra}</dl></div>`; };
@@ -2158,6 +2209,13 @@ const UI = {
   }
 };
 
+/* A badge once earned stays earned, even when the weekly update adds hikes to an area. */
+function keepBadges(list) {
+  const it = ITEMS['cfg:badges'], had = new Set(it && !it.x && it.d && Array.isArray(it.d.earned) ? it.d.earned : []);
+  const now = list.filter(b => b.on).map(b => b.t), fresh = now.filter(t => !had.has(t));
+  if (fresh.length) putItem('cfg:badges', 'cfg', { earned: [...had, ...fresh] });
+  return list.map(b => b.on || !had.has(b.t) ? b : Object.assign({}, b, { on: true }));
+}
 function badges(L, dm) {
   const hs = Object.keys(dm).map(id => HBY[id]);
   const lakes = hs.filter(h => h.tg.includes('lake')).length, peaks = hs.filter(h => h.tg.includes('summit')).length;
@@ -3954,6 +4012,57 @@ const Fly = {
   }
 };
 
+/* ───────────── Follow me: your position on the selected hike ─────────────
+   Works while the app is open and the screen is on (a web app cannot track in the background). Shows where you
+   are on the traced line, what is left, and says so when you have left the path. */
+const Trail = {
+  on: false, watch: null, lock: null, h: null, cum: null, c: null, first: true,
+  async start(h) {
+    if (this.on) this.stop();
+    if (!navigator.geolocation) return toast('This browser has no access to your location');
+    let r = Routes.cached(h);
+    if (!r) { toast('Tracing the route first…'); r = await Routes.get(h).catch(() => null); }
+    if (!r || r.c.length < 2) return toast('No route line for this hike yet. Open it once with signal so it can be traced.', 5000);
+    this.h = h; this.c = r.c; this.cum = [0]; this.first = true;
+    for (let i = 1; i < r.c.length; i++) this.cum.push(this.cum[i - 1] + havLL(r.c[i - 1], r.c[i]));
+    this.on = true; if (Fly.on) Fly.stop();
+    $('#trailHud').hidden = false; $('#trailTitle').innerHTML = `${esc(h.n)}<small>Looking for your position…</small>`; $('#trailProg').style.width = '0';
+    if (isPhone()) Sheet.to(0);
+    try { if (navigator.wakeLock) this.lock = await navigator.wakeLock.request('screen'); } catch (e) { }
+    this.watch = navigator.geolocation.watchPosition(p => this.fix(p), e => { $('#trailTitle').innerHTML = `${esc(h.n)}<small>${e.code === 1 ? 'Location is switched off for this app. Allow it in the phone settings.' : 'No position yet. It needs a view of the sky.'}</small>`; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  },
+  /* nearest point of the line: index of the segment, how far along it, and the distance to it in metres */
+  nearest(ll) {
+    const c = this.c, kx = Math.cos(ll[1] * Math.PI / 180) * 111320, ky = 110540; let best = { d: Infinity, i: 0, t: 0 };
+    for (let i = 0; i < c.length - 1; i++) {
+      const ax = (c[i][0] - ll[0]) * kx, ay = (c[i][1] - ll[1]) * ky, bx = (c[i + 1][0] - ll[0]) * kx, by = (c[i + 1][1] - ll[1]) * ky;
+      const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy, t = len ? clamp(-(ax * dx + ay * dy) / len, 0, 1) : 0;
+      const d = Math.hypot(ax + dx * t, ay + dy * t);
+      if (d < best.d) best = { d, i, t };
+    }
+    return best;
+  },
+  fix(p) {
+    if (!this.on) return;
+    const ll = [p.coords.longitude, p.coords.latitude], n = this.nearest(ll), c = this.c, h = this.h;
+    setSrc('me', { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: ll }, properties: {} }] });
+    const tot = this.cum[this.cum.length - 1], along = this.cum[n.i] + (this.cum[n.i + 1] - this.cum[n.i]) * n.t;
+    let up = 0; for (let i = n.i + 1; i < c.length; i++) { const a = c[i - 1][2], b = c[i][2]; if (a != null && b != null && b > a) up += (b - a) * (i === n.i + 1 ? 1 - n.t : 1); }
+    /* an out-and-back line is traced one way: the way back is the same line again */
+    const back = h.ty === 'out', leftKm = (tot - along) + (back ? tot : 0);
+    const off = n.d > Math.max(60, (p.coords.accuracy || 0) * 1.5);
+    $('#trailTitle').innerHTML = `${esc(h.n)}<small>${off ? `About ${Math.round(n.d / 10) * 10} m off the marked line. ` : ''}${back ? `${fmtKm(tot - along)} and ↑ ${fmtM(up)} to the top, ${fmtKm(leftKm)} in all` : `${fmtKm(leftKm)} and ↑ ${fmtM(up)} to go`}${p.coords.accuracy > 40 ? ` · position ±${Math.round(p.coords.accuracy)} m` : ''}</small>`;
+    $('#trailProg').style.width = (along / tot * 100).toFixed(1) + '%';
+    if (this.first && map) { this.first = false; map.easeTo({ center: ll, zoom: Math.max(map.getZoom(), 14), duration: 900 }); }
+  },
+  stop() {
+    this.on = false;
+    if (this.watch != null) { navigator.geolocation.clearWatch(this.watch); this.watch = null; }
+    if (this.lock) { this.lock.release().catch(() => { }); this.lock = null; }
+    $('#trailHud').hidden = true; setSrc('me', EMPTY);
+  }
+};
+
 /* Names, dog, home base and pace travel with the logbook, so a new device needs no setup. */
 function shareSettings() {
   putItem('cfg:settings', 'cfg', { names: S.names, dogName: S.dogName, dogSize: S.dogSize, home: S.home, pace: S.pace });
@@ -4037,7 +4146,7 @@ const Sync = {
         if (error) throw error;
         part.forEach(([id, v]) => { if (ITEMS[id] && ITEMS[id].u === v.u) ITEMS[id].dirty = false; });
       }
-      LS.set('lastPull', maxU); LS.set('items', ITEMS);
+      LS.set('lastPull', maxU); storeItems();
       if (changed) { applyCloudSettings(); rebuildHikes(); UI.refresh(); if (UI.state.tab === 'log') UI.renderLog(); if (UI.state.tab === 'photos') Album.render(); }
       setTimeout(() => Album.upload(), 500);
       this.setStatus('ok', 'Synced at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -4088,6 +4197,7 @@ function bindControls() {
   $('#fileBackup').onchange = e => { if (e.target.files[0]) Backup.import(e.target.files[0]); e.target.value = ''; };
   $('#btnYear').onclick = () => Fly.year();
   $('#flyStop').onclick = () => Fly.stop();
+  $('#trailStop').onclick = () => Trail.stop();
   $('#mapMsgCancel').onclick = () => Pick.stop();
   $('#editUndo').onclick = () => Edit.undo(); $('#editCancel').onclick = () => Edit.stop(); $('#editSave').onclick = () => Edit.save();
   document.addEventListener('keydown', e => {
@@ -4111,6 +4221,10 @@ function boot() {
   const wx = () => loadOverview().then(() => { UI.syncFind(); UI.refresh(); UI.renderMapDaybar(); }).catch(e => toast('Weather unavailable: ' + e.message, 4000));
   wx(); setInterval(wx, 30 * 6e4);
   loadDrive().then(() => UI.refresh());
+  const snow = () => loadSnow().then(() => { UI.refresh(); if (UI.detailId && HBY[UI.detailId]) UI.loadDetailWeather(HBY[UI.detailId]); }).catch(e => console.warn('snow', e.message));
+  snow(); setInterval(snow, 3 * 3600e3);
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
   Sync.start();
   setTimeout(() => Album.upload(), 6000);
   setTimeout(() => Routes.background(), 3500);

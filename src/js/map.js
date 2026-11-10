@@ -113,12 +113,14 @@ function hikeLayers(C) {
     { id: 'hk-lbl', type: 'symbol', source: 'hikes', minzoom: 9.5, layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': zi(9.5, 10.5, 14, 12.5), 'text-offset': [0, 1], 'text-anchor': 'top', 'text-max-width': 9, 'text-optional': true }, paint: { 'text-color': C.ink, 'text-halo-color': C.halo, 'text-halo-width': 1.6 } },
     { id: 'home-pt', type: 'circle', source: 'home', paint: { 'circle-radius': 6, 'circle-color': C.lake, 'circle-stroke-color': C.case, 'circle-stroke-width': 2 } },
     { id: 'home-lbl', type: 'symbol', source: 'home', layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': 11, 'text-offset': [0, 1], 'text-anchor': 'top' }, paint: { 'text-color': C.lake, 'text-halo-color': C.halo, 'text-halo-width': 1.5 } },
+    { id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 16, 'circle-color': '#2f7fe0', 'circle-opacity': 0.18 } },
+    { id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 7, 'circle-color': '#2f7fe0', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5 } },
     { id: 'pos', type: 'circle', source: 'pos', paint: { 'circle-radius': 7, 'circle-color': C.glow, 'circle-stroke-color': C.case, 'circle-stroke-width': 2.5 } }
   ];
 }
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
-const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY, build: EMPTY, 'build-pre': EMPTY };
+const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, me: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY, build: EMPTY, 'build-pre': EMPTY };
 
 function buildStyle() {
   setupDem();

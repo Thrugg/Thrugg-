@@ -43,61 +43,116 @@
     on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     emit() { listeners.forEach(fn => { try { fn(Cloud.status, Cloud.msg); } catch (e) { } }); },
 
-    /* Keep one localStorage key of an app in the cloud. The newest edit wins; a device that has never
-       synced takes the cloud copy first, so a fresh phone never overwrites the Mac with example data.
-       When newer data arrives, the page reloads once so the app starts from it. */
+    /* Keep one localStorage key of an app in the cloud.
+       Each device remembers the last copy it shared with the cloud (the "base"). On every sync the device's
+       copy and the cloud's copy are both compared with that base, field by field: a field changed on one side
+       only is kept, and when both sides changed the same field the later edit wins. So a phone holding old
+       numbers can no longer replace newer ones, and two devices editing different fields both keep their work.
+       A device that has never synced takes the cloud copy first, so a fresh phone never uploads example data.
+       opts.ignore lists top-level fields that are only about the screen (open tab, filters): they stay on the
+       device, never count as an edit and are never uploaded. When newer data arrives the page reloads once
+       (or opts.onRemote runs) so the app starts from it. */
     mirror(app, key, opts = {}) {
-      const st = { app, key, timer: null, busy: false };
-      const changed = () => { const m = readMeta(app); m.ts = new Date().toISOString(); writeMeta(app, m); clearTimeout(st.timer); st.timer = setTimeout(push, 2500); };
+      const st = { app, key, timer: null, busy: false, again: false };
+      const ignore = opts.ignore || [];
+      const baseKey = 'cloud.base.' + app;
+      const parse = s => { if (s == null) return null; try { return JSON.parse(s); } catch (e) { return s; } };
+      const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+      const strip = v => { if (!isObj(v) || !ignore.length) return v; const o = {}; for (const k in v) if (!ignore.includes(k)) o[k] = v[k]; return o; };
+      const canon = v => isObj(v) ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}' : Array.isArray(v) ? '[' + v.map(canon).join(',') + ']' : JSON.stringify(v === undefined ? null : v);
+      const same = (a, b) => canon(a) === canon(b);
+      const merge3 = (base, mine, theirs, mineWins) => {
+        if (same(mine, theirs)) return mine;
+        if (same(mine, base)) return theirs;
+        if (same(theirs, base)) return mine;
+        if (isObj(mine) && isObj(theirs)) {
+          const o = {}, b = isObj(base) ? base : {};
+          for (const k of new Set([...Object.keys(theirs), ...Object.keys(mine)])) {
+            const v = merge3(b[k], mine[k], theirs[k], mineWins);
+            if (v !== undefined) o[k] = v;
+          }
+          return o;
+        }
+        return mineWins ? mine : theirs;
+      };
+      const local = () => parse(lsGet(key));
+      const getBase = () => parse(lsGet(baseKey));
+      const setBase = v => { if (v == null) { try { rawRemove.call(localStorage, baseKey); } catch (e) { } } else lsSet(baseKey, JSON.stringify(v)); };
+      /* write a shared copy to this device, keeping the device's own screen fields */
+      const adopt = shared => {
+        const cur = local(); let next = shared;
+        if (isObj(shared) && isObj(cur)) { next = Object.assign({}, shared); for (const k of ignore) if (k in cur) next[k] = cur[k]; }
+        if (next == null) rawRemove.call(localStorage, key); else lsSet(key, typeof next === 'string' ? next : JSON.stringify(next));
+      };
+      const dirty = () => { const m = readMeta(app); return m.synced ? !same(strip(local()), getBase()) : lsGet(key) != null; };
+      const changed = () => {
+        const m = readMeta(app);
+        if (m.synced && lsGet(baseKey) != null && same(strip(local()), getBase())) return; // screen-only change, or no real change
+        m.edit = new Date().toISOString(); writeMeta(app, m);
+        clearTimeout(st.timer); st.timer = setTimeout(sync, 2500);
+      };
       Storage.prototype.setItem = function (k, v) { const was = this === localStorage && k === key ? lsGet(k) : null; rawSet.call(this, k, v); if (this === localStorage && k === key && String(v) !== was) changed(); };
       Storage.prototype.removeItem = function (k) { rawRemove.call(this, k); if (this === localStorage && k === key) changed(); };
-      const parse = s => { if (s == null) return null; try { return JSON.parse(s); } catch (e) { return s; } };
-      async function push() {
-        if (st.busy) return;
-        const m = readMeta(app); if (!m.synced) return pull();
-        const s = await Cloud.session().catch(() => null); if (!s) return;
-        st.busy = true;
-        try {
-          Cloud.setStatus('busy', 'Saving…');
-          const { error } = await sb.from('app_state').upsert({ app, data: parse(lsGet(key)), client_ts: m.ts || new Date().toISOString() }, { onConflict: 'owner,app' });
-          if (error) throw error;
-          m.pushed = m.ts; writeMeta(app, m);
-          Cloud.setStatus('ok', 'Saved to your account');
-        } catch (e) { Cloud.setStatus('err', 'Sync failed: ' + (e.message || e)); }
-        finally { st.busy = false; }
-      }
-      async function pull() {
-        if (st.busy || !Cloud.configured()) return;
+      const remoteArrived = stamp => {
+        if (opts.onRemote) { opts.onRemote(); return false; }
+        if (sessionStorage.getItem('cloud.reloaded.' + app) === stamp) return false;
+        sessionStorage.setItem('cloud.reloaded.' + app, stamp); location.reload(); return true;
+      };
+      async function sync() {
+        if (!Cloud.configured()) return;
+        if (st.busy) { st.again = true; return; }
         const s = await Cloud.session().catch(() => null);
         if (!s) { Cloud.setStatus('off', 'Not signed in'); return; }
-        st.busy = true;
+        st.busy = true; clearTimeout(st.timer); st.timer = null;
         try {
           Cloud.setStatus('busy', 'Syncing…');
-          const { data, error } = await sb.from('app_state').select('data,client_ts').eq('app', app).maybeSingle();
+          const { data: row, error } = await sb.from('app_state').select('data,client_ts').eq('app', app).maybeSingle();
           if (error) throw error;
-          const m = readMeta(app), localTs = m.ts ? Date.parse(m.ts) : 0;
-          if (data && (!m.synced || Date.parse(data.client_ts) > localTs)) {
-            const next = data.data == null ? null : typeof data.data === 'string' ? data.data : JSON.stringify(data.data);
-            const cur = lsGet(key);
-            Object.assign(m, { synced: true, ts: data.client_ts, pushed: data.client_ts }); writeMeta(app, m);
-            if (next !== cur && JSON.stringify(parse(next)) !== JSON.stringify(parse(cur))) {
-              if (next == null) rawRemove.call(localStorage, key); else lsSet(key, next);
-              st.busy = false;
-              if (opts.onRemote) opts.onRemote(); else if (sessionStorage.getItem('cloud.reloaded.' + app) !== data.client_ts) { sessionStorage.setItem('cloud.reloaded.' + app, data.client_ts); location.reload(); return; }
-            }
+          const m = readMeta(app), mine = strip(local()), began = new Date().toISOString();
+          /* finish a sync: remember the cloud's stamp, and keep the mark of an edit made while the sync was running */
+          const done = ts => { const e = readMeta(app).edit; writeMeta(app, Object.assign({ synced: true }, ts ? { ts } : {}, e && e > began ? { edit: e } : {})); };
+          /* take a shared copy onto the device, unless the person typed something while the sync was running */
+          const take = v => { if (same(strip(local()), mine)) { adopt(v); return true; } st.again = true; return false; };
+          const theirs = row ? strip(typeof row.data === 'string' ? parse(row.data) : row.data) : null;
+          const upload = async value => {
+            const ts = new Date().toISOString();
+            const { error } = await sb.from('app_state').upsert({ app, data: value, client_ts: ts }, { onConflict: 'owner,app' });
+            if (error) throw error;
+            setBase(value); done(ts);
+          };
+          let reload = false, msg = 'Synced';
+          if (!row) { // nothing in the cloud yet
+            if (mine != null) { await upload(mine); msg = 'Saved to your account'; } else done();
+          } else if (!m.synced) { // first sync on this device: the cloud copy comes first
+            setBase(theirs); done(row.client_ts);
+            if (!same(mine, theirs)) reload = take(theirs);
           } else {
-            m.synced = true; if (!m.ts && lsGet(key) != null) m.ts = new Date().toISOString(); writeMeta(app, m);
-            if (lsGet(key) != null && (!data || localTs > Date.parse(data.client_ts) || !m.pushed)) { st.busy = false; return push(); }
+            let base = getBase();
+            if (lsGet(baseKey) == null) { // installed before field-by-field merging: newest copy wins, once
+              const newer = Date.parse(row.client_ts) > (m.ts ? Date.parse(m.ts) : 0);
+              base = newer ? mine : theirs;
+            }
+            const mineCh = !same(mine, base), theirsCh = !same(theirs, base);
+            if (!mineCh && !theirsCh) { setBase(theirs); done(row.client_ts); }
+            else if (!mineCh) { setBase(theirs); done(row.client_ts); reload = take(theirs); }
+            else if (!theirsCh) { await upload(mine); msg = 'Saved to your account'; }
+            else {
+              const mineWins = (m.edit ? Date.parse(m.edit) : 0) >= Date.parse(row.client_ts);
+              const merged = merge3(base, mine, theirs, mineWins);
+              await upload(merged); msg = 'Saved to your account';
+              if (!same(merged, mine)) reload = take(merged);
+            }
           }
-          Cloud.setStatus('ok', 'Synced');
+          Cloud.setStatus('ok', msg);
+          if (reload) { st.busy = false; if (remoteArrived(row ? row.client_ts : '')) return; }
         } catch (e) { Cloud.setStatus('err', 'Sync failed: ' + (e.message || e)); }
         finally { st.busy = false; }
+        if (st.again) { st.again = false; if (dirty()) sync(); }
       }
-      st.pull = pull;
-      const start = () => { if (!Cloud.configured()) return; pull(); Cloud.badge(pull); };
+      st.pull = sync; st.sync = sync;
+      const start = () => { if (!Cloud.configured()) return; sync(); Cloud.badge(sync); };
       document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start) : start();
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pull(); else if (st.timer) { clearTimeout(st.timer); push(); } });
-      Cloud.on(() => { });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); else if (st.timer) sync(); });
       return st;
     },
 
