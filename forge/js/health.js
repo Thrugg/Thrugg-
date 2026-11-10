@@ -29,7 +29,7 @@ export function looseDate(s, dayFirst = true) {
    (the two blocks have equal length), or lines "date;value". Returns { days: {date: {...}} }. */
 const FIELD = { steps: 'steps', kcal: 'kcal', protein: 'p', carbs: 'c', fat: 'f', weight: 'w', bf: 'bf', rhr: 'rhr', hrv: 'hrv', vo2: 'vo2' };
 export function parseShortcut(text, dayFirst = true) {
-  if (!/FORGE1/i.test(text || '')) throw new Error('not a Forge Shortcut payload');
+  if (!/FORGE1/i.test(text || '') && !/^\s*@(steps|kcal|protein|carbs|fat|weight|bf|rhr)\b/im.test(text || '')) throw Object.assign(new Error('not a Forge Shortcut payload'), { code: 'notForge' });
   const days = {}; const sections = text.split(/^\s*@/m).slice(1);
   for (const sec of sections) {
     const lines = sec.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -57,8 +57,10 @@ export function parseShortcut(text, dayFirst = true) {
 const TYPES = {
   HKQuantityTypeIdentifierStepCount: 'steps', HKQuantityTypeIdentifierDietaryEnergyConsumed: 'kcal', HKQuantityTypeIdentifierDietaryProtein: 'p',
   HKQuantityTypeIdentifierDietaryCarbohydrates: 'c', HKQuantityTypeIdentifierDietaryFatTotal: 'f', HKQuantityTypeIdentifierBodyMass: 'w',
-  HKQuantityTypeIdentifierBodyFatPercentage: 'bf', HKQuantityTypeIdentifierRestingHeartRate: 'rhr', HKQuantityTypeIdentifierHeartRateVariabilitySDNN: 'hrv', HKQuantityTypeIdentifierVO2Max: 'vo2'
+  HKQuantityTypeIdentifierBodyFatPercentage: 'bf', HKQuantityTypeIdentifierRestingHeartRate: 'rhr', HKQuantityTypeIdentifierHeartRateVariabilitySDNN: 'hrv', HKQuantityTypeIdentifierVO2Max: 'vo2',
+  HKQuantityTypeIdentifierWalkingSpeed: 'ws', HKQuantityTypeIdentifierWalkingStepLength: 'sl' // iPhone mobility metrics: measured walking speed and step length
 };
+const SPEED = { 'm/s': 1, 'km/hr': 1 / 3.6, 'km/h': 1 / 3.6, 'mi/hr': 0.44704, 'mph': 0.44704 }, LENGTH = { cm: 1, m: 100, in: 2.54, ft: 30.48 };
 /* "2026-10-29 17:00:00 +0100" → epoch ms */
 export const hkTime = s => s ? Date.parse(`${s.slice(0, 10)}T${s.slice(11, 19)}${s.slice(20, 23)}:${s.slice(23, 25)}`) || null : null;
 const attr = (l, k) => { const i = l.indexOf(' ' + k + '="'); if (i < 0) return null; const s = i + k.length + 3; return l.slice(s, l.indexOf('"', s)); };
@@ -84,6 +86,8 @@ export class HealthAccumulator {
       if (f === 'kcal') v = this.energy(v, unit);
       if (f === 'w' && unit === 'lb') v *= 0.45359237;
       if (f === 'bf' && v <= 1) v *= 100;
+      if (f === 'ws') { v *= SPEED[unit] ?? 1; if (!(v > 0.3 && v < 2.5)) return; }
+      if (f === 'sl') { v *= LENGTH[unit] ?? 1; if (!(v > 30 && v < 130)) return; }
       if (f === 'steps' || f === 'kcal' || f === 'p' || f === 'c' || f === 'f') { const src = attr(l, 'sourceName') || '?'; const k = date + '|' + f; (this.sum[k] ||= {}); this.sum[k][src] = (this.sum[k][src] || 0) + v;
         if (f === 'steps' && date >= this.stepCut) { const a = hkTime(sd), b = hkTime(attr(l, 'endDate')) || a; if (a) this.stepSamples.push([a, Math.max(b, a + 1000), v, src]); } }
       else if (f === 'w' || f === 'bf') { const k = date + '|' + f; if (!this.first[k] || time < this.first[k].t) this.first[k] = { t: time, v }; }
@@ -102,7 +106,7 @@ export class HealthAccumulator {
   }
   energy(v, u) { if (!isFinite(v)) return null; return u === 'kJ' ? v / 4.184 : v; }
   result() {
-    const days = {}; const put = (k, v) => { const [d, f] = k.split('|'); (days[d] ||= {})[f] = Math.round(v * 10) / 10; };
+    const days = {}, mob = {}; const put = (k, v) => { const [d, f] = k.split('|'); if (f === 'ws' || f === 'sl') (mob[d] ||= {})[f] = Math.round(v * 100) / 100; else (days[d] ||= {})[f] = Math.round(v * 10) / 10; };
     for (const [k, src] of Object.entries(this.sum)) put(k, Math.max(...Object.values(src))); // overlapping sources (watch + phone): keep the largest
     for (const [k, x] of Object.entries(this.first)) put(k, x.v);
     for (const [k, a] of Object.entries(this.avg)) put(k, a.s / a.n);
@@ -114,7 +118,7 @@ export class HealthAccumulator {
       for (const [a, b, v, src] of this.stepSamples) { const ov = Math.min(b, w.t1) - Math.max(a, w.t0); if (ov > 0) per[src] = (per[src] || 0) + v * ov / (b - a); }
       w.steps = Math.round(Math.max(0, ...Object.values(per)));
     }
-    return { days, workouts: this.workouts };
+    return { days, workouts: this.workouts, mob };
   }
 }
 
@@ -172,5 +176,8 @@ export function summarise(res, age) {
     return w;
   }).filter(w => w.perWeek >= 0.25);
   const vo2d = dates.filter(d => res.days[d].vo2).pop();
-  return { stepsAvg, workouts, vo2: vo2d ? { date: vo2d, value: res.days[vo2d].vo2 } : null, nDays: dates.length, nWorkouts: res.workouts.length };
+  // measured gait over the same 4 weeks (needs a week of data): walking speed in m/s, step length in cm
+  const gait = k => { const xs = Object.entries(res.mob || {}).filter(([d, v]) => (!since || d >= since) && v[k] > 0).map(([, v]) => v[k]); return xs.length >= 7 ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length * 100) / 100 : null; };
+  const rhrs = dates.filter(d => d >= since && res.days[d].rhr > 0).map(d => res.days[d].rhr);
+  return { walkSpeed: gait('ws'), stepLen: gait('sl'), rhr: rhrs.length >= 5 ? Math.round(rhrs.reduce((a, b) => a + b, 0) / rhrs.length) : null, stepsAvg, workouts, vo2: vo2d ? { date: vo2d, value: res.days[vo2d].vo2 } : null, nDays: dates.length, nWorkouts: res.workouts.length };
 }

@@ -59,5 +59,9 @@ import('../js/renpho.js').then(({ dxaCalibration }) => {
   const cal = dxaCalibration(rowsC, [{ method: 'dxa', date: '2026-12-28', bf: 16.8, lean: 74.0, bmc: 3.5 }, { method: 'dxa', date: '2025-03-10', bf: 15.0 }]);
   assert.ok(Math.abs(cal.offset - (16.8 - 18.8)) < 1e-9); assert.equal(cal.n, 2); assert.ok(Math.abs(cal.ffmGap - (77.05 - 77.5)) < 1e-9);
   assert.equal(dxaCalibration({ '2025-04-20': { bf: 17.0 } }, [{ method: 'dxa', date: '2025-03-10', bf: 15.0 }]), null, '41 days apart: not used');
+  // the correction ages: ±3.5 points for 90 days, back to an uncalibrated ±6 after a year
+  const scan = [{ method: 'dxa', date: '2026-12-28', bf: 16.8 }], rr = { '2026-12-28': { bf: 18.6 } };
+  assert.equal(dxaCalibration(rr, scan, 7, '2027-02-01').sd, 3.5); assert.equal(dxaCalibration(rr, scan, 7, '2028-01-15').sd, 6);
+  const mid = dxaCalibration(rr, scan, 7, '2027-08-10'); assert.ok(mid.sd > 4.5 && mid.sd < 5.3, 'widening in between: ' + mid.sd); assert.ok(Math.abs(mid.offset + 1.8) < 1e-9, 'the offset itself is kept');
   console.log('renpho tests passed');
 });

@@ -174,7 +174,7 @@ export function renphoStats(rows) {
 /* Personal correction from a DEXA: Renpho readings within `maxDays` of a DEXA scan (mean of them) against the scan.
    Uses the most recent DEXA that has such readings. Readings further apart are not used: weight and water shift
    too much over a few weeks. */
-export function dxaCalibration(rows, scans, maxDays = 7) {
+export function dxaCalibration(rows, scans, maxDays = 7, asOf = null) {
   const dxas = (scans || []).filter(s => s.method === 'dxa' && s.bf > 0 && s.date).sort((a, b) => a.date < b.date ? 1 : -1);
   for (const s of dxas) {
     const near = Object.entries(rows || {}).filter(([d, r]) => r.bf > 0 && Math.abs(dn(d) - dn(s.date)) <= maxDays);
@@ -182,7 +182,11 @@ export function dxaCalibration(rows, scans, maxDays = 7) {
     const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
     const rb = mean(near.map(([, r]) => r.bf)), ffm = near.filter(([, r]) => r.ffm > 0);
     const dxaFfm = s.lean > 0 ? s.lean + (s.bmc || 0) : (s.weight > 0 ? s.weight * (1 - s.bf / 100) : null);
-    return { offset: s.bf - rb, dxaDate: s.date, dxaBf: s.bf, renphoBf: rb, n: near.length, ffmGap: ffm.length && dxaFfm ? mean(ffm.map(([, r]) => r.ffm)) - dxaFfm : null };
+    // The correction fixes the scale's bias, not its scatter, and it ages as the body changes: full trust (±3.5 points)
+    // for 90 days after the scan, then widening back to an uncalibrated scale (±6) at one year.
+    const lastDay = Object.keys(rows).sort().pop(), age = Math.max(0, dn(asOf || lastDay) - dn(s.date));
+    const sd = age <= 90 ? 3.5 : age >= 365 ? 6 : 3.5 + (age - 90) / 275 * 2.5;
+    return { offset: s.bf - rb, dxaDate: s.date, dxaBf: s.bf, renphoBf: rb, n: near.length, ageDays: age, sd, ffmGap: ffm.length && dxaFfm ? mean(ffm.map(([, r]) => r.ffm)) - dxaFfm : null };
   }
   return null;
 }

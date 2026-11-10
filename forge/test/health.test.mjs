@@ -75,4 +75,21 @@ const xmlFile = new File([xml], 'export.xml'); const r3 = await readHealthFile(x
 const oneLine = xml.replace(/\n\s*/g, '');
 const r4 = await readHealthFile(new File([oneLine], 'export.xml'), { days: 3650, now: new Date('2026-10-31T12:00:00Z') });
 assert.equal(r4.workouts.length, 2); assert.equal(r4.workouts[0].hr, 128); assert.equal(r4.days['2026-10-29'].steps, 11000); assert.equal(r4.workouts[0].steps, 1250);
+// iPhone mobility metrics: walking speed (any unit → m/s) and step length (→ cm), averaged over the last 4 weeks
+{
+  const { HealthAccumulator } = await import('../js/health.js');
+  const acc = new HealthAccumulator(180, new Date('2026-11-01T12:00:00'));
+  for (let i = 1; i <= 9; i++) {
+    const d = `2026-10-${String(20 + i).padStart(2, '0')}`;
+    acc.line(` <Record type="HKQuantityTypeIdentifierWalkingSpeed" sourceName="iPhone" unit="km/hr" startDate="${d} 09:00:00 +0100" endDate="${d} 09:05:00 +0100" value="${i % 2 ? 5.04 : 4.68}"/>`);
+    acc.line(` <Record type="HKQuantityTypeIdentifierWalkingStepLength" sourceName="iPhone" unit="cm" startDate="${d} 09:00:00 +0100" endDate="${d} 09:05:00 +0100" value="${i % 2 ? 74 : 72}"/>`);
+    acc.line(` <Record type="HKQuantityTypeIdentifierStepCount" sourceName="iPhone" unit="count" startDate="${d} 09:00:00 +0100" endDate="${d} 09:05:00 +0100" value="500"/>`);
+  }
+  acc.line(' <Record type="HKQuantityTypeIdentifierWalkingSpeed" sourceName="iPhone" unit="mi/hr" startDate="2026-10-30 19:00:00 +0100" endDate="2026-10-30 19:05:00 +0100" value="99"/>'); // absurd value dropped
+  const res = acc.result(), sm = summarise(res, 30);
+  assert.ok(Math.abs(sm.walkSpeed - 1.36) < 0.02, 'walking speed in m/s: ' + sm.walkSpeed); assert.ok(Math.abs(sm.stepLen - 73.1) < 0.2, 'step length in cm: ' + sm.stepLen);
+  assert.equal(res.days['2026-10-21'].ws, undefined, 'gait metrics are not written into the daily log');
+  assert.ok(parseShortcut('@steps\n2026-10-29\n9000').days['2026-10-29'].steps === 9000, 'a payload without the FORGE1 line is still read');
+  assert.throws(() => parseShortcut('hello world'), /not a Forge/);
+}
 console.log('health import tests passed');

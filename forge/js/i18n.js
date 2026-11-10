@@ -311,6 +311,302 @@ const FR = {
   }
 };
 
+/* ---------- 2026.11: review additions and corrected strings (merged over the dictionaries above) ---------- */
+const EN2 = {
+  common: { gotIt: 'Got it' },
+  shell: { update: 'A new version of Forge is ready.', reload: 'Reload', saveFail: 'This device refused to save. Free some storage, then download a backup under Settings.' },
+  today: {
+    installT: 'Put Forge on your Home Screen', install: 'Share button → Add to Home Screen. The Home Screen app keeps its data apart from Safari, so set it up there: sign in under Settings to bring your data across, or restore a backup.',
+    calm: 'Calm mode is on: calorie numbers are hidden here. Your trend and habits carry the plan.', trendAlt: 'Trend weight over the last {n} weigh-ins: from {a} to {b} {u}.', trendNote: 'Dots are weigh-ins, the line is your trend: it filters out water and sits on your real weight.', openArena: 'Open the Arena'
+  },
+  quest: {
+    title: 'This week', lead: '{d} days left. Three habits that make every number in Forge more accurate.', lead1: 'Last day of the week.',
+    weigh: 'Weigh in on 4 mornings', fuel: 'Log your calories on 6 days', move: 'Reach {n} steps on 5 days', done: 'Done', prog: '{n} of {g}', side: 'Side quest',
+    boss: '{ev}: {v} takes you to {to}', retest: 'Re-test your {ev}: the record dates from {d}', tape: 'Take this week’s tape measurements', vitals: 'Do a healthspan check: grip and balance, three minutes', photo: 'Photo check-in: a month since the last'
+  },
+  review: {
+    title: 'Your week', trend: 'Trend weight', plan: 'plan {v}', noPlan: 'no plan set', intake: 'Average intake', target: 'target {v}, {n} days logged', days: '{n} days logged', steps: 'Steps a day', assumed: 'Forge assumes {v}',
+    winL: 'Win', adjL: 'Next week', useSteps: 'Use {s} steps',
+    win: { onPace: 'Your weight moved {d} against a plan of {e}: right on pace.', logging: 'Calories logged on nearly every day. That is what lets Forge measure your maintenance instead of guessing it.', steps: '{s} steps a day, above the {a} your plan counts on.', weighins: 'Five or more weigh-ins: your trend line is solid.', protein: 'Protein on target.', showedUp: 'You logged. Consistency beats precision.' },
+    adj: {
+      steady: 'Nothing to change. Keep the same rhythm.', start: 'Log a weigh-in to start the week.',
+      weighMore: 'Fewer than three weigh-ins. Aim for four mornings so the trend can tell water from real change.',
+      logMore: 'Calories on fewer than five days. The measured maintenance pauses until logging is back on most days.',
+      tooFast: 'You lost {d} against a plan of {e}. If that holds for a second week, add 100–150 kcal: losing faster costs muscle.',
+      overTarget: 'Intake averaged {i} against a target of {tg}. Tighten up, or raise the target and accept a slower pace: both are fine.',
+      underTarget: 'Intake averaged {i}, well under your {tg} target. Eat up to the target: a bigger deficit does not speed up fat loss for long.',
+      stepsLow: '{s} steps a day against the {a} Forge assumes. That overstates your maintenance by about {k} kcal.',
+      stepsHigh: '{s} steps a day against the {a} Forge assumes. Your maintenance is about {k} kcal higher than shown.',
+      patience: 'Weight moved {d} against a plan of {e}. One week proves little, since water alone shifts by a kilo or two. Change nothing unless next week says the same.'
+    }
+  },
+  season: {
+    label: 'Season {n}, week {w} of {m}', title: 'Season {n}', lead: 'Forge runs in 12-week seasons. A fresh start every quarter keeps a long project alive: across 16 trials, game-like features worked about three times better while a programme was running than months after it ended (Mazeas 2022).',
+    pips: 'One bar per week, filled by the weekly habits you completed.', this: 'This season', prev: 'Season {n}', live: 'week {w} of {m}',
+    quests: 'Weekly habits completed', days: 'Days with a log', weigh: 'Weigh-ins', weight: 'Trend weight', records: 'Records logged', recordsV: '{n} in {e} events', best: 'Highest tier reached:'
+  },
+  fuel: {
+    slow: 'slow', appliedToast: 'Plan set', fine: 'Fine-tune: stairs, step length, walking speed',
+    stride: 'Step length', strideHint: 'Leave empty to use your height. Your iPhone measures it (Health → Mobility → Walking Step Length), or walk 20 steps, measure the distance and divide by 20.',
+    src: { predicted: 'Predicted from your profile', blended: 'Measured from your logs, starting from the formula', blendedShort: 'measured from your logs' },
+    stepsDetail: '{steps} steps → {km} km at {c} kcal per kg per km ({v} km/h)',
+    walkSpeed: 'Walking speed', walkSpeedHint: 'Leave empty for 4.5 km/h. Your iPhone measures it (Health → Browse → Mobility → Walking Speed) and the Health import fills it in.',
+    eaRange: 'kcal per kg of lean mass after training (likely {lo}–{hi}).',
+    eaL: { ok: 'Enough to train, recover and keep hormones steady.', amber_m: 'Reduced. Fine for a planned cut of a few weeks. In men problems usually start lower, and symptoms matter more than the number.', amber_f: 'Low. Under 30, a woman’s cycle, bones and recovery are at risk when it lasts: keep the cut short and watch for symptoms.', amber_null: 'Reduced: keep the cut short and watch for symptoms.', red: 'Too low. Forge does not apply plans under 25.' },
+    checkin: 'Recovery check-in (30 seconds)', checkinFlag: 'Your check-in of {d} flagged {n} sign(s).',
+    flags: { eaAmber: 'Energy availability under 30. Pick a slower rate or plan a maintenance break every 6–12 weeks, and do the recovery check-in every two weeks.' },
+    projAlt: 'Projected weight over 16 weeks: from {a} to about {b} {u} (likely {lo}–{hi}).',
+    whatif: 'What if…', goal: 'Goal weight', eta: '{g}: around {d} on this plan (between {lo} and {hi}).', etaOpen: 'much later', etaNo: 'This plan does not move toward that weight.',
+    wiSteps: 'Walk more or less each day', wiHint: 'Move the slider to see what a change in daily steps is worth.',
+    wiMore: '{s} more steps a day ≈ {k} kcal more maintenance: about {w} {u} more fat loss a week at the same intake, or {k} kcal more food at the same pace.',
+    wiLess: '{s} fewer steps a day ≈ {k} kcal less maintenance: about {w} {u} less fat loss a week at the same intake.',
+    learnLead: 'Formulas miss by ±10 % for a third of people. Your weight trend and your logged calories measure your maintenance directly.',
+    lMeasured: 'Measured', lFormula: 'Formula', lRatio: 'Logging ratio', lRatioS: 'measured ÷ formula',
+    learnOk: '{a} – {b}: you logged {i} kcal a day on {k} days while your trend moved {slope} a week.',
+    ratioOk: 'Your logs and the formula agree within {p} %. A good sign for both.',
+    ratioLow: 'Measured is {p} % under the formula. The usual cause is logging, not a slow metabolism: food diaries run 0–20 % under real intake even in careful, lean adults. It does not hurt your plan, because targets are set in the same “logged calories” you will keep logging.',
+    ratioHigh: 'Measured is {p} % above the formula: you burn more than predicted, or log generously. Targets follow the measured figure.',
+    partial: '{n} day(s) with under half your usual intake were treated as not fully logged and left out.',
+    water: { trimmed: 'Your plan changed on {d}. The first 10 days after a change are mostly water and glycogen, so they are left out.', recent: 'Your plan changed on {d}. Early weight change is mostly water, so the range is wider for now.' },
+    learnWeight: 'The measured figure carries {pct} % of the estimate, the formula the rest.',
+    nSpan: 'Days covered', nWeigh: 'Weigh-ins', nKcal: 'Days with calories', learnHow: 'How it’s measured',
+    learnHowText: 'Energy balance over the last 28 days: maintenance = average logged intake − change in trend weight × the energy in a kilo of that change (fat and lean, after Forbes and Hall). The trend comes from a Kalman filter, which does not run behind during a cut the way a moving average does. The result is in your own logging units, so the formula only serves as a starting point and fades as your logs build up.',
+    howText: 'Resting metabolism: an ensemble of published equations. Mifflin-St Jeor always; when your body fat is known and you lift 3+ times a week, 75 % comes from lean-mass equations built on athletes (Tinsley 2019, ten Haaf 2014, Cunningham 1980). Daily life: awake hours at your job’s MET level. Steps: walking cost from your height and speed (Ludlow & Weyand 2016, about 0.6 kcal per kg per km above rest), minus the steps of your workouts. Workouts: (MET − 1) × your own resting rate × hours, METs from the 2024 Adult Compendium; runs with a pace use 1 kcal per kg per km. After-burn: 5 % of moderate and hard sessions. Digestion: 10 % of intake. The band combines ±10 % on resting metabolism and ±25 % on activity. Once you log, your weight trend and intake measure maintenance directly (see “Learning your real maintenance”).'
+  },
+  phys: {
+    leanShort: 'lean', measured: 'From photos: waist {w} {u}, neck {n} {u}{h}',
+    m: { biaRenpho: 'Renpho scale (median of {n} readings)', biaRenphoCal: 'Renpho scale, corrected by your DEXA ({o} points; median of {n} readings)' },
+    rp: { subqLead: 'The fat under the skin: the part that shows in the mirror. A manufacturer estimate; no independent validation exists.',
+      caveat: 'Bioimpedance estimates. In a 12-week validation against DEXA, a foot-to-foot scale repeated itself within 2 % yet did not track the real change in body fat. Read its trend as a weight trend, and judge fat loss by tape, photos and DEXA. Forge uses the weight, and the body-fat figure as a rough estimate: ±6 points, ±3.5 for three months after a DEXA calibration, then widening again over a year.' }
+  },
+  hs: {
+    title: 'Healthspan', lead: 'Five markers that say more about the next thirty years than your weight does. Each stands alone: Forge never blends them into a “biological age”.',
+    vo2: 'Aerobic fitness', vo2B: { low: 'Low for your age: the group with the highest risk', below: 'Below average for your age', above: 'Above average for your age', high: 'High for your age', elite: 'Elite for your age (top 2.3 %)' }, addArena: 'Log a VO₂max or a 5 km',
+    grip: 'Grip strength', gripB: { ok: 'Strong enough (T-score {t})', low: 'On the low side (T-score {t})', weak: 'Weak grip (T-score {t})' }, add: 'Add a check',
+    stance: 'One-leg stance', stanceB: { ok: 'Held 10 seconds', low: 'Under 10 seconds: train your balance' }, stanceIn: 'One-leg stance: seconds held, 10 at most',
+    whtr: 'Waist ÷ height', whtrB: { ok: 'Under 0.5: healthy', mid: '0.5–0.6: raised risk', high: 'Over 0.6: high risk' }, addTape: 'Add tape measurements',
+    rhr: 'Resting heart rate', rhrB: 'bpm, mean of {n} days', rhrNone: 'Comes with the Apple Health import',
+    last: 'Grip and balance checked on {d}.', check: 'Healthspan check', why: 'Why these five',
+    evidence: [
+      'Aerobic fitness: among 122,007 adults followed for 1.1 million person-years, the least fit had five times the mortality hazard of the fittest (5.04). In the same cohort coronary artery disease made a much smaller difference (1.29). Mandsager 2018.',
+      'Grip strength peaks around age 30 at a median of 51 kg in men and 31 kg in women (best of all tries, 12 British studies). Forge shows your T-score against that peak; below −2.5 (27 kg for men, 16 kg for women) counts as weak grip. Dodds 2014.',
+      'One-leg stance: of 1,702 adults aged 51 to 75, those who could not hold 10 seconds had 1.84 times the mortality hazard over a median of 7 years (17.5 % died, against 4.6 %). It was studied in that age group only; before 50 treat it as a balance check, not a forecast. Araujo 2022.',
+      'Waist ÷ height under 0.5 is the simplest screen for the abdominal fat that matters to health.',
+      'Resting heart rate is shown as a trend. A drop over months usually means better aerobic fitness; a jump of 5–10 beats over a few days often means illness or short recovery.'
+    ],
+    gripHow: 'Hand dynamometer, elbow bent at 90°, best of three tries with each hand. Many gyms and physiotherapists have one.',
+    stanceHow: 'Barefoot, on one leg, the free foot resting against the back of the standing calf, arms at your sides, eyes ahead. Up to three tries per leg; enter the best.'
+  },
+  arena: {
+    howScores: 'How the scores work', peakShort: 'Your ceiling: the two best domains.', balanceShort: 'Every domain counts; a weak one drags it down.',
+    badEntry: 'Enter a result first.', implausible: 'That would beat the world record. Check the entry: minutes and seconds, kg and lb.',
+    radarAlt: 'Domain scores: {s}.', bosses: 'Closest level-ups', bossesLead: 'The next tier or level that takes the smallest improvement.', bossGap: 'now {now}, {p} % to go',
+    ffa: '{l} on the French federation’s grid. {pts} combined-events points.', ffaAge: '{l} on the French federation’s grid: worth {o} at open age (age factor × {k}). {pts} combined-events points.', ffaBelow: 'Below D7', retest: 'over a year old',
+    glTitle: 'Powerlifting score', glTotal: 'Total {tot} at {bw}: {pts} IPF GL points', glBench: 'Bench alone: {pts} GL points',
+    glText: 'The federation’s formula removes the bodyweight advantage, so lifters of any size and either sex compare on one scale (around 100 is world class). From your estimated maxes; age class {c}.',
+    ageClass: { subjunior: 'Sub-junior', junior: 'Junior', open: 'Open', m1: 'Masters 1 (40–49)', m2: 'Masters 2 (50–59)', m3: 'Masters 3 (60–69)', m4: 'Masters 4 (70+)' },
+    ladderNote: 'The percent bands are among people who do the event. Sprints use the French federation’s levels instead, because no population data exist for sprint times.', ageN: 'age {a}', ffaStd: 'Times shown for your age (WMA factor × {k})',
+    peakText: 'Your two best domains, averaged: your ceiling.',
+    overallNote: 'Overall levels use the same ladder as single records, applied to the score. Scores are averaged on the bell-curve scale, where going from 95 to 99 counts for more than going from 50 to 54.'
+  },
+  tier: { ffa: ['Slower than D7', 'D7 to D5 (département)', 'D4 to D1 (département)', 'R6 to R1 (regional)', 'IR4 to IR1 (inter-regional)', 'N4 to N1 (national)', 'IB (international B)', 'IA (international A)'] },
+  duel: {
+    title: 'Duels', lead: 'Compare with a partner or a friend. Every score is already relative to each person’s own sex and age group, so a duel between any two people is fair.',
+    you: 'You', score: 'You {a} – {b}', noCommon: 'No domain in common yet', gl: 'Powerlifting (GL points)', asOf: 'Their scores as of {d}.', fair: 'A domain counts when both of you have a score; within one point is a draw.',
+    remove: 'Remove this rival', share: 'Share my duel code', add: 'Add a rival’s code',
+    shareLead: 'This code holds your first name and your scores from 0 to 100. No weight, no body fat, no raw results. Send it however you like; Forge sends nothing itself.',
+    code: 'Duel code', copy: 'Copy', send: 'Send', copied: 'Code copied', msg: '{n} challenges you in Forge. Paste this under Arena → Duels:', addLead: 'Paste the code your rival sent you.', bad: 'This is not a Forge duel code.', added: '{n} added'
+  },
+  ck: {
+    title: 'Recovery check-in', lead: 'Over the last four weeks, which of these have been true? Signs like these matter more than any calorie figure.',
+    q: { tired: 'Tired most days, even after a normal night', ill: 'Ill or injured more often than usual', libido_m: 'Clearly lower sex drive, or fewer morning erections', libido_f: 'Clearly lower sex drive', mood: 'Irritable, low or unusually cold', perf: 'Training performance falling for more than two weeks', cycle: 'Periods lighter, irregular or missing' },
+    save: 'Check', none: 'No warning signs. Check again in two weeks while you are in a deficit.', one: 'One sign. Sleep and stress can explain it: check again in a week, and do not lower your calories in the meantime.',
+    two: 'Two or more signs during a deficit point to too little energy for your training. Move to maintenance for at least two weeks. If they persist, or your periods have stopped, see a doctor, ideally in sports medicine.', src: 'Signs taken from the'
+  },
+  lvl: { kicker: 'New tier in {ev}', from: 'Up from {a}.', first: 'Your first ranked record here.', ok: 'Onwards' },
+  new: {
+    title: 'What changed in this version', lead: 'A full review against the research. Some of your numbers moved; here is why.',
+    items: [
+      ['Sprints use real federation levels', 'Times are age-adjusted with the official World Masters factors, then placed on the French federation’s grid (D7 to IA). A tier can shift by one.'],
+      ['The trend line no longer runs behind', 'During a cut the old line read about a week late. The new one sits on your real weight.'],
+      ['Maintenance in your own logging units', 'Once you log, Forge trusts your weight trend and logged calories over the formula, and shows the ratio between the two.'],
+      ['Steps count for more', 'Walking cost now follows your height and speed: about 0.6 kcal per kg per km instead of 0.5.'],
+      ['Scores averaged more fairly', 'Peak and domain scores are averaged on the bell-curve scale. Most move by a point or two.'],
+      ['New', 'Weekly habits and 12-week seasons, your week in review, closest level-ups, duels, a healthspan panel, a what-if planner and a calm mode.']
+    ]
+  },
+  set: {
+    calm: 'Calm mode: hide calorie numbers on Today', calmHint: 'Keeps the trend, protein and habits, and drops the calorie quest. Worth switching on whenever tracking starts to feel heavy.',
+    syncYes: 'Synced', syncYesList: 'Profile, daily entries (weight, body composition, calories, steps), Renpho readings, plan, records, tape and scan values, healthspan checks, rival scores.', syncNo: 'Never synced', syncNoList: 'Photos. They stay on this device.',
+    syncConsent: 'I agree to store this health data in my own account. European data-protection law treats health data as sensitive, so it needs a clear yes.',
+    syncDelete: 'To erase the synced copy as well, use “Delete everything” below and choose “everywhere”.', syncOn: 'Signed in as {e}',
+    wipeConfirm: 'Delete all Forge data on this device? If you sign in again later, your synced data comes back.',
+    wipeT: 'Delete everything', wipeLead: 'You are signed in, so choose how far this goes.', wipeDevice: 'This device only', wipeDeviceH: 'Signs you out and clears this device. Your account keeps its copy.', wipeAll: 'Everywhere', wipeAllH: 'Clears this device and your account. Your other devices empty at their next sync. Download a backup first if in doubt.',
+    hPasteBox: 'Paste the text by hand', hPasteBoxLead: 'Run the Shortcut, then press and hold in the box and choose Paste.', hImport: 'Import', hClipBlocked: 'The clipboard could not be read. Paste the text here instead.', hNotForge: 'That is not the text the Forge Shortcut produces. Run the Shortcut again, then paste.',
+    hOffer: 'Update your profile from Apple Health?', hUse: 'Use the ticked values',
+    hApplySteps: 'Step average: {v} a day over 4 weeks (now {o})', hApplyWorkouts: 'Training sessions: the {n} activities of the last 4 weeks', hApplyVo2: 'Arena: the Watch’s VO₂max ({v})', hApplySpeed: 'Walking speed: {v} km/h, measured by your iPhone', hApplyStride: 'Step length: {v} cm, measured by your iPhone (height formula: {o} cm)',
+    guideSteps: [
+      'Open Shortcuts, tap +, and name the shortcut “Forge sync”.',
+      'Add “Find Health Samples”. Set Type: Step Count. Start Date: is in the last 35 days. Group by: Day. Fill Missing: off. Sort by: Start Date, Oldest First.',
+      'Add the same action for Dietary Energy, Protein, Carbohydrates and Total Fat, each with Group by: Day and Fill Missing off.',
+      'Add it again for Weight (Unit: kg) and Body Fat Percentage, with no grouping, and for Resting Heart Rate with Group by: Day.',
+      'Add a “Text” action. Type FORGE1 on the first line. Then, for each search, add two lines: a label, then the variable. Labels: @steps @kcal @protein @carbs @fat @weight @bf @rhr. Under each label insert the search’s variable twice: first tap it and choose Start Date (Date Format: ISO 8601), then on the next line the same variable with Value. Example:\n@steps\n[Health Samples · Start Date]\n[Health Samples · Value]',
+      'Add “Copy to Clipboard” (input: Text).',
+      'Run it once with the iPhone unlocked (Health data is encrypted while it is locked) and allow Health access. Then open Forge from its Home Screen icon and tap “Paste from Shortcut” on Today.',
+      'Optional: add the Shortcuts widget, so the sync is one tap.'
+    ],
+    guideNote: 'I could not test these steps on an iPhone. If the paste button reports a problem, use “Paste the text by hand”; if a menu is named differently on your iOS version, the full Health export always works.'
+  }
+};
+const FR2 = {
+  common: { gotIt: 'Compris' },
+  shell: { update: 'Une nouvelle version de Forge est prête.', reload: 'Recharger', saveFail: 'Cet appareil a refusé d’enregistrer. Libère de l’espace, puis télécharge une sauvegarde dans Réglages.' },
+  today: {
+    installT: 'Mets Forge sur ton écran d’accueil', install: 'Bouton Partager → Sur l’écran d’accueil. L’app de l’écran d’accueil garde ses données à part de Safari : configure-la là, en te connectant dans Réglages pour récupérer tes données, ou en restaurant une sauvegarde.',
+    calm: 'Mode serein activé : les calories sont masquées ici. Ta tendance et tes habitudes portent le plan.', trendAlt: 'Poids tendance sur les {n} dernières pesées : de {a} à {b} {u}.', trendNote: 'Les points sont tes pesées, la ligne ta tendance : elle filtre l’eau et colle à ton poids réel.', openArena: 'Ouvrir l’Arène'
+  },
+  quest: {
+    title: 'Cette semaine', lead: 'Encore {d} jours. Trois habitudes qui rendent chaque chiffre de Forge plus juste.', lead1: 'Dernier jour de la semaine.',
+    weigh: 'Te peser 4 matins', fuel: 'Saisir tes calories 6 jours', move: 'Atteindre {n} pas 5 jours', done: 'Fait', prog: '{n} sur {g}', side: 'Quête annexe',
+    boss: '{ev} : {v} te fait passer {to}', retest: 'Refais ton test {ev} : le record date de {d}', tape: 'Prends tes mesures au mètre ruban de la semaine', vitals: 'Fais un bilan longévité : poigne et équilibre, trois minutes', photo: 'Bilan photo : un mois depuis le dernier'
+  },
+  review: {
+    title: 'Ta semaine', trend: 'Poids tendance', plan: 'plan {v}', noPlan: 'pas de plan', intake: 'Apport moyen', target: 'objectif {v}, {n} jours saisis', days: '{n} jours saisis', steps: 'Pas par jour', assumed: 'Forge suppose {v}',
+    winL: 'Réussite', adjL: 'La semaine prochaine', useSteps: 'Utiliser {s} pas',
+    win: { onPace: 'Ton poids a bougé de {d} pour un plan de {e} : pile dans le rythme.', logging: 'Calories saisies presque tous les jours. C’est ce qui permet à Forge de mesurer ta maintenance au lieu de la deviner.', steps: '{s} pas par jour, au-dessus des {a} sur lesquels ton plan compte.', weighins: 'Cinq pesées ou plus : ta courbe de tendance est solide.', protein: 'Protéines dans l’objectif.', showedUp: 'Tu as saisi. La régularité bat la précision.' },
+    adj: {
+      steady: 'Rien à changer. Garde le même rythme.', start: 'Enregistre une pesée pour lancer la semaine.',
+      weighMore: 'Moins de trois pesées. Vise quatre matins pour que la tendance distingue l’eau du vrai changement.',
+      logMore: 'Calories sur moins de cinq jours. La maintenance mesurée se met en pause jusqu’à ce que tu saisisses la plupart des jours.',
+      tooFast: 'Tu as perdu {d} pour un plan de {e}. Si ça se confirme une deuxième semaine, ajoute 100 à 150 kcal : perdre plus vite coûte du muscle.',
+      overTarget: 'Apport moyen de {i} pour un objectif de {tg}. Resserre, ou relève l’objectif et accepte un rythme plus lent : les deux se défendent.',
+      underTarget: 'Apport moyen de {i}, nettement sous ton objectif de {tg}. Mange jusqu’à l’objectif : un déficit plus gros n’accélère pas longtemps la perte de gras.',
+      stepsLow: '{s} pas par jour contre les {a} que Forge suppose. Ta maintenance est surestimée d’environ {k} kcal.',
+      stepsHigh: '{s} pas par jour contre les {a} que Forge suppose. Ta maintenance est environ {k} kcal plus haute qu’affiché.',
+      patience: 'Ton poids a bougé de {d} pour un plan de {e}. Une semaine prouve peu, l’eau seule fait varier d’un kilo ou deux. Ne change rien tant que la semaine prochaine ne dit pas la même chose.'
+    }
+  },
+  season: {
+    label: 'Saison {n}, semaine {w} sur {m}', title: 'Saison {n}', lead: 'Forge avance par saisons de 12 semaines. Un nouveau départ chaque trimestre garde un long projet vivant : sur 16 essais, les mécaniques de jeu ont agi environ trois fois plus pendant un programme que des mois après sa fin (Mazeas 2022).',
+    pips: 'Une barre par semaine, remplie par les habitudes tenues.', this: 'Cette saison', prev: 'Saison {n}', live: 'semaine {w} sur {m}',
+    quests: 'Habitudes hebdo tenues', days: 'Jours avec une saisie', weigh: 'Pesées', weight: 'Poids tendance', records: 'Records enregistrés', recordsV: '{n} sur {e} épreuves', best: 'Plus haut palier atteint :'
+  },
+  fuel: {
+    slow: 'lente', appliedToast: 'Plan appliqué', fine: 'Affiner : escaliers, longueur de pas, vitesse de marche',
+    stride: 'Longueur de pas', strideHint: 'Laisse vide pour utiliser ta taille. Ton iPhone la mesure (Santé → Mobilité → Longueur de pas), ou fais 20 pas, mesure la distance et divise par 20.',
+    src: { predicted: 'Estimé d’après ton profil', blended: 'Mesuré d’après tes saisies, en partant de la formule', blendedShort: 'mesuré d’après tes saisies' },
+    stepsDetail: '{steps} pas → {km} km à {c} kcal par kg et par km ({v} km/h)',
+    walkSpeed: 'Vitesse de marche', walkSpeedHint: 'Laisse vide pour 4,5 km/h. Ton iPhone la mesure (Santé → Parcourir → Mobilité → Vitesse de marche) et l’import Santé la remplit.',
+    eaRange: 'kcal par kg de masse maigre après l’entraînement (probablement {lo}–{hi}).',
+    eaL: { ok: 'Assez pour t’entraîner, récupérer et garder tes hormones stables.', amber_m: 'Réduite. Acceptable pour une sèche planifiée de quelques semaines. Chez l’homme les problèmes commencent en général plus bas, et les symptômes comptent plus que le chiffre.', amber_f: 'Basse. Sous 30, le cycle, les os et la récupération d’une femme sont exposés si ça dure : garde la sèche courte et surveille les symptômes.', amber_null: 'Réduite : garde la sèche courte et surveille les symptômes.', red: 'Trop basse. Forge n’applique pas de plan sous 25.' },
+    checkin: 'Bilan récupération (30 secondes)', checkinFlag: 'Ton bilan du {d} a relevé {n} signe(s).',
+    flags: { eaAmber: 'Disponibilité énergétique sous 30. Choisis un rythme plus lent ou prévois une pause à la maintenance toutes les 6 à 12 semaines, et fais le bilan récupération toutes les deux semaines.' },
+    projAlt: 'Poids projeté sur 16 semaines : de {a} à environ {b} {u} (probablement {lo}–{hi}).',
+    whatif: 'Et si…', goal: 'Poids visé', eta: '{g} : vers le {d} avec ce plan (entre le {lo} et le {hi}).', etaOpen: 'bien plus tard', etaNo: 'Ce plan ne va pas vers ce poids.',
+    wiSteps: 'Marcher plus ou moins chaque jour', wiHint: 'Bouge le curseur pour voir ce que vaut un changement de pas quotidiens.',
+    wiMore: '{s} pas de plus par jour ≈ {k} kcal de maintenance en plus : environ {w} {u} de gras perdu en plus par semaine à apport égal, ou {k} kcal de nourriture en plus au même rythme.',
+    wiLess: '{s} pas de moins par jour ≈ {k} kcal de maintenance en moins : environ {w} {u} de gras perdu en moins par semaine à apport égal.',
+    learnLead: 'Les formules se trompent de ±10 % pour un tiers des gens. Ta tendance de poids et tes calories saisies mesurent ta maintenance directement.',
+    lMeasured: 'Mesuré', lFormula: 'Formule', lRatio: 'Ratio de saisie', lRatioS: 'mesuré ÷ formule',
+    learnOk: '{a} – {b} : tu as saisi {i} kcal par jour sur {k} jours pendant que ta tendance bougeait de {slope} par semaine.',
+    ratioOk: 'Tes saisies et la formule s’accordent à {p} % près. Bon signe pour les deux.',
+    ratioLow: 'Le mesuré est {p} % sous la formule. La cause habituelle est la saisie, pas un métabolisme lent : les journaux alimentaires sont 0 à 20 % sous l’apport réel, même chez des adultes minces et soigneux. Ça ne fausse pas ton plan, car les objectifs sont fixés dans les mêmes « calories saisies » que tu continueras à saisir.',
+    ratioHigh: 'Le mesuré est {p} % au-dessus de la formule : tu dépenses plus que prévu, ou tu saisis large. Les objectifs suivent le chiffre mesuré.',
+    partial: '{n} jour(s) à moins de la moitié de ton apport habituel ont été considérés comme incomplets et écartés.',
+    water: { trimmed: 'Ton plan a changé le {d}. Les 10 premiers jours après un changement sont surtout de l’eau et du glycogène : ils sont écartés.', recent: 'Ton plan a changé le {d}. Les premières variations sont surtout de l’eau : la fourchette est plus large pour l’instant.' },
+    learnWeight: 'Le chiffre mesuré porte {pct} % de l’estimation, la formule le reste.',
+    nSpan: 'Jours couverts', nWeigh: 'Pesées', nKcal: 'Jours avec calories', learnHow: 'Comment c’est mesuré',
+    learnHowText: 'Bilan d’énergie sur les 28 derniers jours : maintenance = apport moyen saisi − variation du poids tendance × l’énergie d’un kilo de cette variation (gras et maigre, d’après Forbes et Hall). La tendance vient d’un filtre de Kalman, qui ne prend pas de retard pendant une sèche comme le fait une moyenne mobile. Le résultat est dans tes propres unités de saisie : la formule ne sert que de point de départ et s’efface à mesure que tes saisies s’accumulent.',
+    howText: 'Métabolisme de repos : un ensemble d’équations publiées. Mifflin-St Jeor toujours ; quand ta masse grasse est connue et que tu fais de la musculation 3 fois par semaine ou plus, 75 % vient d’équations de masse maigre construites sur des sportifs (Tinsley 2019, ten Haaf 2014, Cunningham 1980). Vie quotidienne : heures d’éveil au niveau MET de ton travail. Pas : coût de la marche selon ta taille et ta vitesse (Ludlow et Weyand 2016, environ 0,6 kcal par kg et par km au-dessus du repos), moins les pas de tes séances. Séances : (MET − 1) × ton propre métabolisme de repos × heures, MET du Compendium 2024 ; les courses avec allure utilisent 1 kcal par kg et par km. Post-combustion : 5 % des séances modérées et intenses. Digestion : 10 % des apports. La fourchette combine ±10 % sur le métabolisme de repos et ±25 % sur l’activité. Dès que tu saisis, ta tendance de poids et tes apports mesurent la maintenance directement (voir « Apprendre ta vraie maintenance »).'
+  },
+  phys: {
+    leanShort: 'maigre', measured: 'D’après les photos : taille {w} {u}, cou {n} {u}{h}',
+    m: { biaRenpho: 'Balance Renpho (médiane de {n} mesures)', biaRenphoCal: 'Balance Renpho, corrigée par ton DEXA ({o} points ; médiane de {n} mesures)' },
+    rp: { subqLead: 'La graisse sous la peau : celle qui se voit dans le miroir. Une estimation du fabricant ; aucune validation indépendante n’existe.',
+      caveat: 'Estimations par impédance. Dans une validation de 12 semaines face au DEXA, une balance pieds-pieds se répétait à 2 % près sans suivre pour autant la vraie variation de masse grasse. Lis sa tendance comme une tendance de poids, et juge la perte de gras au mètre ruban, aux photos et au DEXA. Forge utilise le poids, et la masse grasse comme estimation grossière : ±6 points, ±3,5 pendant trois mois après un calage sur DEXA, puis de nouveau plus large sur un an.' }
+  },
+  hs: {
+    title: 'Longévité', lead: 'Cinq repères qui en disent plus sur tes trente prochaines années que ton poids. Chacun se lit seul : Forge ne les fond jamais en un « âge biologique ».',
+    vo2: 'Forme aérobie', vo2B: { low: 'Basse pour ton âge : le groupe le plus à risque', below: 'Sous la moyenne de ton âge', above: 'Au-dessus de la moyenne de ton âge', high: 'Élevée pour ton âge', elite: 'Élite pour ton âge (top 2,3 %)' }, addArena: 'Enregistre une VO₂max ou un 5 km',
+    grip: 'Force de poigne', gripB: { ok: 'Assez forte (T-score {t})', low: 'Plutôt basse (T-score {t})', weak: 'Poigne faible (T-score {t})' }, add: 'Ajouter un bilan',
+    stance: 'Équilibre sur un pied', stanceB: { ok: '10 secondes tenues', low: 'Moins de 10 secondes : travaille ton équilibre' }, stanceIn: 'Équilibre sur un pied : secondes tenues, 10 au plus',
+    whtr: 'Tour de taille ÷ taille', whtrB: { ok: 'Sous 0,5 : sain', mid: '0,5–0,6 : risque accru', high: 'Au-dessus de 0,6 : risque élevé' }, addTape: 'Ajoute tes mesures au mètre ruban',
+    rhr: 'Fréquence cardiaque au repos', rhrB: 'bpm, moyenne de {n} jours', rhrNone: 'Arrive avec l’import Apple Santé',
+    last: 'Poigne et équilibre mesurés le {d}.', check: 'Bilan longévité', why: 'Pourquoi ces cinq-là',
+    evidence: [
+      'Forme aérobie : chez 122 007 adultes suivis pendant 1,1 million d’années-personnes, les moins en forme avaient un risque de décès cinq fois plus élevé que les plus en forme (5,04). Dans la même cohorte, la maladie coronarienne pesait bien moins (1,29). Mandsager 2018.',
+      'La force de poigne culmine vers 30 ans, à une médiane de 51 kg chez l’homme et 31 kg chez la femme (meilleur de tous les essais, 12 études britanniques). Forge affiche ton T-score par rapport à ce pic ; sous −2,5 (27 kg pour un homme, 16 kg pour une femme), on parle de poigne faible. Dodds 2014.',
+      'Équilibre sur un pied : sur 1 702 adultes de 51 à 75 ans, ceux qui ne tenaient pas 10 secondes avaient un risque de décès 1,84 fois plus élevé sur un suivi médian de 7 ans (17,5 % de décès contre 4,6 %). Étudié dans cette tranche d’âge seulement ; avant 50 ans, c’est un test d’équilibre, pas une prévision. Araujo 2022.',
+      'Un tour de taille ÷ taille sous 0,5 est le repère le plus simple pour la graisse abdominale qui compte pour la santé.',
+      'La fréquence cardiaque au repos se lit en tendance. Une baisse sur des mois signale en général une meilleure forme aérobie ; un saut de 5 à 10 battements sur quelques jours, souvent une maladie ou une récupération trop courte.'
+    ],
+    gripHow: 'Dynamomètre à main, coude plié à 90°, meilleur de trois essais par main. Beaucoup de salles et de kinés en ont un.',
+    stanceHow: 'Pieds nus, sur une jambe, le pied libre posé contre l’arrière du mollet d’appui, bras le long du corps, regard droit devant. Jusqu’à trois essais par jambe ; saisis le meilleur.'
+  },
+  arena: {
+    howScores: 'Comment marchent les scores', peakShort: 'Ton plafond : tes deux meilleurs domaines.', balanceShort: 'Chaque domaine compte ; un point faible le tire vers le bas.',
+    badEntry: 'Saisis d’abord un résultat.', implausible: 'Ça battrait le record du monde. Vérifie la saisie : minutes et secondes, kg et lb.',
+    radarAlt: 'Scores par domaine : {s}.', bosses: 'Paliers les plus proches', bossesLead: 'Le prochain palier ou niveau qui demande le plus petit progrès.', bossGap: 'aujourd’hui {now}, encore {p} %',
+    ffa: '{l} sur la grille de la fédération française. {pts} points d’épreuves combinées.', ffaAge: '{l} sur la grille de la fédération française : vaut {o} toutes catégories (coefficient d’âge × {k}). {pts} points d’épreuves combinées.', ffaBelow: 'Sous D7', retest: 'plus d’un an',
+    glTitle: 'Score de force athlétique', glTotal: 'Total {tot} à {bw} : {pts} points IPF GL', glBench: 'Développé couché seul : {pts} points GL',
+    glText: 'La formule de la fédération efface l’avantage du poids de corps : tous les gabarits et les deux sexes se comparent sur une seule échelle (autour de 100, c’est le niveau mondial). D’après tes max estimés ; catégorie d’âge {c}.',
+    ageClass: { subjunior: 'Subjunior', junior: 'Junior', open: 'Open', m1: 'Master 1 (40–49)', m2: 'Master 2 (50–59)', m3: 'Master 3 (60–69)', m4: 'Master 4 (70+)' },
+    ladderNote: 'Les tranches en pourcentage valent parmi les pratiquants de l’épreuve. Les sprints utilisent à la place les niveaux de la fédération française, faute de données de population sur les temps de sprint.', ageN: '{a} ans', ffaStd: 'Temps affichés pour ton âge (coefficient WMA × {k})',
+    peakText: 'Tes deux meilleurs domaines, en moyenne : ton plafond.',
+    overallNote: 'Les niveaux globaux utilisent la même échelle que les records, appliquée au score. Les scores sont moyennés sur l’échelle de la courbe en cloche, où passer de 95 à 99 pèse plus que passer de 50 à 54.'
+  },
+  tier: { ffa: ['Plus lent que D7', 'D7 à D5 (départemental)', 'D4 à D1 (départemental)', 'R6 à R1 (régional)', 'IR4 à IR1 (interrégional)', 'N4 à N1 (national)', 'IB (international B)', 'IA (international A)'] },
+  duel: {
+    title: 'Duels', lead: 'Compare-toi à ta moitié ou à un ami. Chaque score est déjà relatif au sexe et à la tranche d’âge de chacun : un duel entre deux personnes, quelles qu’elles soient, est équitable.',
+    you: 'Toi', score: 'Toi {a} – {b}', noCommon: 'Pas encore de domaine en commun', gl: 'Force athlétique (points GL)', asOf: 'Ses scores au {d}.', fair: 'Un domaine compte quand vous avez tous les deux un score ; à moins d’un point d’écart, égalité.',
+    remove: 'Retirer ce rival', share: 'Partager mon code de duel', add: 'Ajouter le code d’un rival',
+    shareLead: 'Ce code contient ton prénom et tes scores de 0 à 100. Ni poids, ni masse grasse, ni résultats bruts. Envoie-le comme tu veux ; Forge n’envoie rien de lui-même.',
+    code: 'Code de duel', copy: 'Copier', send: 'Envoyer', copied: 'Code copié', msg: '{n} te défie dans Forge. Colle ceci dans Arène → Duels :', addLead: 'Colle le code que ton rival t’a envoyé.', bad: 'Ce n’est pas un code de duel Forge.', added: '{n} ajouté'
+  },
+  ck: {
+    title: 'Bilan récupération', lead: 'Sur les quatre dernières semaines, lesquels de ces points sont vrais ? Ces signes comptent plus que n’importe quel chiffre de calories.',
+    q: { tired: 'Fatigué la plupart des jours, même après une nuit normale', ill: 'Malade ou blessé plus souvent que d’habitude', libido_m: 'Libido nettement en baisse, ou moins d’érections matinales', libido_f: 'Libido nettement en baisse', mood: 'Irritable, moral bas ou froid inhabituel', perf: 'Performances en baisse depuis plus de deux semaines', cycle: 'Règles plus légères, irrégulières ou absentes' },
+    save: 'Vérifier', none: 'Aucun signe d’alerte. Refais le point dans deux semaines tant que tu es en déficit.', one: 'Un signe. Le sommeil et le stress peuvent l’expliquer : refais le point dans une semaine, et ne baisse pas tes calories d’ici là.',
+    two: 'Deux signes ou plus pendant un déficit indiquent trop peu d’énergie pour ton entraînement. Passe à la maintenance au moins deux semaines. S’ils persistent, ou si tes règles se sont arrêtées, consulte un médecin, idéalement du sport.', src: 'Signes tirés du'
+  },
+  lvl: { kicker: 'Nouveau palier en {ev}', from: 'Tu viens de {a}.', first: 'Ton premier record classé ici.', ok: 'En avant' },
+  new: {
+    title: 'Ce qui a changé dans cette version', lead: 'Une revue complète face à la recherche. Certains de tes chiffres ont bougé ; voici pourquoi.',
+    items: [
+      ['Les sprints utilisent de vrais niveaux fédéraux', 'Les temps sont corrigés de l’âge avec les coefficients officiels des World Masters, puis placés sur la grille de la fédération française (D7 à IA). Un palier peut bouger d’un cran.'],
+      ['La courbe de tendance n’est plus en retard', 'Pendant une sèche, l’ancienne courbe lisait environ une semaine de retard. La nouvelle colle à ton poids réel.'],
+      ['La maintenance dans tes propres unités de saisie', 'Dès que tu saisis, Forge se fie à ta tendance de poids et à tes calories saisies plutôt qu’à la formule, et affiche le ratio entre les deux.'],
+      ['Les pas comptent davantage', 'Le coût de la marche suit maintenant ta taille et ta vitesse : environ 0,6 kcal par kg et par km au lieu de 0,5.'],
+      ['Des scores moyennés plus justement', 'Les scores Pic et de domaine sont moyennés sur l’échelle de la courbe en cloche. La plupart bougent d’un point ou deux.'],
+      ['Nouveau', 'Habitudes hebdo et saisons de 12 semaines, bilan de ta semaine, paliers les plus proches, duels, un panneau longévité, un simulateur « et si » et un mode serein.']
+    ]
+  },
+  set: {
+    calm: 'Mode serein : masquer les calories dans Aujourd’hui', calmHint: 'Garde la tendance, les protéines et les habitudes, et retire la quête calories. À activer dès que le suivi devient pesant.',
+    syncYes: 'Synchronisé', syncYesList: 'Profil, saisies quotidiennes (poids, composition corporelle, calories, pas), mesures Renpho, plan, records, mesures au mètre ruban et scans, bilans longévité, scores des rivaux.', syncNo: 'Jamais synchronisé', syncNoList: 'Les photos. Elles restent sur cet appareil.',
+    syncConsent: 'J’accepte de stocker ces données de santé sur mon propre compte. Le droit européen les considère comme sensibles : il faut donc un oui clair.',
+    syncDelete: 'Pour effacer aussi la copie synchronisée, utilise « Tout supprimer » ci-dessous et choisis « partout ».', syncOn: 'Connecté : {e}',
+    wipeConfirm: 'Supprimer toutes les données Forge de cet appareil ? Si tu te reconnectes plus tard, tes données synchronisées reviennent.',
+    wipeT: 'Tout supprimer', wipeLead: 'Tu es connecté : choisis jusqu’où ça va.', wipeDevice: 'Cet appareil seulement', wipeDeviceH: 'Te déconnecte et vide cet appareil. Ton compte garde sa copie.', wipeAll: 'Partout', wipeAllH: 'Vide cet appareil et ton compte. Tes autres appareils se vident à leur prochaine synchro. Dans le doute, télécharge d’abord une sauvegarde.',
+    hPasteBox: 'Coller le texte à la main', hPasteBoxLead: 'Lance le Raccourci, puis fais un appui long dans la zone et choisis Coller.', hImport: 'Importer', hClipBlocked: 'Le presse-papiers n’a pas pu être lu. Colle le texte ici.', hNotForge: 'Ce n’est pas le texte produit par le Raccourci Forge. Relance le Raccourci, puis colle.',
+    hOffer: 'Mettre ton profil à jour d’après Apple Santé ?', hUse: 'Utiliser les valeurs cochées',
+    hApplySteps: 'Moyenne de pas : {v} par jour sur 4 semaines (actuellement {o})', hApplyWorkouts: 'Séances : les {n} activités des 4 dernières semaines', hApplyVo2: 'Arène : la VO₂max de la montre ({v})', hApplySpeed: 'Vitesse de marche : {v} km/h, mesurée par ton iPhone', hApplyStride: 'Longueur de pas : {v} cm, mesurée par ton iPhone (formule selon la taille : {o} cm)',
+    guideSteps: [
+      'Ouvre Raccourcis, touche +, et nomme le raccourci « Forge sync ».',
+      'Ajoute « Rechercher des échantillons Santé ». Type : Nombre de pas. Date de début : dans les 35 derniers jours. Grouper par : Jour. Remplir les valeurs manquantes : désactivé. Trier par : Date de début, du plus ancien au plus récent.',
+      'Ajoute la même action pour Énergie alimentaire, Protéines, Glucides et Lipides totaux, chacune avec Grouper par : Jour et sans remplissage des valeurs manquantes.',
+      'Ajoute-la encore pour Poids (Unité : kg) et Pourcentage de graisse corporelle, sans regroupement, et pour Fréquence cardiaque au repos avec Grouper par : Jour.',
+      'Ajoute une action « Texte ». Écris FORGE1 sur la première ligne. Puis, pour chaque recherche, ajoute deux lignes : une étiquette, puis la variable. Étiquettes : @steps @kcal @protein @carbs @fat @weight @bf @rhr. Sous chaque étiquette, insère deux fois la variable de la recherche : d’abord touche-la et choisis Date de début (Format de date : ISO 8601), puis à la ligne suivante la même variable avec Valeur. Exemple :\n@steps\n[Échantillons Santé · Date de début]\n[Échantillons Santé · Valeur]',
+      'Ajoute « Copier dans le presse-papiers » (entrée : Texte).',
+      'Lance-le une fois, iPhone déverrouillé (les données Santé sont chiffrées quand il est verrouillé), et autorise l’accès à Santé. Puis ouvre Forge depuis son icône de l’écran d’accueil et touche « Coller depuis le Raccourci » dans Aujourd’hui.',
+      'Facultatif : ajoute le widget Raccourcis, pour une synchro en un geste.'
+    ],
+    guideNote: 'Je n’ai pas pu tester ces étapes sur un iPhone. Si le bouton Coller signale un problème, utilise « Coller le texte à la main » ; si un menu porte un autre nom sur ta version d’iOS, l’export Santé complet fonctionne toujours.'
+  }
+};
+const deep = (a, b) => { for (const [k, v] of Object.entries(b)) { if (v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' && !Array.isArray(a[k])) deep(a[k], v); else a[k] = v; } return a; };
+deep(EN, EN2); deep(FR, FR2);
+
 const DICT = { en: EN, fr: FR };
 let lang = 'en';
 export const setLang = l => { lang = DICT[l] ? l : 'en'; document.documentElement.lang = lang; };

@@ -1,5 +1,5 @@
 /* Forge — calculation engine. Pure functions, no DOM, metric units. Tested in test/calc.test.mjs. */
-import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION, REPS, ERG, VJ, VJ_P, DOMAINS, DOMAIN_AGG } from './data.js';
+import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION, REPS, ERG, VJ, VJ_P, DOMAINS, DOMAIN_AGG, FFA, FFA_LEVELS, FFA_TIER_START, WMA, WA_POINTS, GL, GRIP } from './data.js';
 
 export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 export const sum = a => a.reduce((s, x) => s + (x || 0), 0);
@@ -75,6 +75,13 @@ export function rmrEnsemble(p) {
 
 /* ---------- activity ---------- */
 export const strideM = (sex, cm, overrideCm) => overrideCm > 0 ? overrideCm / 100 : (sex === 'm' ? 0.415 : 0.413) * cm / 100;
+/* Net cost of walking above rest, kcal per kg per km (Ludlow & Weyand 2016: VO2 − VO2rest = 3.85 + 5.97·V²/height,
+   ml/kg/min, V in m/s, height in m; 4.9 kcal per litre of oxygen). About 0.59 at 1.25 m/s for 1.80 m; shorter people
+   and both very slow and fast walking cost more. The older ACSM constant (0.5) under-counted by 15–20 %. */
+export function walkCost(cm, v = 1.25) {
+  const V = clamp(+v || 1.25, 0.7, 1.9), H = clamp((+cm || 172) / 100, 1.4, 2.1);
+  return 4.9 / 1000 * (3.85 + 5.97 * V * V / H) * 1000 / (60 * V);
+}
 export function isTrained(inp) {
   const sessions = sum((inp.workouts || []).filter(w => CATALOGUE[w.type]?.strength).map(w => +w.perWeek || 0));
   return sessions >= 3 || (sessions >= 2 && (inp.trainingYears || 0) >= 1);
@@ -107,7 +114,7 @@ export function predictTdee(inp) {
   const wkSteps = inp.stepsIncludeWorkouts === false ? 0 : sum(items.map(i => i.stepsDay));
   const steps = Math.max(0, (+inp.stepsAvg || 0) - wkSteps);
   const km = steps * strideM(inp.sex, inp.cm, inp.strideCm) / 1000;
-  const stepsKcal = 0.5 * kg * km;
+  const kcalPerKgKm = walkCost(inp.cm, inp.walkSpeed), stepsKcal = kcalPerKgKm * kg * km;
   const flightsKcal = (+inp.flightsAvg || 0) * 3 * 1.8 / 1000 * 5 * kg;
   const walkH = steps / 100 / 60;
   const sleepH = clamp(+inp.sleepH || 7.5, 4, 11);
@@ -119,7 +126,7 @@ export function predictTdee(inp) {
   const activity = neat + stepsKcal + flightsKcal + exercise + epoc;
   const sd = Math.sqrt(rmr.sd ** 2 + (0.25 * activity) ** 2) / 0.9;
   const kPerKg = (10 + (stepsKcal + flightsKcal + exercise + epoc + neat) / kg) / 0.9;
-  return { trained, rmr, CF, items, exercise, epoc, steps, wkSteps, km, stepsKcal, flightsKcal, neat, awakeH, tef: tdee - pre, tdee, sd, kPerKg };
+  return { trained, rmr, CF, items, exercise, epoc, steps, wkSteps, km, kcalPerKgKm, stepsKcal, flightsKcal, neat, awakeH, tef: tdee - pre, tdee, sd, kPerKg };
 }
 
 /* ---------- energy density of weight change (Forbes partition, Hall's tissue energies) ---------- */
@@ -130,14 +137,52 @@ export function energyDensity(fmKg, trained, dir) {
 }
 
 /* ---------- trend weight and adaptive maintenance ---------- */
-export function trendSeries(points, alpha = 0.1) { // points: [{date, w}] any order
+/* Day-to-day scatter of the scale (kg, 1 SD), learned from the person's own consecutive weigh-ins. */
+export function scaleNoise(points) {
+  const s = points.filter(p => p.w > 0).sort((a, b) => a.date < b.date ? -1 : 1), d = [];
+  for (let i = 1; i < s.length; i++) if (dayNum(s[i].date) - dayNum(s[i - 1].date) <= 2) d.push(s[i].w - s[i - 1].w);
+  if (d.length < 8) return 0.5;
+  const med = a => { const x = [...a].sort((p, q) => p - q); return x.length % 2 ? x[x.length >> 1] : (x[x.length / 2 - 1] + x[x.length / 2]) / 2; };
+  const m = med(d);
+  return clamp(1.4826 * med(d.map(x => Math.abs(x - m))) / Math.SQRT2, 0.2, 1.0);
+}
+/* Trend weight: a local-linear-trend Kalman filter (state = level and daily slope) with a backward smoothing pass.
+   Unlike a moving average it does not run behind during a steady cut or bulk, and gaps simply widen its uncertainty.
+   points: [{date, w}] in any order → [{ date, w, trend, slope (kg/day), sd }]; the last point is the live estimate. */
+export function trendSeries(points, { sig, qL = 0.08 ** 2, qS = 0.004 ** 2 } = {}) {
   const s = points.filter(p => p.w > 0).sort((a, b) => a.date < b.date ? -1 : 1);
-  let t = null, last = null;
-  return s.map(p => {
-    if (t == null) t = p.w;
-    else { const gap = Math.max(1, dayNum(p.date) - dayNum(last)); const a = 1 - (1 - alpha) ** gap; t = t + a * (p.w - t); }
-    last = p.date; return { date: p.date, w: p.w, trend: t };
+  if (!s.length) return [];
+  const r = (sig || scaleNoise(s)) ** 2, f = [];
+  let x = [s[0].w, 0], P = [[r, 0], [0, 0.05 ** 2]], last = dayNum(s[0].date);
+  s.forEach((p, i) => {
+    let xp = x, Pp = P, dt = 0;
+    if (i) {
+      dt = Math.max(1, dayNum(p.date) - last);
+      xp = [x[0] + dt * x[1], x[1]];
+      Pp = [[P[0][0] + dt * (P[0][1] + P[1][0]) + dt * dt * P[1][1] + dt * qL, P[0][1] + dt * P[1][1]], [P[1][0] + dt * P[1][1], P[1][1] + dt * qS]];
+    }
+    const S = Pp[0][0] + r, K0 = Pp[0][0] / S, K1 = Pp[1][0] / S, y = p.w - xp[0];
+    x = [xp[0] + K0 * y, xp[1] + K1 * y];
+    P = [[(1 - K0) * Pp[0][0], (1 - K0) * Pp[0][1]], [Pp[1][0] - K1 * Pp[0][0], Pp[1][1] - K1 * Pp[0][1]]];
+    last = dayNum(p.date); f.push({ x, P, xp, Pp, dt });
   });
+  // Rauch–Tung–Striebel smoother
+  const out = new Array(s.length); let xs = f[f.length - 1].x, Ps = f[f.length - 1].P;
+  for (let i = s.length - 1; i >= 0; i--) {
+    if (i < s.length - 1) {
+      const n = f[i + 1], { x: xf, P: Pf } = f[i], dt = n.dt;
+      const A = [[Pf[0][0] + dt * Pf[0][1], Pf[0][1]], [Pf[1][0] + dt * Pf[1][1], Pf[1][1]]]; // P·Fᵀ
+      const det = n.Pp[0][0] * n.Pp[1][1] - n.Pp[0][1] * n.Pp[1][0] || 1e-12;
+      const inv = [[n.Pp[1][1] / det, -n.Pp[0][1] / det], [-n.Pp[1][0] / det, n.Pp[0][0] / det]];
+      const G = [[A[0][0] * inv[0][0] + A[0][1] * inv[1][0], A[0][0] * inv[0][1] + A[0][1] * inv[1][1]], [A[1][0] * inv[0][0] + A[1][1] * inv[1][0], A[1][0] * inv[0][1] + A[1][1] * inv[1][1]]];
+      const dx = [xs[0] - n.xp[0], xs[1] - n.xp[1]], dP = [[Ps[0][0] - n.Pp[0][0], Ps[0][1] - n.Pp[0][1]], [Ps[1][0] - n.Pp[1][0], Ps[1][1] - n.Pp[1][1]]];
+      xs = [xf[0] + G[0][0] * dx[0] + G[0][1] * dx[1], xf[1] + G[1][0] * dx[0] + G[1][1] * dx[1]];
+      const GD = [[G[0][0] * dP[0][0] + G[0][1] * dP[1][0], G[0][0] * dP[0][1] + G[0][1] * dP[1][1]], [G[1][0] * dP[0][0] + G[1][1] * dP[1][0], G[1][0] * dP[0][1] + G[1][1] * dP[1][1]]];
+      Ps = [[Pf[0][0] + GD[0][0] * G[0][0] + GD[0][1] * G[0][1], 0], [0, Pf[1][1] + GD[1][0] * G[1][0] + GD[1][1] * G[1][1]]];
+    }
+    out[i] = { date: s[i].date, w: s[i].w, trend: xs[0], slope: xs[1], sd: Math.sqrt(Math.max(0, Ps[0][0])) };
+  }
+  return out;
 }
 export function regress(xy) {
   const n = xy.length; if (n < 3) return null;
@@ -148,24 +193,52 @@ export function regress(xy) {
   let sse = 0; for (const [x, y] of xy) sse += (y - icpt - slope * x) ** 2;
   return { slope, icpt, se: Math.sqrt(sse / (n - 2) / sxx), n };
 }
-/* logs: { 'YYYY-MM-DD': { w, kcal } } */
-export function adaptiveTdee(logs, { end = today(), days = 28, fmKg, trained } = {}) {
-  const start = addDays(end, -(days - 1));
-  const rows = Object.entries(logs || {}).filter(([d]) => d >= start && d <= end).sort();
-  const W = rows.filter(([, v]) => v.w > 0).map(([d, v]) => [dayNum(d), v.w]);
-  const K = rows.filter(([, v]) => v.kcal > 0).map(([, v]) => v.kcal);
-  const first = rows.length ? dayNum(rows[0][0]) : 0, span = rows.length ? dayNum(rows[rows.length - 1][0]) - first + 1 : 0;
-  const out = { ok: false, nW: W.length, nK: K.length, span, need: { weights: 4, intakeDays: Math.max(10, Math.ceil(0.7 * Math.max(span, 14))), span: 14 } };
+const median = a => { const x = [...a].sort((p, q) => p - q); return x.length ? (x.length % 2 ? x[x.length >> 1] : (x[x.length / 2 - 1] + x[x.length / 2]) / 2) : NaN; };
+/* Measured maintenance from the logs: energy balance over the window, in the person's own logging units.
+   maintenance = mean logged intake − (trend weight at the end − trend weight at the start) / days × energy density.
+   - Trend weights come from the smoothed Kalman trend (weigh-ins up to 14 days before the window steady its start).
+   - Days with under half the usual intake are treated as not fully logged and left out of the mean (`nPartial`).
+   - phaseStart: date a new plan began. The first 10 days after it are mostly water and glycogen, so the window
+     starts after them when at least 14 days remain (`water: 'trimmed'`); otherwise the uncertainty is widened (`'recent'`).
+   logs: { 'YYYY-MM-DD': { w, kcal } } */
+export function adaptiveTdee(logs, { end = today(), days = 28, fmKg, trained, phaseStart } = {}) {
+  let start = addDays(end, -(days - 1)), water = null;
+  if (phaseStart && phaseStart > addDays(start, -10) && phaseStart <= end) {
+    const s2 = addDays(phaseStart, 10);
+    if (dayNum(end) - dayNum(s2) >= 14) { if (s2 > start) { start = s2; water = 'trimmed'; } } else water = 'recent';
+  }
+  const all = Object.entries(logs || {}).filter(([d]) => d <= end).sort();
+  const rows = all.filter(([d]) => d >= start);
+  const W = rows.filter(([, v]) => v.w > 0), Kall = rows.filter(([, v]) => v.kcal > 0);
+  const med = median(Kall.map(([, v]) => v.kcal));
+  const K = Kall.filter(([, v]) => v.kcal >= 0.5 * med), nPartial = Kall.length - K.length;
+  const span = rows.length ? dayNum(rows[rows.length - 1][0]) - dayNum(rows[0][0]) + 1 : 0;
+  const out = { ok: false, nW: W.length, nK: K.length, nPartial, span, water, need: { weights: 4, intakeDays: Math.max(10, Math.ceil(0.7 * Math.max(span, 14))), span: 14 } };
   if (span < 14 || W.length < 4 || K.length < out.need.intakeDays) return out;
-  const r = regress(W); if (!r) return out;
-  const ed = energyDensity(fmKg, trained, r.slope < 0 ? -1 : 1);
-  const intake = mean(K);
-  return { ...out, ok: true, tdee: intake - r.slope * ed, sd: Math.sqrt((ed * r.se) ** 2 + 100 ** 2), slopeKgWk: r.slope * 7, intake, ed, coverage: K.length / span };
+  const lead = addDays(start, -14);
+  const tr = trendSeries(all.filter(([d, v]) => d >= lead && v.w > 0).map(([date, v]) => ({ date, w: v.w }))).filter(p => p.date >= start);
+  if (tr.length < 2) return out;
+  const a = tr[0], b = tr[tr.length - 1], D = dayNum(b.date) - dayNum(a.date);
+  if (D < 10) return out;
+  const slope = (b.trend - a.trend) / D, seSlope = Math.sqrt(a.sd ** 2 + b.sd ** 2) / D;
+  const ed = energyDensity(fmKg, trained, slope < 0 ? -1 : 1);
+  const ks = K.map(([, v]) => v.kcal), intake = mean(ks), n = ks.length;
+  const sdK = n > 1 ? Math.sqrt(sum(ks.map(k => (k - intake) ** 2)) / (n - 1)) : 0;
+  const coverage = Math.min(1, n / span);
+  const seIntake = Math.sqrt(sdK ** 2 / n + ((1 - coverage) * 0.15 * intake) ** 2);
+  const sd = Math.sqrt((ed * seSlope) ** 2 + seIntake ** 2 + 60 ** 2 + (water === 'recent' ? 150 ** 2 : 0));
+  return { ...out, ok: true, tdee: intake - slope * ed, sd, slopeKgWk: slope * 7, intake, ed, coverage, from: a.date, to: b.date };
 }
+/* Combine the formula with the measured figure. The two are not in the same unit: the formula estimates true
+   expenditure, the logs measure it in "calories as this person logs them" (food logs run 0–20 % under true intake
+   in lean adults, more in others). Targets are logged the same way, so the logged unit is the useful one: the formula
+   only serves as a prior, with ±12 % added for the unknown logging ratio, and fades as the logs accumulate. */
+export const LOG_UNIT_SD = 0.12;
 export function blend(pred, predSd, obs) {
   if (!obs || !obs.ok) return { value: pred, sd: predSd, source: 'predicted' };
-  const wp = 1 / predSd ** 2, wo = 1 / obs.sd ** 2;
-  return { value: (pred * wp + obs.tdee * wo) / (wp + wo), sd: 1 / Math.sqrt(wp + wo), source: 'blended', wObs: wo / (wp + wo) };
+  const priorSd = Math.sqrt(predSd ** 2 + (LOG_UNIT_SD * pred) ** 2);
+  const wp = 1 / priorSd ** 2, wo = 1 / obs.sd ** 2;
+  return { value: (pred * wp + obs.tdee * wo) / (wp + wo), sd: 1 / Math.sqrt(wp + wo), source: 'blended', wObs: wo / (wp + wo), ratio: obs.tdee / pred };
 }
 export const confidence = sd => sd < 130 ? 'high' : sd < 230 ? 'medium' : 'low';
 
@@ -216,16 +289,29 @@ export function makePlan(ctx) {
   const ea = ffm ? (kcal - (ctx.exerciseDay || 0)) / ffm : null;
   let eaLevel = null;
   if (ea != null) { eaLevel = ea < 25 ? 'red' : ea < 30 ? 'amber' : 'ok'; if (eaLevel === 'red') { flags.push('eaRed'); blocked = true; } else if (eaLevel === 'amber') flags.push('eaAmber'); }
+  // range: exercise energy is known to about ±25 %, fat-free mass to ±(body-fat SD) × weight
+  const ffmSd = ffm ? kg * (ctx.bfSd || 3) / 100 : 0;
+  const eaLo = ffm ? (kcal - 1.25 * (ctx.exerciseDay || 0)) / (ffm + ffmSd) : null, eaHi = ffm ? (kcal - 0.75 * (ctx.exerciseDay || 0)) / Math.max(20, ffm - ffmSd) : null;
   if (mode === 'cut' && (ctx.ratePct || 0) > 1) flags.push('fastCut');
   // the most aggressive kcal target that keeps EA >= 25 and above the floor
   const minKcal = Math.max(floor, ffm ? 25 * ffm + (ctx.exerciseDay || 0) : floor);
   const meals = clamp(ctx.meals || 4, 2, 6);
-  return { kcal, delta, weeklyKg, weeklyPct: weeklyKg / kg * 100, ed, protein, fat, carbs, ea, eaLevel, flags, blocked, minKcal, perMeal: protein / meals, perMealPerKg: protein / meals / kg };
+  return { kcal, delta, weeklyKg, weeklyPct: weeklyKg / kg * 100, ed, protein, fat, carbs, ea, eaLo, eaHi, eaLevel, flags, blocked, minKcal, perMeal: protein / meals, perMealPerKg: protein / meals / kg };
 }
 /* Weekly simulation of body weight under a fixed intake, maintenance falling with weight. */
 export function project({ kg, tdee, sd, kcal, ed, kPerKg, weeks = 16 }) {
   const run = t0 => { const pts = [{ wk: 0, w: kg }]; let w = kg; for (let i = 1; i <= weeks; i++) { const t = t0 + kPerKg * (w - kg); w += (kcal - t) * 7 / (ed || 7000); pts.push({ wk: i, w }); } return pts; };
   return { mid: run(tdee), lo: run(tdee + sd), hi: run(tdee - sd) };
+}
+
+/* Weeks until a goal weight under the plan, with the range from the maintenance uncertainty. null when the plan moves away from it. */
+export function etaWeeks({ kg, goal, tdee, sd, kcal, ed, kPerKg, maxWeeks = 104 }) {
+  if (!(goal > 0) || Math.abs(goal - kg) < 0.05) return null;
+  const dir = Math.sign(goal - kg);
+  const run = t0 => { let w = kg; for (let i = 1; i <= maxWeeks; i++) { const t = t0 + kPerKg * (w - kg), step = (kcal - t) * 7 / (ed || 7000); if (Math.sign(step) !== dir) return null; if ((goal - (w + step)) * dir <= 0) return i - 1 + (goal - w) / step; w += step; } return null; };
+  const mid = run(tdee); if (mid == null) return null;
+  const a = run(tdee + sd), b = run(tdee - sd);
+  return { mid, lo: dir < 0 ? a : b, hi: dir < 0 ? b : a };
 }
 
 /* ---------- body fat ---------- */
@@ -273,7 +359,7 @@ export function valueAtP(p, A) {
   let i = 0; while (zp > z[i + 1]) i++;
   return A[i].v + (zp - z[i]) / (z[i + 1] - z[i]) * (A[i + 1].v - A[i].v);
 }
-export const tierOf = p => TIER_P.filter(b => p >= b).length;
+export const tierOf = p => TIER_P.filter(b => p >= b - 1e-6).length; // tolerance: a result exactly on a bound belongs to the higher tier
 /* Overall level for a 0–100 score (domain, Peak, Balance): same ladder as single records, applied to the score. */
 export const scoreTier = s => s == null ? null : tierOf(s / 100);
 
@@ -311,7 +397,33 @@ export function raceTime(dist, target) { // bisection: time whose VDOT equals ta
   for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (vdot(dist, mid) > target) lo = mid; else hi = mid; }
   return (lo + hi) / 2;
 }
-export function sprintFactor(age, sex) { return age > 35 ? Math.max(0.5, 1 - SPRINT.slope[sex === 'm' ? 'm' : 'f'] * (age - 35)) : 1; }
+/* WMA 2023 age factor: open-equivalent time = time × factor (1 below 30, table to 90). */
+export function sprintFactor(age, sex, dist = 100) {
+  const t = WMA[sex === 'm' ? 'm' : 'f'][dist] || WMA.m[100], a = clamp(age || 30, 30, 90), i = Math.floor(a) - 30;
+  return i >= 60 ? t[60] : t[i] + (a - Math.floor(a)) * (t[i + 1] - t[i]);
+}
+/* Position of each FFA level on the tier scale: the levels that open a Forge tier sit on that tier's bound, the
+   levels in between are spread evenly. Returns the z-score of each of the 23 levels. */
+const FFA_Z = (() => {
+  const zb = TIER_P.map(invcdf), z = new Array(FFA_LEVELS.length);
+  for (let k = 0; k < FFA_TIER_START.length; k++) {
+    const i0 = FFA_TIER_START[k], i1 = FFA_TIER_START[k + 1] ?? i0;
+    for (let i = i0; i < Math.max(i1, i0 + 1); i++) z[i] = i1 > i0 ? zb[k] + (i - i0) / (i1 - i0) * (zb[k + 1] - zb[k]) : zb[k];
+  }
+  return z;
+})();
+/* FFA level of an open-equivalent time: { i, name } of the best level reached (i = −1 below D7) and the next one. */
+export function ffaLevel(open, sex, dist) {
+  const t = FFA[sex === 'm' ? 'm' : 'f'][dist]; let i = -1;
+  while (i + 1 < t.length && open <= t[i + 1] + 1e-9) i++;
+  return { i, name: i >= 0 ? FFA_LEVELS[i] : null, next: i + 1 < t.length ? { name: FFA_LEVELS[i + 1], open: t[i + 1] } : null };
+}
+export function waPoints(open, sex, dist) { const [a, b] = WA_POINTS[sex === 'm' ? 'm' : 'f'][dist]; return open < b ? Math.floor(a * (b - open) ** 1.81) : 0; }
+/* IPF GL points for a powerlifting total or a bench press (classic). */
+export function glPoints(sex, bw, lifted, kind = 'total') { const [A, B, C] = GL[sex === 'm' ? 'm' : 'f'][kind]; return bw > 0 && lifted > 0 ? lifted * 100 / (A - B * Math.exp(-C * bw)) : null; }
+export const ageClass = age => age == null ? 'open' : age < 19 ? 'subjunior' : age < 24 ? 'junior' : age < 40 ? 'open' : age < 50 ? 'm1' : age < 60 ? 'm2' : age < 70 ? 'm3' : 'm4';
+/* Grip strength as a T-score against the young-adult peak (Dodds 2014), like bone density. */
+export function gripT(sex, kg) { const g = GRIP[sex === 'm' ? 'm' : 'f']; return kg > 0 ? { t: (kg - g.mean) / g.sd, band: kg < g.weak ? 'weak' : kg < g.low ? 'low' : 'ok', ...g } : null; }
 export function anchorsFor(id, { sex, bw, age }) {
   const ev = EVENTS[id], s = sex === 'm' ? 'm' : 'f';
   if (ev.kind === 'lift') {
@@ -320,8 +432,8 @@ export function anchorsFor(id, { sex, bw, age }) {
     return { A: SL_P.map((p, i) => ({ p, v: row[i] })), enc: x => x, dec: v => v, unit: 'kg', clampedBw: out };
   }
   if (ev.kind === 'sprint') {
-    const wr = SPRINT.wr[ev.dist][s] / sprintFactor(age || 30, s);
-    return { A: [0.05, 0.2, 0.5, 0.8, 0.95, 0.99, 0.999].map((p, i) => ({ p, v: SPRINT.ag[i] })), enc: t => 100 * wr / t, dec: ag => 100 * wr / ag, unit: 's', lowerBetter: true };
+    const k = sprintFactor(age || 30, s, ev.dist), T = FFA[s][ev.dist];
+    return { A: T.map((t, i) => ({ p: cdf(FFA_Z[i]), v: -t })), enc: t => -t * k, dec: v => -v / k, unit: 's', lowerBetter: true, factor: k, ffa: true };
   }
   if (ev.kind === 'row') {
     const T = c2Times(ev.dist, s);
@@ -399,15 +511,41 @@ export function prValue(pr) {
   }
   return { rankable: false };
 }
+/* Sanity limits: a result better than anything ever recorded is a typing error (seconds for minutes, lb for kg…). */
+export function plausible(pr, sex = 'm') {
+  const ev = EVENTS[pr.event], v = prValue(pr).value, m = sex === 'm';
+  if (!ev || !(v > 0)) return false;
+  switch (ev.kind) {
+    case 'lift': return v <= ({ bench: [360, 210], squat: [500, 320], deadlift: [510, 330], ohp: [230, 140] }[pr.event] || [500, 330])[m ? 0 : 1];
+    case 'sprint': return v >= SPRINT.wr[ev.dist][m ? 'm' : 'f'] && v < ev.dist * 0.6;
+    case 'row': return v >= ev.dist * (m ? 0.118 : 0.14) && v < ev.dist;
+    case 'erg': return v >= (pr.event === 'bike1000' ? 55 : 65) && v < 900;
+    case 'rowtime': return v <= (m ? 460 : 400) && v >= 50;
+    case 'race': return v >= ev.dist * (m ? 0.151 : 0.168) && v < ev.dist * 0.9;
+    case 'jump': return v >= 5 && v <= 125;
+    case 'reps': return v <= 200;
+    case 'vo2': return v >= 8 && v <= 97;
+  }
+  return true;
+}
 export function evaluatePR(pr, who) {
   const ev = EVENTS[pr.event], nv = prValue(pr);
   if (!nv.rankable) return { ...nv, ev };
   const an = anchorsFor(pr.event, { sex: who.sex, bw: +pr.bw || who.kg, age: who.age });
   const x = an.enc(nv.value), p = pctFromAnchors(x, an.A), tier = tierOf(p);
   const next = tier < 7 ? an.dec(valueAtP(TIER_P[tier], an.A)) : null;
-  const pop = popRange(p, ev.q[who.sex === 'm' ? 'm' : 'f']);
-  return { ...nv, ev, an, p, tier, next, pop };
+  const pop = ev.noPop ? null : popRange(p, ev.q[who.sex === 'm' ? 'm' : 'f']);
+  const out = { ...nv, ev, an, p, tier, next, pop };
+  if (ev.kind === 'sprint') {
+    const open = nv.value * an.factor, lv = ffaLevel(open, who.sex, ev.dist);
+    Object.assign(out, { open, factor: an.factor, level: lv.name, levelI: lv.i, nextLevel: lv.next ? { name: lv.next.name, time: lv.next.open / an.factor } : null, points: waPoints(open, who.sex, ev.dist) });
+  }
+  return out;
 }
+/* Averaging percentile scores directly treats 95 → 99 like 50 → 54, although the first is a far bigger jump in
+   performance. Scores are therefore averaged on the z-scale (probit) and converted back. */
+export const zmean = xs => xs.length === 1 ? xs[0] : Math.round(1e4 * 100 * cdf(mean(xs.map(x => invcdf(clamp(x / 100, 0.0005, 0.9995)))))) / 1e4; // rounded: the cdf/inverse pair is exact to about 1e-6
+export const geomean = xs => Math.exp(mean(xs.map(v => Math.log(Math.max(1, v)))));
 /* Best PR per event (by percentile), then domain scores, Peak and Balance. */
 export function arena(prs, who, leanP) {
   const best = {};
@@ -421,10 +559,15 @@ export function arena(prs, who, leanP) {
   const domains = {};
   for (const [id, b] of Object.entries(best)) (domains[EVENTS[id].domain] ||= []).push(b.score);
   const dom = {};
-  for (const [d, xs] of Object.entries(domains)) { xs.sort((a, b) => b - a); dom[d] = DOMAIN_AGG[d] === 'max' ? xs[0] : mean(xs.slice(0, 3)); }
+  for (const [d, xs] of Object.entries(domains)) { xs.sort((a, b) => b - a); dom[d] = DOMAIN_AGG[d] === 'max' ? xs[0] : zmean(xs.slice(0, 3)); }
   const vals = DOMAINS.map(d => dom[d]).filter(x => x > 0); // performance domains only
   const sorted = [...vals].sort((a, b) => b - a);
-  const peak = sorted.length >= 2 ? mean(sorted.slice(0, 2)) : null;
-  const balance = vals.length >= 3 ? Math.exp(mean(vals.map(v => Math.log(Math.max(1, v))))) : null;
-  return { best, dom, peak, balance, lean: leanP != null ? 100 * leanP : null, nDom: vals.length };
+  const peak = sorted.length >= 2 ? zmean(sorted.slice(0, 2)) : null;
+  const balance = vals.length >= 3 ? geomean(vals) : null;
+  // powerlifting total and IPF GL points from the best estimated 1RMs
+  let gl = null;
+  const L = k => best[k]?.r.value, bwOf = k => +best[k]?.pr.bw || who.kg;
+  if (L('squat') && L('bench') && L('deadlift')) { const total = L('squat') + L('bench') + L('deadlift'), bw = mean(['squat', 'bench', 'deadlift'].map(bwOf)); gl = { total, bw, points: glPoints(who.sex, bw, total) }; }
+  const benchGl = L('bench') ? glPoints(who.sex, bwOf('bench'), L('bench'), 'bench') : null;
+  return { best, dom, peak, balance, lean: leanP != null ? 100 * leanP : null, nDom: vals.length, gl, benchGl };
 }

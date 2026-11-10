@@ -9,7 +9,7 @@ const DEF = () => ({
   activity: { stepsAvg: 8000, stepsInc: true, flights: 0, strideCm: null, occupation: 'desk', sleepH: 7.5, years: 0, workouts: [] },
   body: { source: 'auto' }, renpho: { rows: {}, imported: null, file: null, height: null },
   plan: { mode: null, ratePct: 0.5, fatPct: 25, meals: 4, customKcal: null, applied: null },
-  logs: {}, tapes: [], scans: [], photos: [], prs: [], health: { last: null }, meta: { created: today() }
+  logs: {}, tapes: [], scans: [], photos: [], prs: [], vitals: [], rivals: [], health: { last: null }, meta: { created: today(), seen: null, syncConsent: false, checkin: null }
 });
 
 export let S = DEF();
@@ -31,7 +31,7 @@ export function load() {
 let timer = null;
 export function save(now) {
   clearTimeout(timer);
-  const write = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { console.warn('save failed', e); } };
+  const write = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { console.warn('save failed', e); window.dispatchEvent(new CustomEvent('forge:savefail')); } };
   if (now) write(); else timer = setTimeout(write, 300);
   subs.forEach(fn => { try { fn(S); } catch (e) { console.error(e); } });
 }
@@ -95,7 +95,7 @@ export async function importBackup(text) {
   if (!x || (!x.forge && !x.forgeMerge)) throw new Error('Not a Forge file');
   if (x.forgeMerge) { // partial file: fill missing profile fields, add scans/photos/prs/tapes by id
     for (const [k, v] of Object.entries(x.profile || {})) if (S.profile[k] == null || S.profile[k] === '') S.profile[k] = v;
-    for (const list of ['scans', 'photos', 'prs', 'tapes']) for (const it of x[list] || []) if (!S[list].some(y => y.id === it.id)) S[list].push(it);
+    for (const list of ['scans', 'photos', 'prs', 'tapes', 'vitals']) for (const it of x[list] || []) if (!S[list].some(y => y.id === it.id)) S[list].push(it);
   } else replaceAll(x.state);
   for (const [k, data] of Object.entries(x.images || {})) { const blob = await (await fetch(data)).blob(); await putPhoto(k, blob); }
   save(true); return x.forgeMerge ? 'merge' : 'replace';
