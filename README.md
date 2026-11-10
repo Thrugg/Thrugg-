@@ -27,6 +27,20 @@ Your logbook, names, settings and inputs live in your browser and your own Supab
 
 Two devices are merged field by field: a change made on one device never undoes a different change made on the other, and when both changed the same field the later one wins. Which tab or filter is open stays on each device.
 
+## Live prices in the options lab (one-time setup, about 5 minutes)
+
+Gains & Greeks can fill in the last price of a symbol on any device, the phone included, through a small function in your own Supabase project. It answers only when you are signed in to sync.
+
+1. Open your project in the Supabase dashboard → **Edge Functions** → **Deploy a new function** → **Via editor**.
+2. Name it exactly `quote`.
+3. Replace the example code with the content of [`supabase/functions/quote/index.ts`](supabase/functions/quote/index.ts) and press **Deploy**. Leave "Verify JWT" switched on. No keys or secrets are needed.
+
+After that, the **Fetch** button appears in the options lab whenever you are signed in, and the price fills in when you change the symbol. Prices come from Yahoo Finance (Stooq as a fallback for US symbols) and are delayed or last close. Until the function exists, the app shows the Yahoo and TradingView links as before.
+
+## Routes traced on GitHub
+
+The route line of every hike is traced on GitHub's machines every Tuesday night and whenever the catalogue changes (`.github/workflows/trace-routes.yml`), and published as `data/routes.json`. Phones use those lines directly, so a hike opens with its line at once and needs no routing server. A hike you edited, or a GPX you imported, keeps its own line. To run it by hand: Actions tab → **Trace hike routes** → **Run workflow**.
+
 ## Checks and the yearly rule update
 
 `node --test tests/*.mjs` runs the checks: sync between two simulated devices, and both finance engines against published reference figures. Run it before every change to `cloud.js`, Safety Net Score or Gains & Greeks.

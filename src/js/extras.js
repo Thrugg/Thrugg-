@@ -971,7 +971,9 @@ function boot() {
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
   Sync.start();
   setTimeout(() => Album.upload(), 6000);
-  setTimeout(() => Routes.background(), 3500);
+  loadShippedRoutes().then(got => {
+    if (got) { pushHikeData(); if (UI.detailId && HBY[UI.detailId]) UI.openHike(UI.detailId, { noFly: true }); }
+  }).finally(() => setTimeout(() => Routes.background(), 3500));
   loadCatalogue().then(changed => {
     if (!changed) return;
     rebuildHikes(); UI.refresh();

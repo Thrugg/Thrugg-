@@ -1,0 +1,37 @@
+# Traces the route line of every hike on GitHub's machines and publishes data/routes.json.
+# Runs every Tuesday night, after a change to the catalogue, and on demand (Actions tab → Trace hike routes → Run workflow).
+name: Trace hike routes
+on:
+  schedule:
+    - cron: '17 2 * * 2'
+  push:
+    branches: [main]
+    paths: ['data/hikes.json', 'tools/trace_routes.mjs']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: trace-routes
+  cancel-in-progress: false
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Trace routes that are missing or out of date
+        run: node tools/trace_routes.mjs --max-minutes 45
+      - name: Check the catalogue against the traced lines
+        run: python3 tools/build.py --check
+      - name: Publish
+        run: |
+          if git diff --quiet data/routes.json; then echo "no new routes"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add data/routes.json
+          git commit -m "Routes traced: $(node -e "const r=require('./data/routes.json');console.log(Object.keys(r.by).length)") hikes"
+          git pull --rebase origin main
+          git push

@@ -76,3 +76,15 @@ test('Safety Net: the move planner pieces behave (gap cost with and without the 
   const pb = sn.convertProfile(EX, 'EUR', 'CHF');
   assert.ok(sn.compute('CH', { ...pb, years: 0 }, {}).T[1] > sn.compute('CH', pb, {}).T[1], 'without counted years the fund must be larger');
 });
+
+test('Safety Net: household cases are ordered sensibly', () => {
+  const pr = { ...EX, essential: 3500, otherIncome: 0, savings: 15000, partner: { on: true, grossAnnual: 45000, netMonthly: 2500, age: 32, years: 5, deTaxClass: '1', severance: 0 } };
+  const h = sn.household('DE', pr, {});
+  const [you, partner, both] = h.cases;
+  assert.equal(you.need, 1000); assert.equal(partner.need, 500); assert.equal(both.need, 3500);
+  assert.ok(both.good > you.good && both.good > partner.good, 'both losing work needs the most');
+  assert.ok(you.good > partner.good, 'losing the larger salary needs more here');
+  for (const c of h.cases) assert.ok(c.vgood >= c.good && isFinite(c.good));
+  assert.equal(sn.household('DE', { ...EX }, {}), null);
+  const conv = sn.convertProfile(pr, 'EUR', 'CHF'); assert.ok(conv.partner.netMonthly > 2500 * 0.9 && conv.partner.netMonthly < 2500 && pr.partner.netMonthly === 2500);
+});

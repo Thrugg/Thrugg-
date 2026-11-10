@@ -1,5 +1,5 @@
 /* Offline support: the network is tried first, and the last good copy is used when there is no signal. */
-const V = 'gainsgreeks-2026.11.10c';
+const V = 'gainsgreeks-2026.11.10d';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', '../cloud.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('gainsgreeks-') && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

@@ -343,6 +343,26 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
           <div class="ladder" id="ladder" style="margin-top:8px"></div>
           <p class="note" id="nextNote" style="margin-top:12px"></p>
         </div>
+        <div class="panel pad" id="hhPanel">
+          <div class="cardhead"><div><h2>Household</h2><p id="hhSub">Add a partner who shares the budget, to see what happens if either of you, or both, lose work.</p></div>
+            <label class="chk" style="white-space:nowrap"><input type="checkbox" id="hhOn"> Add a partner</label></div>
+          <div id="hhBody" hidden>
+            <div class="row2">
+              <div class="field"><label for="hhGross">Partner's gross salary per year</label><div class="inp"><input id="hhGross" type="number" inputmode="decimal" min="0" step="1000"><span class="unit" data-cur></span></div></div>
+              <div class="field"><label for="hhNet">Partner's net pay per month</label><div class="inp"><input id="hhNet" type="number" inputmode="decimal" min="0" step="50"><span class="unit" data-cur></span></div></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="hhAge">Partner's age</label><div class="inp"><input id="hhAge" type="number" inputmode="numeric" min="16" max="70"></div></div>
+              <div class="field"><label for="hhYears">Partner's years insured here</label><div class="inp"><input id="hhYears" type="number" inputmode="decimal" min="0" max="50" step="0.5"></div></div>
+            </div>
+            <div class="row2">
+              <div class="field" id="hhTaxField"><label for="hhTax">Partner's tax class</label><div class="inp"><select id="hhTax"><option value="1">I or IV</option><option value="2">II (single parent)</option><option value="3">III</option></select></div></div>
+              <div class="field"><label for="hhSev">Partner's severance you can count on</label><div class="inp"><input id="hhSev" type="number" inputmode="decimal" min="0" step="500"><span class="unit" data-cur></span></div></div>
+            </div>
+            <p class="note">Essential spending and savings above are now the household's. Take your partner's salary out of "Household income that keeps coming": it is counted here, and it can stop.</p>
+            <div id="hhOut" style="margin-top:10px"></div>
+          </div>
+        </div>
         <div class="panel pad" id="histPanel" hidden>
           <div class="cardhead"><div><h2>Progress</h2><p id="histSub"></p></div></div>
           <div id="histChart"></div>
@@ -1263,10 +1283,43 @@ This leaves margin for friction the rules do not capture.</div>
     const o = Object.assign({}, pr);
     ['grossAnnual', 'netMonthly', 'essential', 'otherIncome', 'savings', 'monthlySaving', 'severance'].forEach(k => { if (o[k] != null) o[k] = Math.round(Number(o[k]) * f); });
     o.netBenefitOverride = null;
+    if (pr.partner) { o.partner = Object.assign({}, pr.partner); ['grossAnnual', 'netMonthly', 'severance'].forEach(k => { if (o.partner[k] != null) o.partner[k] = Math.round(Number(o.partner[k]) * f); }); }
     return o;
   }
 
-  const API = { DPM, deAlg, deTariff, plan, simulate, compute, convertProfile, scoreOf, bandOf, BANDS, ANCHORS, DEFAULT_ASSUMPTIONS, DATA: D };
+  /* Household: two earners sharing one budget. Three cases: you lose your job, your partner loses theirs, both
+     lose them at the same time. The other salary keeps coming in the first two cases. Each person's benefit
+     follows the rules of the same country. Severance is set against the gap of the person who receives it. */
+  function household(code, pr, asm) {
+    const P = pr && pr.partner;
+    if (!P || !P.on) return null;
+    const A = Object.assign({}, DEFAULT_ASSUMPTIONS, asm || {});
+    const E = Math.max(0, Number(pr.essential || 0)), H = Math.max(0, Number(pr.otherIncome || 0));
+    const nY = Math.max(0, Number(pr.netMonthly || 0)), nP = Math.max(0, Number(P.netMonthly || 0));
+    const lag = Math.max(0, Math.round(Number(A.lagDays)));
+    const hT = Math.round(A.typicalMonths * DPM), hL = Math.round(A.longMonths * DPM), horizon = Math.max(hL, Math.round(24 * DPM));
+    const pp = Object.assign({}, pr, { taxOverride: null, netBenefitOverride: null, severance: 0, dkMemberYears: pr.dkMemberYears, seMemberMonths: pr.seMemberMonths }, P);
+    const plY = plan(code, pr), plP = plan(code, pp);
+    const dY = simulate(plY, 'A', 0, lag, horizon).daily, dP = simulate(plP, 'A', 0, lag, horizon).daily;
+    const sevY = Math.max(0, Number(pr.severance || 0)), sevP = Math.max(0, Number(P.severance || 0));
+    const shock = A.shockMonths * E;
+    const run = (daily, need, sev) => {
+      const dd = [0]; let acc = [0];
+      for (let d = 1; d <= horizon; d++) { acc[d] = acc[d - 1] + daily[d]; dd[d] = need * d / DPM - (d - lag >= 1 ? acc[d - lag] : 0); }
+      const worst = h => { let m = 0; for (let d = 1; d <= h; d++) if (dd[d] > m) m = dd[d]; return m; };
+      return { good: shock + Math.max(0, worst(hT) - sev), vgood: shock + Math.max(0, worst(hL) - sev) };
+    };
+    const firstNet = pl => pl.eligible && pl.phases.length ? pl.phases[0].net : 0;
+    const both = dY.map((v, i) => v + dP[i]);
+    const cases = [
+      Object.assign({ key: 'you', need: Math.max(0, E - H - nP), benefit: firstNet(plY), eligible: plY.eligible }, run(dY, Math.max(0, E - H - nP), sevY)),
+      Object.assign({ key: 'partner', need: Math.max(0, E - H - nY), benefit: firstNet(plP), eligible: plP.eligible }, run(dP, Math.max(0, E - H - nY), sevP)),
+      Object.assign({ key: 'both', need: Math.max(0, E - H), benefit: firstNet(plY) + firstNet(plP), eligible: plY.eligible || plP.eligible }, run(both, Math.max(0, E - H), sevY + sevP))
+    ];
+    return { cases, savings: Math.max(0, Number(pr.savings || 0)), A };
+  }
+
+  const API = { household, DPM, deAlg, deTariff, plan, simulate, compute, convertProfile, scoreOf, bandOf, BANDS, ANCHORS, DEFAULT_ASSUMPTIONS, DATA: D };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.NETSCORE = API;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
@@ -1632,9 +1685,30 @@ This leaves margin for friction the rules do not capture.</div>
     pts.forEach((q, i) => svg.appendChild(sv('circle', { cx: x(i), cy: y(q.s), r: i === pts.length - 1 ? 3.5 : 2, fill: 'currentColor' })));
     $('histChart').textContent = ''; $('histChart').appendChild(svg);
   }
+  function renderHousehold() {
+    const p = prof(), code = S.active, P = p.partner || {}, on = !!P.on;
+    $('hhOn').checked = on; $('hhBody').hidden = !on; $('hhTaxField').hidden = code !== 'DE';
+    [['hhGross', 'grossAnnual'], ['hhNet', 'netMonthly'], ['hhAge', 'age'], ['hhYears', 'years'], ['hhSev', 'severance']].forEach(([id, k]) => { if (document.activeElement !== $(id)) $(id).value = P[k] == null ? '' : P[k]; });
+    $('hhTax').value = String(P.deTaxClass || '1');
+    if (!on) return;
+    const h = N.household(code, p, S.asm), A = h.A;
+    const lab = { you: 'You lose your job', partner: 'Your partner loses theirs', both: 'Both of you at once' };
+    const mark = (need) => h.savings >= need ? '<span style="color:var(--lv-3)">covered</span>' : '<span style="color:#b04a3a">' + fmtC(need - h.savings, code) + ' short</span>';
+    const rows = h.cases.map(c => '<tr><td>' + lab[c.key] + '<br><small class="muted">needs ' + fmtC(c.need, code) + ' a month from savings, ' + (c.eligible ? 'benefit about ' + fmtC(c.benefit, code) + ' net' : 'no benefit yet') + '</small></td><td class="num" style="text-align:right">' + fmtC(c.good, code) + '<br><small>' + mark(c.good) + '</small></td><td class="num" style="text-align:right">' + fmtC(c.vgood, code) + '<br><small>' + mark(c.vgood) + '</small></td></tr>').join('');
+    const worst = h.cases.reduce((m, c) => c.good > m.good ? c : m, h.cases[0]);
+    $('hhOut').innerHTML = '<table style="width:100%;border-collapse:collapse;line-height:1.5"><thead><tr><th style="text-align:left">Case</th><th style="text-align:right">Good<br><small class="muted">' + A.typicalMonths + ' months</small></th><th style="text-align:right">Very good<br><small class="muted">' + A.longMonths + ' months</small></th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="note" style="margin-top:10px">' + (h.savings >= worst.good ? 'Your joint savings of ' + fmtC(h.savings, code) + ' cover a typical job search in every case.' : 'The hardest case is "' + lab[worst.key].toLowerCase() + '": it needs ' + fmtC(worst.good, code) + ' for a typical search, against ' + fmtC(h.savings, code) + ' saved.') + ' Both losing work together is rare, unless you work for the same employer or in the same sector.</p>';
+  }
+  (function () {
+    const P = () => { const p = prof(); p.partner = p.partner || { on: false, grossAnnual: 45000, netMonthly: 2500, age: 32, years: 5, deTaxClass: '1', severance: 0 }; return p.partner; };
+    $('hhOn').addEventListener('change', e => { P().on = e.target.checked; save(); renderHousehold(); });
+    [['hhGross', 'grossAnnual'], ['hhNet', 'netMonthly'], ['hhAge', 'age'], ['hhYears', 'years'], ['hhSev', 'severance']].forEach(([id, k]) =>
+      $(id).addEventListener('input', e => { P()[k] = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)); save(); renderHousehold(); }));
+    $('hhTax').addEventListener('change', e => { P().deTaxClass = e.target.value; save(); renderHousehold(); });
+  })();
   function renderScore() {
     const r = res();
-    renderRing(r); renderVerdict(r); renderTiles(r); renderLadder(r); renderChart(r); renderCountryNote(r); renderHistory(r);
+    renderRing(r); renderVerdict(r); renderTiles(r); renderLadder(r); renderChart(r); renderCountryNote(r); renderHistory(r); renderHousehold();
     document.querySelectorAll('[data-span]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.span) === S.span)));
   }
 

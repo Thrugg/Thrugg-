@@ -131,7 +131,31 @@ def check(hikes):
             tb = b['p'][b.get('hi', len(b['p']) - 1)] if isinstance(b.get('hi'), int) and b['hi'] < len(b['p']) else b['p'][-1]
             if hav(a['p'][0], b['p'][0]) < 0.4 and hav(ta, tb) < 0.4:
                 warnings.append(f'{a["id"]} and {b["id"]} share start and top: same hike twice?')
+    warnings += route_warnings(hikes)
     return errors, warnings
+
+
+def route_warnings(hikes):
+    """Compare catalogue distance and ascent with the lines traced on GitHub (data/routes.json)."""
+    f = DATA / 'routes.json'
+    if not f.exists(): return []
+    try: by = json.loads(f.read_text()).get('by', {})
+    except json.JSONDecodeError: return ['data/routes.json is not valid JSON']
+    out = []
+    for h in hikes:
+        r = by.get(h.get('id')) if isinstance(h, dict) else None
+        if not r or not isinstance(h.get('p'), list): continue
+        if r.get('wk') != json.dumps(h['p'], separators=(',', ':')) + '|' + (h.get('ty') or 'out'): continue
+        out_back = (h.get('ty') or 'out') == 'out'
+        km_t = r['km'] * (2 if out_back else 1)
+        up_t = r['asc'] + r['desc'] if out_back else r['asc']
+        km = h['km'] if num(h.get('km')) else 0
+        up = h['up'] if num(h.get('up')) else 0
+        if km and abs(km - km_t) > max(1.0, 0.2 * km):
+            out.append(f'{h["id"]}: catalogue says {km} km, the traced line gives {km_t:.1f} km: check the figure or the route points')
+        if up and abs(up - up_t) > max(150, 0.25 * up):
+            out.append(f'{h["id"]}: catalogue says {up} m of ascent, the traced line gives {up_t} m: check the figure or the route points')
+    return out
 
 
 def serialise(hikes):

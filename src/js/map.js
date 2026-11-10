@@ -345,10 +345,33 @@ async function addElevation(c) {
   }
   return c;
 }
+/* Routes traced on GitHub (tools/trace_routes.mjs → data/routes.json). Used whenever this device has no
+   better line of its own for the hike's current route points, so phones rarely need to trace anything. */
+let SHIPPED = {};
+async function loadShippedRoutes() {
+  if (!/^https?:$/.test(location.protocol)) return false;
+  try {
+    const r = await fetchT('data/routes.json', { cache: 'no-cache' }, 20000);
+    if (!r.ok) return false;
+    const j = await r.json(), by = {};
+    for (const [id, v] of Object.entries(j.by || {})) {
+      if (!v || !Array.isArray(v.x) || v.x.length < 2) continue;
+      let X = 0, Y = 0; const c = v.x.map((dx, i) => { X += dx; Y += v.y[i]; return [X / 1e5, Y / 1e5, v.z[i]]; });
+      by[id] = { c, wk: v.wk, src: v.src || 'brouter', snapped: !!v.snapped, km: v.km, asc: v.asc, desc: v.desc, mx: v.mx, mn: v.mn, ts: v.ts, shipped: true };
+    }
+    SHIPPED = by;
+    return Object.keys(by).length > 0;
+  } catch (e) { console.warn('routes', e.message); return false; }
+}
 const Routes = {
   inflight: {}, queue: [], running: false,
   key: h => JSON.stringify(h.p) + '|' + h.ty,
-  cached(h) { const it = ITEMS['route:' + h.id]; return it && !it.x && it.d && it.d.c ? it.d : null; },
+  cached(h) {
+    const it = ITEMS['route:' + h.id], own = it && !it.x && it.d && it.d.c ? it.d : null, sh = SHIPPED[h.id];
+    if (own && (own.src === 'gpx' || (own.wk === this.key(h) && own.src === 'brouter'))) return own;
+    if (sh && sh.wk === this.key(h)) return sh;
+    return own;
+  },
   fresh(h) { const r = this.cached(h); return r && (r.wk === this.key(h) || r.src === 'gpx'); },
   async snap(name, pt) { // move the summit/hut waypoint onto the named OSM feature: Nominatim first, Overpass as fallback
     const rank = (cat, type) => ((cat === 'natural' && (type === 'peak' || type === 'volcano')) || (cat === 'tourism' && (type === 'alpine_hut' || type === 'wilderness_hut'))) ? 0 : (type === 'saddle' || type === 'mountain_pass') ? 1 : (cat === 'tourism' || cat === 'amenity') ? 2 : 3;

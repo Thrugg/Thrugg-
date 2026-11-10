@@ -2,6 +2,12 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 10 Nov 2026 (4) · Fourth batch
+
+- Safety Net Score: **Household**. Add a partner who shares the budget: the fund needed if you lose your job, if your partner loses theirs, or both at once, against your joint savings.
+- Cordée: route lines are now traced on GitHub every week and published in `data/routes.json`; the app uses them first. The build warns when a hike's distance or ascent disagrees with its traced line.
+- Gains & Greeks: live prices in the options lab on every device, through a `quote` function in your Supabase project (one-time setup in the README).
+
 ## 10 Nov 2026 (3) · Third batch
 
 - Safety Net Score: **Move planner** tab. Pick the country you move to, your last paid day and your first paid day there: it shows what the gap costs, what covers you at each step, the fund to have on the day you leave, and what to save per month until then.
