@@ -140,4 +140,17 @@ t('overall levels', () => {
   assert.equal(C.scoreTier(87), 4, 'Peak 87 = Spartan'); assert.equal(C.scoreTier(76), 3, 'Balance 76 = Viking');
   assert.equal(C.scoreTier(95), 5); assert.equal(C.scoreTier(4.9), 0); assert.equal(C.scoreTier(null), null);
 });
+t('Wattbike converted to a BikeErg 1,000 m through watts', () => {
+  near(C.bikeErgTime(202.5), 120, 0.1, 'Concept2: 2:00 per 1,000 m = 202 W');
+  near(C.wattbikeEquiv(345, 100.5).time, 100.5, 0.1, 'an effort as long as the equivalent time converts exactly');
+  const short = C.wattbikeEquiv(450, 60), long = C.wattbikeEquiv(450, 120);
+  assert.ok(short.time > C.bikeErgTime(450) && long.time < C.bikeErgTime(450), 'short efforts are discounted, long ones credited');
+  const who = { sex: 'm', kg: 80, age: 30 };
+  const r = C.evaluatePR({ event: 'bike1000', machine: 'wattbike', watts: 345, dur: 100.5 }, who);
+  near(r.p, 0.5, 0.01, 'same watts as the BikeErg median = median'); assert.equal(r.note, 'wattbike');
+  assert.equal(C.evaluatePR({ event: 'bike1000', machine: 'wattbike', watts: 900, dur: 20 }, who).note, 'wattbikeFar');
+  assert.equal(C.plausible({ event: 'bike1000', machine: 'wattbike', watts: 5000, dur: 100 }, 'm'), false, 'typo in watts');
+  assert.equal(C.plausible({ event: 'bike1000', machine: 'wattbike', watts: 420, dur: 100 }, 'm'), true);
+  assert.equal(C.evaluatePR({ event: 'bike1000', time: 100.5 }, who).note, undefined, 'BikeErg records unchanged');
+});
 console.log(`\n${n} test groups passed`);

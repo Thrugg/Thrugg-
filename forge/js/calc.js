@@ -488,6 +488,18 @@ export function e1rm(w, r) {
   return { value: mean(xs), spread: Math.max(...xs) - Math.min(...xs), xs };
 }
 /* Normalise a stored PR into the value that is ranked. Returns { value, rankable, note }. */
+/* Wattbike → BikeErg. The two machines agree on watts, not on distance: the Wattbike's distance comes from its own
+   road-bike speed model, the BikeErg's from Concept2's pace formula P = 0.35 / (s per m)³ (same watts as the RowErg
+   at half the pace distance: 2:00 per 1,000 m ≈ 202 W). An all-out effort of T seconds at P watts becomes the time
+   a BikeErg 1,000 m at that effort would take. Effort length matters (power falls fast between 1 and 3 minutes), so
+   power is moved along P ∝ t^−k (k = 0.35, a middle value for 1–3 min efforts) to the equivalent duration. */
+export const WB_K = 0.35;
+export function bikeErgTime(watts) { return watts > 0 ? 1000 * Math.cbrt(0.35 / watts) : null; }
+export function wattbikeEquiv(watts, dur, k = WB_K) {
+  if (!(watts > 0) || !(dur > 0)) return null;
+  const a = bikeErgTime(watts), e = k / 3, t = Math.pow(a * Math.pow(dur, -e), 1 / (1 - e));
+  return { time: t, ratio: dur / t, watts1k: watts * Math.pow(t / dur, -k) };
+}
 export function prValue(pr) {
   const ev = EVENTS[pr.event]; if (!ev) return { rankable: false };
   if (ev.kind === 'lift') {
@@ -499,6 +511,12 @@ export function prValue(pr) {
     if (pr.timing === 'gps') return { value: +pr.time, rankable: false, note: 'gps' };
     const t = +pr.time + (pr.timing === 'hand' ? SPRINT.hand[ev.dist] : 0);
     return { value: t, rankable: t > 0, note: pr.timing === 'hand' ? 'hand' : (pr.wind > 2 ? 'wind' : null) };
+  }
+  if (ev.kind === 'erg' && pr.machine === 'wattbike') {
+    const q = wattbikeEquiv(+pr.watts, +pr.dur);
+    if (!q) return { rankable: false };
+    const far = q.ratio < 0.75 || q.ratio > 1.33;
+    return { value: q.time, rankable: true, note: far ? 'wattbikeFar' : 'wattbike', est: true, watts1k: q.watts1k };
   }
   if (ev.kind === 'row' || ev.kind === 'erg') return { value: +pr.time, rankable: +pr.time > 0 };
   if (ev.kind === 'race') return { value: +pr.time, rankable: +pr.time > 0, note: 'vdot' };
@@ -519,7 +537,8 @@ export function plausible(pr, sex = 'm') {
     case 'lift': return v <= ({ bench: [360, 210], squat: [500, 320], deadlift: [510, 330], ohp: [230, 140] }[pr.event] || [500, 330])[m ? 0 : 1];
     case 'sprint': return v >= SPRINT.wr[ev.dist][m ? 'm' : 'f'] && v < ev.dist * 0.6;
     case 'row': return v >= ev.dist * (m ? 0.118 : 0.14) && v < ev.dist;
-    case 'erg': return v >= (pr.event === 'bike1000' ? 55 : 65) && v < 900;
+    case 'erg': if (pr.machine === 'wattbike' && !(+pr.watts >= 60 && +pr.watts <= 2600 && +pr.dur >= 30 && +pr.dur <= 600)) return false;
+      return v >= (pr.event === 'bike1000' ? 55 : 65) && v < 900;
     case 'rowtime': return v <= (m ? 460 : 400) && v >= 50;
     case 'race': return v >= ev.dist * (m ? 0.151 : 0.168) && v < ev.dist * 0.9;
     case 'jump': return v >= 5 && v <= 125;
