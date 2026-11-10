@@ -59,6 +59,20 @@ test('Gains & Greeks: Switzerland gives no tax relief for a loss year', () => {
   const r = gg.evaluate('CH', { ...I, res: 'CH', gain: -20000, opt: -5000, swing: -3000 });
   assert.ok(r.lines.filter(l => !l.wealth).every(l => l.tax == null || l.tax >= 0));
 });
+test('Gains & Greeks: 2026 verification pass, hand-checked countries', () => {
+  const near = (c, x, want) => { const t = gg.evaluate(c, { ...I, res: c, ...x }).total; assert.ok(Math.abs(t - want) < 1, `${c}: ${t} vs ${want}`); };
+  // Lithuania: 8,000 + 1,500 + 3,200 − 500 exemption = 12,200 at 20 %; dividend 15 % fully credited; + 90 withheld abroad
+  near('LT', {}, 2440 + 90);
+  // Costa Rica: territorial, foreign gains and dividends untaxed; only the 90 withheld abroad remains
+  near('CR', {}, 90);
+  // Luxembourg: long-held gain exempt; 1,500 + 3,200 speculative at 39 % × 1.07; 300 taxable dividend at the same rate − 90 credit; + 90
+  near('LU', {}, 4700 * .39 * 1.07 + (300 * .39 * 1.07 - 90) + 90);
+  // Israel: income above ILS 721,560, so 12,700 gains + 600 dividends add 5 % surtax on top of 25 %
+  near('IL', { income: 200000 }, 12700 * .25 + 600 * .10 + 13300 * .05 + 90);
+  // Canada (Ontario): CAD 97,200 income; 50 % of CAD 20,574 = 10,287 at 31.48 %; dividends CAD 972 straddle the 107,785 band
+  near('CA', {}, (10287 * .3148 + 298 * .3148 + 674 * .3389) / 1.62 - 90 + 90);
+  assert.equal(Object.values(gg.COUNTRIES).filter(c => c.conf === 'K').length, 0);
+});
 test('Gains & Greeks: every country runs on edge profiles without errors', () => {
   const edges = [{}, { gain: 0, opt: 0, swing: 0, div: 0 }, { gain: -20000, opt: -5000, swing: -3000 }, { gain: 5e6, opt: 1e6, cap: 2e7 }, { income: 0 }, { veh: 'shares' }, { veh: 'bondFund' }, { filing: 'joint' }, { hold: 10, tHold: 400 }, { margin: true, hedgeOnly: true }];
   assert.equal(Object.keys(gg.COUNTRIES).length, 38);
