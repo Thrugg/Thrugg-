@@ -248,6 +248,7 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" id="tab-score" aria-controls="p-score" aria-selected="true" data-tab="score">My score</button>
     <button role="tab" id="tab-compare" aria-controls="p-compare" aria-selected="false" data-tab="compare">Compare countries</button>
+    <button role="tab" id="tab-move" aria-controls="p-move" aria-selected="false" data-tab="move">Move planner</button>
     <button role="tab" id="tab-rules" aria-controls="p-rules" aria-selected="false" data-tab="rules">Rules &amp; sources</button>
     <button role="tab" id="tab-method" aria-controls="p-method" aria-selected="false" data-tab="method">Method</button>
   </nav>
@@ -381,6 +382,30 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
   </section>
 
   <!-- ================= RULES ================= -->
+  <section id="p-move" role="tabpanel" aria-labelledby="tab-move" hidden>
+    <div class="stack">
+      <div class="panel pad">
+        <div class="cardhead"><div><h2>Moving to another country</h2><p id="mvSub"></p></div></div>
+        <div class="row2">
+          <div class="field"><label for="mvTo">Moving to</label><div class="inp"><select id="mvTo"></select></div></div>
+          <div class="field"><label for="mvLeave">Last paid day in your current job</label><div class="inp"><input id="mvLeave" type="date"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="mvStart">First paid day in the new job</label><div class="inp"><input id="mvStart" type="date"></div><span class="hint">Leave empty if you move without a job. The search time from your assumptions is used.</span></div>
+          <div class="field"><label for="mvCosts">One-off moving costs</label><div class="inp"><input id="mvCosts" type="number" inputmode="decimal" min="0" step="500"><span class="unit" data-mvcur="a"></span></div><span class="hint">Removal, rental deposit, double rent, travel.</span></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="mvGross">Gross salary there, per year</label><div class="inp"><input id="mvGross" type="number" inputmode="decimal" min="0" step="1000"><span class="unit" data-mvcur="b"></span></div><span class="hint">Empty = your current salary converted.</span></div>
+          <div class="field"><label for="mvEss">Essential spending there, per month</label><div class="inp"><input id="mvEss" type="number" inputmode="decimal" min="0" step="50"><span class="unit" data-mvcur="b"></span></div><span class="hint">Empty = your current spending converted. Rent usually differs a lot.</span></div>
+        </div>
+      </div>
+      <div class="panel pad"><div class="cardhead"><div><h2>What you need on the day you leave</h2><p id="mvVerdict"></p></div></div><div id="mvFund"></div></div>
+      <div class="panel pad"><div class="cardhead"><div><h2>Your cover, step by step</h2></div></div><div id="mvSteps"></div></div>
+      <div class="panel pad"><div class="cardhead"><div><h2>To do</h2></div></div><ul class="plain" id="mvTodo"></ul>
+        <p class="note" style="margin-top:12px">The coordination rules are described in general terms. Countries apply them with their own conditions, so confirm your case with both employment agencies before you resign. Tax on your investments when you leave is a separate question: see <a href="../gains-greeks/#move">Gains &amp; Greeks, Move abroad</a>.</p></div>
+    </div>
+  </section>
+
   <section id="p-rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
     <div class="jump" id="jump"></div>
     <div class="cards" id="cards"></div>
@@ -1730,11 +1755,92 @@ This leaves margin for friction the rules do not capture.</div>
     fx.appendChild(s2); cards.appendChild(fx);
   }
 
+  // ---------- move planner ----------
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  /* Leaving a job in one country and starting in another: what the gap costs, what covers you at each step,
+     and how much to have saved on the day you leave. Amounts in the currency of the country you leave,
+     except the cover in the new country, which is shown in its own currency. */
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const dayNum = v => { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(v || ''); return m ? Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5) : null; };
+  const resignText = c => { const f = C[c].facts || C[c].rules || C[c]; const t = (f && f.resign) || (C[c].txt && C[c].txt.resign) || ''; return t ? (/[.!?]$/.test(t) ? t : t + '.') : 'see Rules & sources.'; };
+  function moveState() {
+    const a = S.active, t = new Date();
+    if (!S.move) S.move = {};
+    const M = S.move;
+    if (!M.to || !C[M.to] || M.to === a) M.to = ['CH', 'DK', 'NO', 'PL', 'DE'].find(c => c !== a && C[c]);
+    if (!dayNum(M.leave)) M.leave = iso(new Date(t.getFullYear(), t.getMonth() + 6, 0));
+    if (M.start === undefined) { const d = new Date(M.leave + 'T12:00'); d.setDate(d.getDate() + 31); M.start = iso(d); }
+    return M;
+  }
+  function renderMove() {
+    const M = moveState(), a = S.active, b = M.to, pa = prof(), A = Object.assign({}, N.DEFAULT_ASSUMPTIONS, S.asm), DPM = N.DPM;
+    const sel = $('mvTo');
+    if (sel.options.length !== ORDER.length - 1 || sel.dataset.from !== a) { sel.textContent = ''; ORDER.filter(c => c !== a).forEach(c => sel.appendChild(el('option', { value: c, text: C[c].name }))); sel.dataset.from = a; }
+    sel.value = b; $('mvLeave').value = M.leave; $('mvStart').value = M.start || '';
+    [['mvCosts', 'costs'], ['mvGross', 'gross'], ['mvEss', 'ess']].forEach(([id, k]) => { if (document.activeElement !== $(id)) $(id).value = M[k] > 0 ? M[k] : ''; });
+    document.querySelectorAll('[data-mvcur]').forEach(u => { u.textContent = C[u.dataset.mvcur === 'a' ? a : b].cur; });
+    const today = dayNum(iso(new Date())), leave = dayNum(M.leave), start = dayNum(M.start);
+    const hasJob = start != null, gap = hasJob ? Math.max(0, start - leave) : Math.round(A.typicalMonths * DPM);
+    const monthsTo = Math.max(0, (leave - today) / DPM);
+    const E = Math.max(0, Number(pa.essential || 0)), need = Math.max(0, E - Number(pa.otherIncome || 0));
+    const shock = A.shockMonths * E, costs = Math.max(0, Number(M.costs || 0));
+    const gapPlain = need * gap / DPM;
+    /* with the benefit of the country you leave, after its penalty for resigning; only if you stay registered there */
+    let gapWith = gapPlain;
+    if (gap > 0) { const sim = N.simulate(N.plan(a, pa), 'B', need, Math.max(0, Math.round(Number(A.lagDays))), gap); gapWith = 0; for (let d = 1; d <= gap; d++) if (sim.dd[d] > gapWith) gapWith = sim.dd[d]; }
+    /* the new country: same person, salary and spending there */
+    const pb = N.convertProfile(pa, C[a].cur, C[b].cur); pb.taxOverride = null; pb.severance = 0; pb.otherIncome = Math.round(Number(pa.otherIncome || 0) * D.FX[C[b].cur] / D.FX[C[a].cur]);
+    if (M.gross > 0) { const k = M.gross / Math.max(1, pb.grossAnnual); pb.netMonthly = Math.round(pb.netMonthly * k); pb.grossAnnual = M.gross; }
+    if (M.ess > 0) pb.essential = M.ess;
+    pb.savings = 0;
+    const rbFull = N.compute(b, pb, S.asm), rbNew = N.compute(b, Object.assign({}, pb, { years: 0, dkMemberYears: 0, seMemberMonths: 0 }), S.asm);
+    const toA = x => x * D.FX[C[a].cur] / D.FX[C[b].cur];
+    const through = shock + gapPlain + costs, arriveGood = through + toA(rbFull.T[1]);
+    const have = Math.max(0, Number(pa.savings || 0)) + Math.max(0, Number(pa.monthlySaving || 0)) * monthsTo;
+    const perMonth = t => monthsTo >= 1 ? Math.max(0, (t - Number(pa.savings || 0)) / monthsTo) : null;
+    const fmtD = v => new Date(v + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    $('mvSub').textContent = C[a].name + ' to ' + C[b].name + (hasJob ? ', ' + gap + ' days between the two jobs.' : ', no job there yet: ' + A.typicalMonths + ' months of search assumed.');
+    $('mvVerdict').textContent = leave <= today ? 'The leaving date is in the past: set a future date.' : have >= arriveGood ? 'On your current saving rate you arrive with the move paid for and a Good safety net in ' + C[b].name + '.' : have >= through ? 'On your current saving rate the move itself is covered, but you arrive below a Good safety net in ' + C[b].name + '.' : 'On your current saving rate you are ' + fmtC(through - have, a) + ' short of covering the move itself.';
+    const row = (k, v, strong) => '<tr><td>' + k + '</td><td class="num" style="text-align:right;white-space:nowrap">' + (strong ? '<b>' + v + '</b>' : v) + '</td></tr>';
+    $('mvFund').innerHTML = '<table style="width:100%;border-collapse:collapse;line-height:1.9">' +
+      row('Surprise bill (' + A.shockMonths + ' month of spending)', fmtC(shock, a)) +
+      row('Living costs for ' + gap + ' days without pay' + (hasJob ? '' : ' (assumed search time)'), fmtC(gapPlain, a)) +
+      row('One-off moving costs', fmtC(costs, a)) +
+      row('To get through the move', fmtC(through, a), true) +
+      row('Good level in ' + C[b].name + ' from day one (' + fmtC(rbFull.T[1], b) + ')', fmtC(toA(rbFull.T[1]), a)) +
+      row('To arrive already at Good', fmtC(arriveGood, a), true) +
+      row('Savings expected on ' + fmtD(M.leave) + ' (' + fmtC(pa.savings, a) + ' now + ' + fmtC(pa.monthlySaving, a) + ' × ' + monthsTo.toFixed(1) + ' months)', fmtC(have, a), true) + '</table>' +
+      (perMonth(through) != null ? '<p class="note" style="margin-top:10px">Saving needed per month until then: ' + fmtC(perMonth(through), a) + ' to cover the move, ' + fmtC(perMonth(arriveGood), a) + ' to arrive at Good.</p>' : '');
+    const steps = [];
+    steps.push(['Until ' + fmtD(M.leave), 'Salary in ' + C[a].name + '. Nothing changes.']);
+    steps.push([hasJob ? 'The ' + gap + ' days in between' : 'While you search', gap === 0 ? 'No gap: no income is missing.' :
+      'No pay. ' + C[a].name + ' on resigning: ' + resignText(a) + (gapWith < gapPlain - 1 ? ' If you stay there registered as a jobseeker, the gap costs about ' + fmtC(gapWith, a) + ' instead of ' + fmtC(gapPlain, a) + '.' : ' Over this gap that leaves no benefit, even if you stay there registered as a jobseeker.') + ' If you leave the country straight away, count on no benefit. The plan above uses the cautious figure.']);
+    if (!hasJob) steps.push(['Taking the benefit with you', 'Within the EU, EEA and Switzerland an unemployment benefit can usually be paid abroad for three months while you look for work there, after about four weeks registered in the country you leave (form PD U2).']);
+    steps.push(['First months in ' + C[b].name, 'From your first working day your insured years from ' + C[a].name + ' normally count (form PD U1). Then ' + C[b].scheme + ' would pay about ' + fmtC(rbFull.firstNet, b) + ' net a month after a job loss, and a Good safety net is ' + fmtC(rbFull.T[1], b).replace(/\.$/, '') + '.']);
+    steps.push(['If those years are not counted', (rbNew.plan.eligible ? 'The benefit would be about ' + fmtC(rbNew.firstNet, b) + ' net a month' : 'You would not be entitled to the benefit yet') + ', and a Good safety net is ' + fmtC(rbNew.T[1], b).replace(/\.$/, '') + '. Some countries ask for a minimum time of work or membership before they count earlier periods.']);
+    $('mvSteps').innerHTML = steps.map(x => '<p style="margin:0 0 10px"><b>' + esc(x[0]) + '.</b> ' + esc(x[1]) + '</p>').join('');
+    const todo = ['Ask the agency in ' + C[a].name + ' for form PD U1 (your insurance record) before you leave.'];
+    if (!hasJob) todo.push('If you move without a job: register as unemployed in ' + C[a].name + ' first and ask for form PD U2 before leaving.');
+    if (b === 'DK') todo.push('Denmark: unemployment insurance is voluntary. Join an a-kasse on your first working day, or earlier periods may not be counted.');
+    if (b === 'SE' || b === 'FI') todo.push(C[b].name + ': the income-related benefit depends on membership of an unemployment fund. Join one when you start.');
+    if (a === 'UK' || b === 'UK') todo.push('The United Kingdom is outside the EU rules. Periods are coordinated under the EU–UK agreement with different forms: check with both sides.');
+    todo.push('Ask ' + C[b].name + ' whether a minimum time of work there is needed before periods from ' + C[a].name + ' count.');
+    todo.push('Health insurance: make sure there is no day without cover between the two jobs.');
+    $('mvTodo').textContent = ''; todo.forEach(t => $('mvTodo').appendChild(el('li', { text: t })));
+  }
+  (function () {
+    const set = (k, v) => { moveState()[k] = v; save(); renderMove(); };
+    $('mvTo').addEventListener('change', e => { const M = moveState(); M.to = e.target.value; M.gross = 0; M.ess = 0; save(); renderMove(); });
+    $('mvLeave').addEventListener('change', e => { if (dayNum(e.target.value)) set('leave', e.target.value); });
+    $('mvStart').addEventListener('change', e => set('start', dayNum(e.target.value) ? e.target.value : ''));
+    [['mvCosts', 'costs'], ['mvGross', 'gross'], ['mvEss', 'ess']].forEach(([id, k]) => $(id).addEventListener('input', e => set(k, Math.max(0, Number(e.target.value) || 0))));
+  })();
+
   // ---------- navigation ----------
   function setTab(tab) {
     S.tab = tab; save();
     document.querySelectorAll('[role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    ['score', 'compare', 'rules', 'method'].forEach(t => { $('p-' + t).hidden = t !== tab; });
+    ['score', 'compare', 'move', 'rules', 'method'].forEach(t => { $('p-' + t).hidden = t !== tab; });
     try { if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab); } catch (e) { /* ignore */ }
     renderTab();
   }
@@ -1742,6 +1848,7 @@ This leaves margin for friction the rules do not capture.</div>
     if (S.tab === 'score') renderScore();
     else if (S.tab === 'compare') renderCompare();
     else if (S.tab === 'rules') renderRules();
+    else if (S.tab === 'move') renderMove();
   }
   function openCountry(code) {
     const from = S.active; S.active = code; ensureProfile(code, from); save(); writeInputs(); setTab('score');
@@ -1763,7 +1870,7 @@ This leaves margin for friction the rules do not capture.</div>
   document.querySelectorAll('[data-basis]').forEach(b => b.addEventListener('click', () => { S.basis = b.dataset.basis; save(); renderCompare(); }));
   let rz = null; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderTab, 150); });
   const h = (location.hash || '').replace('#', '');
-  setTab(['score', 'compare', 'rules', 'method'].includes(h) ? h : (S.tab || 'score'));
+  setTab(['score', 'compare', 'move', 'rules', 'method'].includes(h) ? h : (S.tab || 'score'));
 })();
 
 </script>
