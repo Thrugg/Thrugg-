@@ -2,6 +2,27 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 10 Nov 2026 (5) · Fifth batch: every country checked
+
+Gains & Greeks: the 29 countries marked "To verify" were checked against 2026-dated sources (tax authorities, PwC Tax Summaries, KPMG, local firms). All 38 are now marked verified. What changed in the numbers:
+
+- Australia: 2026-27 brackets (the 16 % band is now 15 %); note on the Budget proposal to replace the 50 % discount from July 2027.
+- Canada: 2026 federal + Ontario brackets (lowest federal rate 14 %).
+- Chile: foreign shares now taxed at the global complementary scale in UTA (up to 40 %) instead of the 10 % rate, which only covers Chilean shares with market presence.
+- Colombia: short-held gains use the real art. 241 table in UVT 2026 instead of a flat 28 %; foreign dividends at the same table.
+- Costa Rica: territorial system, so foreign gains and dividends are untaxed (was 15 %).
+- Czechia: the CZK 40m cap on the 3-year exemption is gone from 2026.
+- Iceland: ISK 300,000 allowance shared by gains and dividends; losses do not carry forward.
+- Israel: 3 % surtax plus 2 % on capital income above ILS 721,560, worked out on your income; losses carry forward.
+- Latvia: 3 % extra on yearly income above €200,000.
+- Lithuania: 2026 reform. Gains stack on your income at 20 / 25 / 32 %, shares held over 5 years pay 15 %, €500 exemption.
+- Luxembourg: the exact 2026 class-1 tariff (23 bands) and the 9 % solidarity rate above €150,000.
+- Mexico: 10 % for shares listed in Mexico or on the SIC, also through a foreign broker; derivatives at the 2026 annual table.
+- Slovakia: 2026 brackets, €500 exemption, 16 % health insurance on taxable gains, dividends 10 %.
+- Türkiye: 2026 progressive brackets instead of a flat 30 % estimate.
+- Greece, Hungary, Slovenia: "(verify)" removed; notes on non-UCITS funds (Greece) and the 13 % social contribution on dividends (Hungary).
+- Austria, Estonia, Finland, Italy, Japan, Korea, New Zealand, Portugal, Spain, Sweden, United Kingdom, United States: figures confirmed unchanged; sources updated.
+
 ## 10 Nov 2026 (4) · Fourth batch
 
 - Safety Net Score: **Household**. Add a partner who shares the budget: the fund needed if you lose your job, if your partner loses theirs, or both at once, against your joint savings.

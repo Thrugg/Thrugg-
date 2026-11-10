@@ -239,7 +239,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
     <div class="vhead"><h1>Same results, 38 tax codes</h1><p>Your Tax desk inputs run through every OECD member's 2026 rules. The one-off tax on this year's results is ranked; recurring wealth tax is shown beside it because it compounds against you every year.</p></div>
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:12px">
-        <div class="seg" id="cmp-filter"><button data-v="ver">Verified 9</button><button data-v="all">All 38</button><button data-v="pri">Top 6</button><button data-v="eu">EU</button></div>
+        <div class="seg" id="cmp-filter"><button data-v="ver">Verified 38</button><button data-v="all">All 38</button><button data-v="pri">Top 6</button><button data-v="eu">EU</button></div>
         <div class="seg" id="cmp-sort"><button data-v="total">Total</button><button data-v="inv">Investing</button><button data-v="trd">Trading</button><button data-v="wealth">Wealth tax</button></div>
       </div>
       <div class="tw" id="cmp-table"></div>
@@ -468,20 +468,21 @@ FR:{n:'France',cur:'EUR',conf:'V',eu:1,pri:1,src:'https://www.impots.gouv.fr',sr
   if(cehr>0)c.add('High-income contribution (CEHR 3 % / 4 %)',rfr-rfr0,cehr);
   c.cf(g.cf,'10 years, gains only');
  }},
-AT:{n:'Austria',cur:'EUR',conf:'K',eu:1,src:'https://www.bmf.gv.at',srcN:'BMF Austria · §27a EStG',
+AT:{n:'Austria',cur:'EUR',conf:'V',eu:1,src:'https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/besteuerung-kapitalvermoegen.html',srcN:'BMF Austria · §27a EStG',
  r:{sh:'27,5 % KESt',op:'27,5 %',al:'—',hp:'None',ls:'Same-year offset only; no carry-forward',wt:'None'},wrap:'No dedicated equity wrapper; Zukunftsvorsorge is limited.',
  calc:simple({rate:.275,carry:false})},
-AU:{n:'Australia',cur:'AUD',conf:'K',src:'https://www.ato.gov.au',srcN:'ATO · ITAA 1997 Div 115',
+AU:{n:'Australia',cur:'AUD',conf:'V',src:'https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents',srcN:'ATO · resident rates 2026-27 · ITAA 1997 Div 115',
  r:{sh:'Marginal rate (0–45 %) + 2 % Medicare levy',op:'Capital account; traders taxed as ordinary income',al:'A$18,200 tax-free threshold',hp:'50 % CGT discount after 12 months',ls:'Capital losses only against capital gains; Part IVA for wash sales',wt:'None'},
  wrap:'Superannuation: 15 % on earnings, 10 % on discounted gains, 0 % in pension phase.',
  calc(I,c){
-  const br=[[18200,0],[45000,.16],[135000,.30],[190000,.37],[Infinity,.45]],inc=c.L(I.income);
+  const br=[[18200,0],[45000,.15],[135000,.30],[190000,.37],[Infinity,.45]],inc=c.L(I.income);
   let s=c.L((I.hold<365?I.gain:0)+I.swing+I.opt),l=c.L(I.hold>=365?I.gain:0),loss=c.L(I.lossCF)+(s<0?-s:0)+(l<0?-l:0);
   s=Math.max(0,s);l=Math.max(0,l);const us=Math.min(loss,s);s-=us;loss-=us;const ul=Math.min(loss,l);l-=ul;loss-=ul;
   const ncg=s+l*.5,t=stk(inc,ncg,br)+ncg*.02;
   c.add(`Net capital gain (${l>0?'50 % discount on long-term part':'no discount'}) at marginal rate + Medicare`,c.E(ncg),c.E(t));
   if(I.div>0)c.divAt(c.E(stk(inc+ncg,c.L(I.div),br)+c.L(I.div)*.02),'Dividends at marginal rate (unfranked foreign)');
   c.cf(c.E(loss),'capital gains only');
+  c.note('info','2026-27 rates (the 16 % band fell to 15 % on 1 July 2026). The 2026 Budget proposes replacing the 50 % discount from 1 July 2027; not law yet.');
   if(I.trades>100)c.note('warn','At this frequency the ATO may treat you as a share trader: profits become ordinary income (no discount), but losses become deductible.');
  }},
 BE:{n:'Belgium',cur:'EUR',conf:'V',eu:1,src:'https://finance.belgium.be',srcN:'SPF Finances · Act of 6 April 2026',
@@ -496,46 +497,63 @@ BE:{n:'Belgium',cur:'EUR',conf:'V',eu:1,src:'https://finance.belgium.be',srcN:'S
   if(I.trades>150)c.note('warn','Very frequent trading risks the 33 % "abnormal management of private wealth" regime.');
   c.note('info','Stock-exchange tax (TOB, 0,12–1,32 % per trade) applies to foreign brokers like IBKR too, and you declare it yourself.');
  }},
-CA:{n:'Canada',cur:'CAD',conf:'K',src:'https://www.canada.ca/en/revenue-agency.html',srcN:'CRA · ITA s.38 (Ontario rates used)',
+CA:{n:'Canada',cur:'CAD',conf:'V',src:'https://www.canada.ca/en/revenue-agency/services/tax/individuals/frequently-asked-questions-individuals/canadian-income-tax-rates-individuals-current-previous-years.html',srcN:'CRA 2026 rates · ITA s.38 (Ontario combined)',
  r:{sh:'50 % inclusion at marginal rate',op:'Same, or 100 % business income for traders',al:'TFSA, RRSP, FHSA',hp:'None',ls:'Superficial-loss rule 30 days; carry back 3 years, forward indefinitely',wt:'None'},
  wrap:'TFSA (tax-free growth) and RRSP (deductible contributions).',
  calc(I,c){
-  const br=[[12500,0],[53000,.2005],[58500,.2415],[106000,.2965],[117000,.3148],[150000,.4341],[181000,.4497],[220000,.4829],[258000,.4985],[Infinity,.5353]];
+  const br=[[16452,0],[53891,.1905],[58523,.2315],[94902,.2965],[107785,.3148],[111810,.3389],[117045,.3791],[150000,.4341],[181440,.4497],[220000,.4826],[258482,.4982],[Infinity,.5353]];
   const inc=c.L(I.income),g=nb(c.L(I.gain+I.swing+I.opt),c.L(I.lossCF),0),tx=g.taxable*.5,t=stk(inc,tx,br);
   c.add('Taxable capital gain: 50 % inclusion at combined marginal rate',c.E(tx),c.E(t));
   if(I.div>0)c.divAt(c.E(stk(inc+tx,c.L(I.div),br)),'Foreign dividends at marginal rate');
   c.cf(c.E(g.cf));
+  c.note('info','Federal + Ontario 2026 brackets, surtax included; basic personal amounts simplified. Other provinces differ.');
   if(I.trades>100)c.note('warn','Frequent trading can be business income: 100 % inclusion.');
  }},
-CL:{n:'Chile',cur:'CLP',conf:'K',src:'https://www.sii.cl',srcN:'SII · art. 107 LIR',r:{sh:'10 % sole tax on locally listed shares with market presence',op:'Ordinary income',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'APV voluntary pension savings.',
- calc(I,c){simple({rate:.10})(I,c);c.note('warn','The 10 % rate applies to Chilean-listed shares with market presence. Foreign shares held at IBKR fall into the progressive global complementary tax (up to 40 %).');}},
-CO:{n:'Colombia',cur:'COP',conf:'K',src:'https://www.dian.gov.co',srcN:'DIAN · Estatuto Tributario',r:{sh:'Ganancia ocasional 15 % if held ≥ 2 years; otherwise ordinary income',op:'Ordinary income',al:'Small listed stakes (< 10 %) may be exempt',hp:'2-year test',ls:'—',wt:'Wealth tax above ~72,000 UVT'},wrap:'Voluntary pension funds (AFC/FVP).',
- calc(I,c){const lg=I.hold>=730?I.gain:0,b1=nb(lg,0,0),b2=nb((I.hold<730?I.gain:0)+I.swing+I.opt,I.lossCF,0);c.add('Long-held gains (≥ 2 years) at 15 %',b1.taxable,b1.taxable*.15);c.add('Short-term gains as ordinary income (≈28 %, est.)',b2.taxable,b2.taxable*.28);c.div(.20);}},
-CR:{n:'Costa Rica',cur:'CRC',conf:'K',src:'https://www.hacienda.go.cr',srcN:'Hacienda · Ley 9635',r:{sh:'15 %',op:'15 %',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'—',calc:simple({rate:.15})},
-CZ:{n:'Czechia',cur:'CZK',conf:'K',eu:1,src:'https://www.financnisprava.cz',srcN:'Finanční správa · §4 ZDP',
- r:{sh:'15 % / 23 % above ~CZK 1,76m',op:'15 % / 23 %',al:'Gross proceeds ≤ CZK 100k/yr exempt',hp:'Exempt after 3 years (cap CZK 40m/yr)',ls:'Same-year offset only',wt:'None'},wrap:'DIP long-term investment product (deductible).',
+CL:{n:'Chile',cur:'CLP',conf:'V',src:'https://www.sii.cl/valores_y_fechas/utm/utm2025.htm',srcN:'SII · LIR arts. 17 N°8, 52, 107 · UTA Dec 2025',r:{sh:'Foreign shares: global complementary tax 0–40 %; Chilean shares with market presence 10 %',op:'Global complementary tax',al:'Income up to 13,5 UTA exempt',hp:'—',ls:'Not modelled',wt:'None'},wrap:'APV voluntary pension savings.',
+ calc(I,c){const U=834504,br=[[13.5*U,0],[30*U,.04],[50*U,.08],[70*U,.135],[90*U,.23],[120*U,.304],[310*U,.35],[Infinity,.40]],inc=c.L(I.income);
+  const g=Math.max(0,c.L(I.gain+I.swing+I.opt)),t=stk(inc,g,br);c.add('Gains at global complementary tax (foreign shares, marginal rate)',c.E(g),c.E(t));
+  if(I.div>0)c.divAt(c.E(stk(inc+g,c.L(I.div),br)),'Foreign dividends at global complementary tax');
+  c.note('info','Chilean-listed shares with market presence pay a 10 % sole tax instead; a reform ends that rate from 2027.');
+  if(I.hold<365||I.trades>100)c.note('warn','Gains on shares held under a year, or by a habitual seller, can also bear first-category tax; not modelled here.');}},
+CO:{n:'Colombia',cur:'COP',conf:'V',src:'https://www.dian.gov.co',srcN:'DIAN · Estatuto Tributario arts. 241, 300, 314 · UVT 2026',r:{sh:'Ganancia ocasional 15 % if held ≥ 2 years; otherwise art. 241 table (0–39 %)',op:'Ordinary income (art. 241 table)',al:'Colombian-listed shares (stake ≤ 3 %) exempt; foreign shares are not',hp:'2-year test',ls:'Not modelled',wt:'Wealth tax above 72,000 UVT (not computed)'},wrap:'Voluntary pension funds (AFC/FVP).',
+ calc(I,c){const U=52374,br=[[1090*U,0],[1700*U,.19],[4100*U,.28],[8670*U,.33],[18970*U,.35],[31000*U,.37],[Infinity,.39]],inc=c.L(I.income);
+  const lg=Math.max(0,I.hold>=730?I.gain:0),sg=Math.max(0,c.L((I.hold<730?I.gain:0)+I.swing+I.opt));
+  c.add('Ganancia ocasional (held ≥ 2 years) at 15 %',lg,lg*.15);c.add('Short-held gains at the art. 241 table (marginal)',c.E(sg),c.E(stk(inc,sg,br)));
+  if(I.div>0)c.divAt(c.E(stk(inc+sg,c.L(I.div),br)),'Foreign dividends at the art. 241 table');
+  c.note('info','Labour-income exemptions are ignored, so the marginal rate may be slightly overstated.');}},
+CR:{n:'Costa Rica',cur:'CRC',conf:'V',src:'https://taxsummaries.pwc.com/costa-rica/individual/income-determination',srcN:'Hacienda · Ley 7092 / 9635 (territorial)',r:{sh:'Foreign-source gains: 0 % (territorial)',op:'Foreign-source: 0 %',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'—',
+ calc(I,c){c.add('Foreign-source gains (shares, ETFs, options): not taxed',I.gain+I.swing+I.opt,0);if(I.div>0)c.add('Foreign dividends: not taxed (territorial system)',I.div,0);
+  c.note('info','Costa Rica taxes only Costa Rican-source income; local capital gains pay 15 %. A 2026 bill proposes 15 % on foreign passive income.');}},
+CZ:{n:'Czechia',cur:'CZK',conf:'V',eu:1,src:'https://taxsummaries.pwc.com/czech-republic/individual/income-determination',srcN:'Finanční správa · §§4, 10 ZDP',
+ r:{sh:'15 % / 23 % above CZK 1,762,812',op:'15 % / 23 %',al:'Gross proceeds ≤ CZK 100k/yr exempt',hp:'Exempt after 3 years (no cap from 2026)',ls:'Same-year offset only',wt:'None'},wrap:'DIP long-term investment product (deductible).',
  calc(I,c){const inc=c.L(I.income),br=[[1762812,.15],[Infinity,.23]];let g=I.gain;if(I.hold>=1095&&g){c.add('Exempt: 3-year time test met',g,0);g=0;}
   const s=c.L(g+I.swing+I.opt),t=s>0?stk(inc,s,br):0;c.add('Taxable gains at 15 % / 23 %',c.E(Math.max(0,s)),c.E(t));if(s<0)c.note('warn','Losses cannot be carried forward in Czechia.');c.div(.15);}},
-EE:{n:'Estonia',cur:'EUR',conf:'K',eu:1,src:'https://www.emta.ee',srcN:'EMTA · Income Tax Act',r:{sh:'22 %',op:'22 %',al:'Investment account (investeerimiskonto) defers tax',hp:'—',ls:'—',wt:'None'},wrap:'Investment account: gains taxed only when withdrawn above deposits.',calc:simple({rate:.22})},
-FI:{n:'Finland',cur:'EUR',conf:'K',eu:1,src:'https://www.vero.fi',srcN:'Vero · Tuloverolaki',
+EE:{n:'Estonia',cur:'EUR',conf:'V',eu:1,src:'https://www.emta.ee/en/private-client/taxes-and-payment/income-tax',srcN:'EMTA · Income Tax Act',r:{sh:'22 %',op:'22 %',al:'Investment account (investeerimiskonto) defers tax',hp:'—',ls:'—',wt:'None'},wrap:'Investment account: gains taxed only when withdrawn above deposits.',calc:simple({rate:.22})},
+FI:{n:'Finland',cur:'EUR',conf:'V',eu:1,src:'https://www.vero.fi/en/individuals/property/investments/selling-shares/',srcN:'Vero · Tuloverolaki',
+ r:{sh:'30 % / 34 % on capital income above €30k',op:'Same',al:'Proceeds ≤ €1,000/yr exempt; equity savings account',hp:'Deemed acquisition cost 20 % (40 % after 10 years)',ls:'5-year carry-forward',wt:'None'},wrap:'Osakesäästötili (equity savings account, €100k).',
  r:{sh:'30 % / 34 % on capital income above €30k',op:'Same',al:'Proceeds ≤ €1,000/yr exempt; equity savings account',hp:'Deemed acquisition cost 20 % (40 % after 10 years)',ls:'5-year carry-forward',wt:'None'},wrap:'Osakesäästötili (equity savings account, €100k).',
  calc(I,c){let g=I.gain;const pr=I.cap+I.gain;if(g>0){const dg=pr*(I.hold>=3650?.6:.8);if(dg<g){c.add('Deemed acquisition cost applied',g-dg,0);g=dg;}}
   const b=nb(g+I.swing+I.opt,I.lossCF,0),d=I.div*.85,br=[[30000,.30],[Infinity,.34]],tot=prog(b.taxable+d,br),gt=prog(b.taxable,br);
   c.add('Capital income at 30 % / 34 %',b.taxable,gt);if(I.div>0)c.divAt(tot-gt,'Listed dividends (85 % taxable)');c.cf(b.cf,'5 years');}},
-GR:{n:'Greece',cur:'EUR',conf:'K',eu:1,src:'https://www.aade.gr',srcN:'AADE · art. 42 ITC',r:{sh:'0 % on listed shares (stake < 0,5 %)',op:'15 % on derivatives (verify)',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'—',
- calc(I,c){c.add('Listed shares & ETFs (stake < 0,5 %): exempt',I.gain+I.swing,0);const b=nb(I.opt,0,0);c.add('Derivatives at 15 %',b.taxable,b.taxable*.15);c.div(.05);c.note('warn','Check whether non-EU listings (US shares at IBKR) qualify for the exemption.');}},
-HU:{n:'Hungary',cur:'HUF',conf:'K',eu:1,src:'https://nav.gov.hu',srcN:'NAV · Szja tv.',r:{sh:'15 % on controlled-market trades',op:'15 %',al:'TBSZ 5-year account: 0 %',hp:'TBSZ',ls:'Controlled-market losses: 2 years back and forward',wt:'None'},wrap:'TBSZ long-term investment account: 0 % after 5 years.',
- calc(I,c){simple({rate:.15})(I,c);c.note('info','Assumes controlled-market transactions through an EEA investment firm. Otherwise 13 % social contribution tax is added (capped).');}},
-IS:{n:'Iceland',cur:'ISK',conf:'K',src:'https://www.skatturinn.is',srcN:'Skatturinn',r:{sh:'22 % capital income',op:'22 %',al:'Small interest/dividend allowance',hp:'—',ls:'—',wt:'None'},wrap:'—',calc:simple({rate:.22})},
+GR:{n:'Greece',cur:'EUR',conf:'V',eu:1,src:'https://taxsummaries.pwc.com/greece/individual/income-determination',srcN:'AADE · arts. 42–43 ITC',r:{sh:'0 % on listed shares (stake < 0,5 %) and EU/EEA UCITS',op:'15 % on derivatives',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'—',
+ calc(I,c){c.add('Listed shares & UCITS ETFs (stake < 0,5 %): exempt',I.gain+I.swing,0);const b=nb(I.opt,0,0);c.add('Derivatives at 15 %',b.taxable,b.taxable*.15);c.div(.05);
+  if(I.veh!=='shares')c.note('warn','Non-UCITS funds (for example US-domiciled ETFs) are taxed at 15 % on gains.');}},
+HU:{n:'Hungary',cur:'HUF',conf:'V',eu:1,src:'https://nav.gov.hu',srcN:'NAV · Szja tv. §§67/A, 66',r:{sh:'15 % on controlled-market trades',op:'15 %',al:'TBSZ 5-year account: 0 %',hp:'TBSZ',ls:'Controlled-market losses: 2 years back and forward',wt:'None'},wrap:'TBSZ long-term investment account: 0 % after 5 years.',
+ calc(I,c){simple({rate:.15})(I,c);c.note('info','Assumes controlled-market transactions through an EEA investment firm. Dividends also carry 13 % social contribution tax until your yearly income reaches the ceiling (not computed).');}},
+IS:{n:'Iceland',cur:'ISK',conf:'V',src:'https://island.is/en/capital-income-tax',srcN:'Skatturinn · capital income tax',r:{sh:'22 % capital income',op:'22 %',al:'ISK 300,000 shared by listed-share gains, dividends and interest',hp:'—',ls:'Same-year offset only',wt:'None'},wrap:'—',
+ calc(I,c){const A=c.E(300000),b=nb(I.gain+I.swing+I.opt,0,A);if(b.allow)c.add('Capital income allowance (ISK 300,000)',b.allow,0);c.add('Gains at 22 %',b.taxable,b.taxable*.22);
+  const dA=Math.min(Math.max(0,I.div),A-b.allow);if(I.div>0)c.divAt((I.div-dA)*.22,dA>0?'Dividends at 22 % (after the rest of the allowance)':'Dividends at 22 %');
+  if(b.cf>0)c.note('warn','Net losses cannot be carried forward; they expire at year end.');}},
 IE:{n:'Ireland',cur:'EUR',conf:'V',eu:1,src:'https://www.revenue.ie',srcN:'Revenue · Budget 2027',
  r:{sh:'CGT 31 % (from 7 Oct 2026); ETFs: exit tax 38 %',op:'CGT 31 %',al:'€1,270 (CGT only, not exit tax)',hp:'8-year deemed disposal on funds',ls:'4-week bed & breakfast rule; no loss relief on funds',wt:'None'},wrap:'PRSA / pensions; Investment Account from July 2027 (1 % annual tax above €50k).',
  calc(I,c){const etf=I.veh!=='shares';if(etf){if(I.gain>0)c.add('ETF gain: exit tax 38 % (no allowance, no loss relief)',I.gain,I.gain*.38);else if(I.gain<0)c.note('warn','Fund losses are not deductible under the exit-tax regime.');}
   const g=nb((etf?0:I.gain)+I.swing+I.opt,I.lossCF,1270);if(g.allow)c.add('CGT annual exemption',g.allow,0);c.add('CGT 31 %',g.taxable,g.taxable*.31);
   const mr=I.income>70044?.522:I.income>44000?.472:.302;c.divAt(I.div*mr,'Dividends at marginal rate + USC + PRSI');c.cf(g.cf);
   if(etf)c.note('info','Funds face deemed disposal every 8 years. The exit-tax rate falls to 35 % on 1 Jan 2027.');}},
-IL:{n:'Israel',cur:'ILS',conf:'K',src:'https://www.gov.il/en/departments/israel_tax_authority',srcN:'Israel Tax Authority',r:{sh:'25 % (+3 % surtax, +2 % on capital income above threshold)',op:'25 %',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'Keren Hishtalmut (study fund).',
- calc(I,c){simple({rate:.25})(I,c);c.note('info','High incomes add a 3 % surtax plus 2 % on capital income.');}},
-IT:{n:'Italy',cur:'EUR',conf:'K',eu:1,src:'https://www.agenziaentrate.gov.it',srcN:'Agenzia delle Entrate · TUIR art. 67',
+IL:{n:'Israel',cur:'ILS',conf:'V',src:'https://taxsummaries.pwc.com/israel/individual/taxes-on-personal-income',srcN:'Israel Tax Authority · ITO s.91, 121B',r:{sh:'25 % (+3 % surtax, +2 % on capital income above ILS 721,560)',op:'25 %',al:'—',hp:'—',ls:'Carry forward indefinitely against capital gains',wt:'None'},wrap:'Keren Hishtalmut (study fund).',
+ calc(I,c){const T=721560,w=c.L(I.income),b=nb(I.gain+I.swing+I.opt,I.lossCF,0);c.add('Gains at 25 %',b.taxable,b.taxable*.25);c.div(.25);
+  const k=c.L(b.taxable+Math.max(0,I.div)),x=Math.max(0,w+k-T)-Math.max(0,w-T);if(x>0)c.add('Surtax 3 % + 2 % on capital income above ILS 721,560',c.E(x),c.E(x*.05));c.cf(b.cf,'indefinitely');}},
+IT:{n:'Italy',cur:'EUR',conf:'V',eu:1,src:'https://www.agenziaentrate.gov.it',srcN:'Agenzia delle Entrate · TUIR arts. 44, 67–68',
  r:{sh:'26 %',op:'26 % (redditi diversi)',al:'—',hp:'—',ls:'4-year carry-forward; ETF gains cannot absorb losses',wt:'IVAFE / imposta di bollo 0,2 %'},wrap:'PIR (5-year exemption, limits apply).',
  ibkr:['A foreign broker means the regime dichiarativo: quadro RT/RM for gains, quadro RW for the account, IVAFE 0,2 % on value.'],
  calc(I,c){const etf=I.veh!=='shares';let rc=0,eL=0;if(etf){if(I.gain>0)rc=I.gain;else eL=I.gain;}
@@ -543,21 +561,27 @@ IT:{n:'Italy',cur:'EUR',conf:'K',eu:1,src:'https://www.agenziaentrate.gov.it',sr
   const b=nb((etf?eL:I.gain)+I.swing+I.opt,I.lossCF,0);c.add('Redditi diversi: shares, options at 26 %',b.taxable,b.taxable*.26);c.div(.26);c.cf(b.cf,'4 years');
   c.wealth(I.broker==='ibkr'?'IVAFE 0,2 % on foreign custody':'Imposta di bollo 0,2 %',(I.cap+I.tCap)*.002);
   if(etf&&b.cf>0)c.note('warn','Losses in redditi diversi cannot offset ETF gains, which are redditi di capitale.');}},
-JP:{n:'Japan',cur:'JPY',conf:'K',src:'https://www.nta.go.jp',srcN:'NTA',r:{sh:'20,315 %',op:'20,315 % (listed)',al:'NISA (lifetime ¥18m)',hp:'—',ls:'3-year carry-forward',wt:'None'},wrap:'NISA: tax-free, lifetime ¥18m.',calc:simple({rate:.20315})},
-KR:{n:'Korea',cur:'KRW',conf:'K',src:'https://www.nts.go.kr',srcN:'NTS',r:{sh:'Domestic small holders 0 %; foreign shares 22 %',op:'Derivatives 11 %',al:'₩2,5m deduction per basket',hp:'—',ls:'—',wt:'None'},wrap:'ISA (Korean).',
+JP:{n:'Japan',cur:'JPY',conf:'V',src:'https://taxsummaries.pwc.com/japan/individual/income-determination',srcN:'NTA · Special Taxation Measures Act',r:{sh:'20,315 %',op:'20,315 % (listed)',al:'NISA (lifetime ¥18m)',hp:'—',ls:'3-year carry-forward',wt:'None'},wrap:'NISA: tax-free, lifetime ¥18m.',calc:simple({rate:.20315})},
+KR:{n:'Korea',cur:'KRW',conf:'V',src:'https://www.nts.go.kr',srcN:'NTS · Income Tax Act arts. 94, 118-2',r:{sh:'Domestic small holders 0 %; foreign shares 22 %',op:'Derivatives 11 %',al:'₩2,5m deduction per basket',hp:'—',ls:'—',wt:'None'},wrap:'ISA (Korean).',
  calc(I,c){const d=2.5e6,g=c.L(I.gain+I.swing),gt=Math.max(0,g-d),o=c.L(I.opt),ot=Math.max(0,o-d);c.add('Foreign shares 22 % above ₩2,5m deduction',c.E(Math.max(0,g)),c.E(gt*.22));c.add('Derivatives 11 % above ₩2,5m',c.E(Math.max(0,o)),c.E(ot*.11));c.div(.154);c.note('info','Assumes foreign shares (as at IBKR). Domestic listed shares are 0 % for small holders.');}},
-LV:{n:'Latvia',cur:'EUR',conf:'K',eu:1,src:'https://www.vid.gov.lv',srcN:'VID',r:{sh:'25,5 % capital income',op:'25,5 %',al:'Investment account defers tax',hp:'—',ls:'—',wt:'None'},wrap:'Investment account.',calc:simple({rate:.255})},
-LT:{n:'Lithuania',cur:'EUR',conf:'K',eu:1,src:'https://www.vmi.lt',srcN:'VMI',r:{sh:'Progressive capital-income rates from 2026 (verify)',op:'Same',al:'Small exemption (verify)',hp:'—',ls:'—',wt:'None'},wrap:'Pillar III pension.',
- calc(I,c){simple({rate:.15})(I,c);c.note('warn','Lithuania reworked capital-income rates for 2026; the 15 % used here is low-confidence.');}},
-LU:{n:'Luxembourg',cur:'EUR',conf:'K',eu:1,src:'https://impotsdirects.public.lu',srcN:'ACD · LIR art. 99bis',
+LV:{n:'Latvia',cur:'EUR',conf:'V',eu:1,src:'https://www.fm.gov.lv',srcN:'VID · Law on Personal Income Tax',r:{sh:'25,5 % capital income (+3 % on total income above €200k)',op:'25,5 %',al:'Investment account defers tax',hp:'—',ls:'—',wt:'None'},wrap:'Investment account.',
+ calc(I,c){simple({rate:.255})(I,c);const g=Math.max(0,I.gain+I.swing+I.opt-I.lossCF)+Math.max(0,I.div),x=Math.max(0,I.income+g-200000)-Math.max(0,I.income-200000);if(x>0)c.add('Additional 3 % on yearly income above €200,000',x,x*.03);}},
+LT:{n:'Lithuania',cur:'EUR',conf:'V',eu:1,src:'https://taxsummaries.pwc.com/lithuania/individual/taxes-on-personal-income',srcN:'VMI · GPMĮ (2026 reform)',r:{sh:'20 / 25 / 32 % with other income; 15 % if held > 5 years',op:'20 / 25 / 32 %',al:'€500 on financial instruments',hp:'5 years → 15 %',ls:'Not modelled',wt:'None'},wrap:'Pillar III pension.',
+ calc(I,c){const br=[[82962,.20],[138270,.25],[Infinity,.32]],lg=I.hold>=1826?I.gain:0,b=nb((I.hold<1826?I.gain:0)+I.swing+I.opt,0,500),l=Math.max(0,lg-Math.max(0,-b.net));
+  if(b.allow)c.add('Exemption on financial instruments (€500)',b.allow,0);c.add('Long-held shares (> 5 years) at 15 %',l,l*.15);c.add('Other gains at 20 / 25 / 32 % (with your income)',b.taxable,stk(I.income,b.taxable,br));c.div(.15);}},
+LU:{n:'Luxembourg',cur:'EUR',conf:'V',eu:1,src:'https://impotsdirects.public.lu/fr/baremes.html',srcN:'ACD · LIR arts. 99bis, 115 · tariff 2026 (class 1)',
  r:{sh:'0 % if held > 6 months (stake < 10 %)',op:'Speculative (< 6 months) at marginal rate',al:'€500 speculative-gain exemption',hp:'6 months',ls:'Speculative losses only against speculative gains',wt:'None'},wrap:'Prévoyance-vieillesse (art. 111bis).',
- calc(I,c){const br=[[13230,0],[25000,.12],[45000,.25],[60000,.33],[150000,.39],[Infinity,.42]],sol=1.07,long=I.hold>=183;
+ calc(I,c){const br=[[13230,0],[15435,.08],[17640,.09],[19845,.10],[22050,.11],[24255,.12],[26550,.14],[28845,.16],[31140,.18],[33435,.20],[35730,.22],[38025,.24],[40320,.26],[42615,.28],[44910,.30],[47205,.32],[49500,.34],[51795,.36],[54090,.38],[117450,.39],[176160,.40],[234870,.41],[Infinity,.42]],
+  T=x=>prog(Math.max(0,x),br)*(x>150000?1.09:1.07),inc=I.income,long=I.hold>=183;
   let sp=(long?0:I.gain)+(I.tHold>=183?0:I.swing)+I.opt;if(long&&I.gain)c.add('Gain exempt (held > 6 months, stake < 10 %)',I.gain,0);
-  if(sp>0&&sp<500){c.add('Speculative gains under €500: exempt',sp,0);sp=0;}
-  c.add('Speculative gains (< 6 months) at marginal rate + solidarity',Math.max(0,sp),stk(I.income,Math.max(0,sp),br)*sol);
-  if(I.div>0)c.divAt(stk(I.income+Math.max(0,sp),I.div*.5,br)*sol,'Dividends, 50 % exempt, at marginal rate');}},
-MX:{n:'Mexico',cur:'MXN',conf:'K',src:'https://www.sat.gob.mx',srcN:'SAT · LISR art. 129',r:{sh:'10 % on Mexican-listed shares',op:'Ordinary',al:'—',hp:'—',ls:'—',wt:'None'},wrap:'PPR personal retirement plan.',
- calc(I,c){simple({rate:.10})(I,c);c.note('warn','The 10 % rate needs a Mexican intermediary. Through IBKR gains fall into progressive income tax (up to 35 %).');}},
+  if(sp>0&&sp<500){c.add('Speculative gains under €500: exempt',sp,0);sp=0;}sp=Math.max(0,sp);
+  c.add('Speculative gains (< 6 months) at marginal rate + solidarity 7 % / 9 %',sp,T(inc+sp)-T(inc));
+  if(I.div>0)c.divAt(T(inc+sp+I.div*.5)-T(inc+sp),'Dividends, 50 % exempt, at marginal rate');
+  c.note('info','Tax class 1 (single). Class 2 (couples) roughly halves the marginal rate at the same income.');}},
+MX:{n:'Mexico',cur:'MXN',conf:'V',src:'https://consultoriofiscal.unam.mx',srcN:'SAT · LISR arts. 129, 152 (2026 table)',r:{sh:'10 % on shares listed in Mexico or on the SIC',op:'Annual table 1,92–35 %',al:'—',hp:'—',ls:'Same-year offset; 10-year carry-forward on listed-share losses',wt:'None'},wrap:'PPR personal retirement plan.',
+ calc(I,c){const br=[[8952.49,.0192],[75984.55,.064],[133536.07,.1088],[155229.80,.16],[185852.57,.1792],[374837.88,.2136],[590795.99,.2352],[1127926.84,.30],[1503902.46,.32],[4511707.37,.34],[Infinity,.35]],inc=c.L(I.income);
+  const b=nb(I.gain+I.swing,I.lossCF,0);c.add('Listed shares & ETFs at 10 %',b.taxable,b.taxable*.10);const o=Math.max(0,c.L(I.opt));c.add('Derivatives at the annual table (marginal)',c.E(o),c.E(stk(inc,o,br)));c.div(.10);c.cf(b.cf,'10 years');
+  c.note('info','The 10 % rate covers securities listed in Mexico or on the SIC, also through a foreign broker. Securities outside both fall into the annual table.');}},
 NL:{n:'Netherlands',cur:'EUR',conf:'V',eu:1,src:'https://www.belastingdienst.nl',srcN:'Belastingdienst · Box 3 (2026)',
  r:{sh:'Box 3: 36 % on a deemed 6,00 % return above €59,357',op:'Box 3 (Box 1 if it is a trading business)',al:'€59,357 / €118,714 with fiscal partner',hp:'—',ls:'Counter-evidence of a lower actual return allowed',wt:'Box 3 works as a wealth tax'},wrap:'Lijfrente (deductible annuity saving).',
  calc(I,c){const ex=I.filing==='joint'?118714:59357,A=I.cap+I.tCap+I.wealthOther,sh=A>0?Math.max(0,A-ex)/A:0;
@@ -565,33 +589,37 @@ NL:{n:'Netherlands',cur:'EUR',conf:'V',eu:1,src:'https://www.belastingdienst.nl'
   if(at<b3){c.add('Box 3 deemed return (6,00 % on assets above exemption)',dm,null);c.add('Counter-evidence: actual return × 36 % (lower)',act,at);c.note('tip','Your actual return is below the deemed return, so the tegenbewijsregeling lowers the bill. Actual return includes unrealised changes in value.');}
   else c.add('Box 3: deemed 6,00 % return on assets above exemption × 36 %',dm,b3);
   c.note('info','Box 3 taxes wealth, not realised gains. An actual-return regime is planned for 2028 (Senate vote postponed June 2026).');if(I.trades>200)c.note('warn','Very active trading can move results into Box 1 (up to 49,5 %).');}},
-NZ:{n:'New Zealand',cur:'NZD',conf:'K',src:'https://www.ird.govt.nz',srcN:'IRD · FIF rules',r:{sh:'No general CGT; FIF 5 % fair-dividend rate if foreign cost > NZ$50k',op:'Taxable if trading or bought to sell',al:'NZ$50k FIF de minimis',hp:'—',ls:'Trading losses deductible',wt:'None'},wrap:'KiwiSaver; PIE funds (28 % cap).',
+NZ:{n:'New Zealand',cur:'NZD',conf:'V',src:'https://www.ird.govt.nz/income-tax/income-tax-for-individuals/tax-codes-and-tax-rates-for-individuals/tax-rates-for-individuals',srcN:'IRD · rates & FIF rules',r:{sh:'No general CGT; FIF 5 % fair-dividend rate if foreign cost > NZ$50k',op:'Taxable if trading or bought to sell',al:'NZ$50k FIF de minimis',hp:'—',ls:'Trading losses deductible',wt:'None'},wrap:'KiwiSaver; PIE funds (28 % cap).',
  calc(I,c){const br=[[15600,.105],[53500,.175],[78100,.30],[180000,.33],[Infinity,.39]],inc=c.L(I.income),cost=c.L(I.cap);let fif=0;
   if(cost>50000){fif=cost*.05;c.add('FIF: 5 % of opening value taxed at marginal rate',c.E(fif),c.E(stk(inc,fif,br)));c.add('Realised gain on foreign shares: not taxed under FIF',I.gain,0);}
   else{c.add('Gains on investments held long-term: not taxed',I.gain,0);if(I.div>0)c.divAt(c.E(stk(inc,c.L(I.div),br)),'Dividends at marginal rate');}
   const tr=c.L(I.swing+I.opt);c.add('Trading profits (swing & options) as income',c.E(tr),c.E(stk(inc+fif,tr,br)));}},
-PT:{n:'Portugal',cur:'EUR',conf:'K',eu:1,src:'https://info.portaldasfinancas.gov.pt',srcN:'Portal das Finanças · CIRS art. 72',
+PT:{n:'Portugal',cur:'EUR',conf:'V',eu:1,src:'https://info.portaldasfinancas.gov.pt',srcN:'Portal das Finanças · CIRS arts. 68, 72',
  r:{sh:'28 % autonomous rate (or opt to aggregate)',op:'28 %',al:'—',hp:'Mandatory aggregation if held < 365 days and income in top bracket',ls:'5-year carry-forward if you aggregate',wt:'None'},wrap:'PPR retirement savings plan.',
  calc(I,c){const top=86634,sg=(I.hold<365?I.gain:0)+I.swing+I.opt,lg=I.hold>=365?I.gain:0,agg=sg>0&&I.income+sg>=top;
   if(agg){c.add('Short-held gains: mandatory aggregation (≈48 % marginal)',sg,sg*.48);const b=nb(lg,I.lossCF,0);c.add('Long-held gains at 28 %',b.taxable,b.taxable*.28);c.note('warn','Gains on assets held under 365 days are aggregated at progressive rates once your income reaches the top bracket.');}
   else{const b=nb(sg+lg,I.lossCF,0);c.add('Gains at 28 % autonomous rate',b.taxable,b.taxable*.28);}c.div(.28);}},
-SK:{n:'Slovakia',cur:'EUR',conf:'K',eu:1,src:'https://www.financnasprava.sk',srcN:'Finančná správa',r:{sh:'Progressive 19–35 %',op:'Same',al:'—',hp:'Listed securities held > 1 year exempt (verify)',ls:'Offset within category',wt:'None'},wrap:'Pillar III pension.',
- calc(I,c){const br=[[43983,.19],[60000,.25],[75000,.30],[Infinity,.35]];let g=I.gain;if(I.hold>=365&&g){c.add('Listed securities held > 1 year: exempt',g,0);g=0;}
-  const s=g+I.swing+I.opt;c.add('Taxable gains at progressive rate',Math.max(0,s),s>0?stk(I.income,s,br):0);c.div(.07);c.note('warn','Check whether the health-insurance levy also applies to your gains.');}},
-SI:{n:'Slovenia',cur:'EUR',conf:'K',eu:1,src:'https://www.fu.gov.si',srcN:'FURS · ZDoh-2',r:{sh:'25 % → 20 % (5 y) → 15 % (10 y) → 0 % (15 y)',op:'25 % (verify short-term derivative rules)',al:'—',hp:'Sliding scale',ls:'—',wt:'None'},wrap:'—',
- calc(I,c){const y=I.hold/365,r=y>=15?0:y>=10?.15:y>=5?.20:.25,b1=nb(I.gain,I.lossCF,0),b2=nb(I.swing+I.opt,0,0);c.add(`Shares & ETFs at ${pct(r)} (held ${y.toFixed(1)} years)`,b1.taxable,b1.taxable*r);c.add('Short-term gains & derivatives at 25 %',b2.taxable,b2.taxable*.25);c.div(.25);}},
-ES:{n:'Spain',cur:'EUR',conf:'K',eu:1,src:'https://sede.agenciatributaria.gob.es',srcN:'AEAT · LIRPF art. 66',
+SK:{n:'Slovakia',cur:'EUR',conf:'V',eu:1,src:'https://taxsummaries.pwc.com/slovak-republic/individual/income-determination',srcN:'Finančná správa · ZDP §§8, 9',r:{sh:'Progressive 19–35 % + health insurance',op:'Same',al:'€500 on securities/options gains',hp:'Listed securities held > 1 year exempt',ls:'Offset within category',wt:'None'},wrap:'Pillar III pension.',
+ calc(I,c){const br=[[43983.32,.19],[60349.21,.25],[75010.32,.30],[Infinity,.35]];let g=I.gain;if(I.hold>=365&&g){c.add('Listed securities held > 1 year: exempt',g,0);g=0;}
+  const b=nb(g+I.swing+I.opt,0,500);if(b.allow)c.add('Exemption on securities gains (€500)',b.allow,0);c.add('Taxable gains at progressive rate',b.taxable,b.taxable>0?stk(I.income,b.taxable,br):0);
+  if(b.taxable>0)c.add('Health insurance on other income (16 %, est.)',b.taxable,b.taxable*.16);c.div(.10);
+  c.note('info','Dividends from pre-2025 profits pay 7 % instead of 10 %.');}},
+SI:{n:'Slovenia',cur:'EUR',conf:'V',eu:1,src:'https://taxsummaries.pwc.com/slovenia/individual/income-determination',srcN:'FURS · ZDoh-2 (2026)',r:{sh:'25 % → 20 % (5 y) → 15 % (10 y) → 0 % (15 y)',op:'Derivatives flat 25 % from 2026',al:'—',hp:'Sliding scale',ls:'—',wt:'None'},wrap:'—',
+ calc(I,c){const y=I.hold/365,r=y>=15?0:y>=10?.15:y>=5?.20:.25,b1=nb(I.gain,I.lossCF,0),b2=nb(I.swing+I.opt,0,0);c.add(`Shares & ETFs at ${pct(r)} (held ${y.toFixed(1)} years)`,b1.taxable,b1.taxable*r);c.add('Short-term trades & derivatives at 25 %',b2.taxable,b2.taxable*.25);c.div(.25);}},
+ES:{n:'Spain',cur:'EUR',conf:'V',eu:1,src:'https://sede.agenciatributaria.gob.es',srcN:'AEAT · LIRPF art. 66 · Ley 19/1991',
  r:{sh:'Savings scale 19 / 21 / 23 / 27 / 30 %',op:'Same savings base',al:'—',hp:'—',ls:'2-month anti-wash; 4-year carry-forward; 25 % cross-offset with dividends',wt:'Wealth tax 0,2–3,5 % (regional) + solidarity tax above €3m'},wrap:'Planes de pensiones (limited).',
  ibkr:['Foreign assets above €50,000 must be reported on Modelo 720 (penalties reduced after the 2022 CJEU ruling).'],
  calc(I,c){const br=[[6000,.19],[50000,.21],[200000,.23],[300000,.27],[Infinity,.30]],g=nb(I.gain+I.swing+I.opt,I.lossCF,0);let gn=g.net,d=I.div;
   if(gn<0){const off=Math.min(-gn,.25*d);d-=off;gn+=off;}const gT=Math.max(0,gn),tot=prog(gT+d,br),gt=prog(gT,br);
   c.add('Savings base: gains at 19–30 %',gT,gt);if(I.div>0)c.divAt(tot-gt,'Dividends in the savings base');c.cf(Math.max(0,-gn),'4 years');
   const W=I.cap+I.tCap+I.wealthOther;c.wealth('Wealth tax, state scale above €700k (est.; regional reliefs ignored)',prog(Math.max(0,W-700000),[[167129,.002],[334252,.003],[668499,.005],[1336999,.009],[2673999,.013],[5347998,.017],[10695996,.021],[Infinity,.035]]));}},
-SE:{n:'Sweden',cur:'SEK',conf:'K',eu:1,src:'https://www.skatteverket.se',srcN:'Skatteverket',r:{sh:'30 %',op:'30 % (listed: 70 % loss rule)',al:'ISK: schablon tax, SEK 300k tax-free (2026)',hp:'—',ls:'70 % of a listed-share loss deductible',wt:'None'},wrap:'Investeringssparkonto (ISK): flat yearly tax on value, no gains tax.',
+SE:{n:'Sweden',cur:'SEK',conf:'V',eu:1,src:'https://www.skatteverket.se',srcN:'Skatteverket · IL 42, 48 kap.',r:{sh:'30 %',op:'30 % (listed: 70 % loss rule)',al:'ISK: schablon tax, SEK 300k tax-free (2026)',hp:'—',ls:'70 % of a listed-share loss deductible',wt:'None'},wrap:'Investeringssparkonto (ISK): flat yearly tax on value, no gains tax.',
  calc(I,c){const n=I.gain+I.swing+I.opt;if(n>=0)c.add('Capital income at 30 %',n,n*.3);else c.add('Net loss: 70 % deductible, 30 % tax reduction',n,n*.7*.3);c.div(.30);c.note('tip','An ISK replaces gains tax with a small yearly charge on value; for active traders it is usually far cheaper.');}},
-TR:{n:'Türkiye',cur:'TRY',conf:'K',src:'https://www.gib.gov.tr',srcN:'GİB',r:{sh:'BIST shares exempt after 1 year; foreign shares progressive 15–40 %',op:'Withholding regime',al:'—',hp:'1 year (BIST)',ls:'—',wt:'None'},wrap:'BES private pension.',
- calc(I,c){simple({rate:.30})(I,c);c.note('warn','Foreign shares (as at IBKR) are taxed at progressive rates; 30 % is a mid-bracket estimate.');}},
-UK:{n:'United Kingdom',cur:'GBP',conf:'K',src:'https://www.gov.uk/capital-gains-tax',srcN:'HMRC · TCGA 1992',
+TR:{n:'Türkiye',cur:'TRY',conf:'V',src:'https://taxsummaries.pwc.com/turkey/individual/taxes-on-personal-income',srcN:'GİB · GVK art. 103 (2026), Mük. 80',r:{sh:'Foreign shares: progressive 15–40 %; BIST shares withholding regime',op:'Foreign derivatives: progressive',al:'—',hp:'—',ls:'Not modelled',wt:'None'},wrap:'BES private pension.',
+ calc(I,c){const br=[[190000,.15],[400000,.20],[1000000,.27],[5300000,.35],[Infinity,.40]],inc=c.L(I.income),g=Math.max(0,c.L(I.gain+I.swing+I.opt));
+  c.add('Foreign gains declared yearly at progressive rates',c.E(g),c.E(stk(inc,g,br)));if(I.div>0)c.divAt(c.E(stk(inc+g,c.L(I.div),br)),'Foreign dividends at progressive rates');
+  c.note('info','2026 non-wage brackets stacked on your income. Cost can be indexed by producer-price inflation when it exceeds 10 %, which this ignores.');}},
+UK:{n:'United Kingdom',cur:'GBP',conf:'V',src:'https://www.gov.uk/capital-gains-tax/rates',srcN:'HMRC · TCGA 1992 · 2026-27 rates',
  r:{sh:'CGT 18 % / 24 %',op:'CGT; spread betting exempt',al:'£3,000 AEA; ISA £20k; £500 dividend allowance',hp:'—',ls:'Same-day, 30-day bed & breakfasting, s104 pooling',wt:'None'},wrap:'ISA (£20k/yr, tax-free) and SIPP (relief at marginal rate).',
  calc(I,c){const inc=c.L(I.income),pa=Math.max(0,12570-Math.max(0,(inc-100000)/2)),ns=Math.max(0,inc-pa),d=c.L(I.div),dAl=Math.min(500,d);
   const dBr=[[37700,.1075],[125140,.3575],[Infinity,.3935]],dTax=prog(ns+d,dBr)-prog(ns+dAl,dBr);
@@ -599,7 +627,7 @@ UK:{n:'United Kingdom',cur:'GBP',conf:'K',src:'https://www.gov.uk/capital-gains-
   const gBr=[[37700,.18],[Infinity,.24]],g=nb(c.L(I.gain+I.swing+I.opt),c.L(I.lossCF),3000),cg=prog(ns+d+g.taxable,gBr)-prog(ns+d,gBr);
   if(g.allow)c.add('Annual exempt amount (£3,000)',c.E(g.allow),0);c.add('CGT at 18 % / 24 %',c.E(g.taxable),c.E(cg));c.cf(c.E(g.cf));
   c.note('tip','Spread bets on the same underlyings are outside CGT entirely, and an ISA shelters £20k a year.');}},
-US:{n:'United States',cur:'USD',conf:'K',src:'https://www.irs.gov',srcN:'IRS · IRC §§1, 1222, 1256, 1411',
+US:{n:'United States',cur:'USD',conf:'V',src:'https://www.irs.gov/pub/irs-drop/rp-25-32.pdf',srcN:'IRS · Rev. Proc. 2025-32 · IRC §§1, 1222, 1256, 1411',
  r:{sh:'LT 0 / 15 / 20 % + 3,8 % NIIT; ST at ordinary rates',op:'§1256 60/40 for index options; §475(f) trader election',al:'Roth IRA, 401(k)',hp:'1 year',ls:'30-day wash sale; $3,000/yr against ordinary income',wt:'None (federal)'},wrap:'Roth IRA / 401(k) / HSA.',
  calc(I,c){const j=I.filing==='joint',sd=j?32200:16100;
   const br=j?[[24800,.10],[100800,.12],[211400,.22],[403550,.24],[512450,.32],[768700,.35],[Infinity,.37]]:[[12400,.10],[50400,.12],[105700,.22],[201775,.24],[256225,.32],[640600,.35],[Infinity,.37]];
@@ -1374,11 +1402,11 @@ function renderRules(){
   <div><b>31 December</b>Check open short options (DE: premium already taxable); confirm KS 36 metrics if CH-resident.</div>
  </div></div>
  <div class="card"><h2>Method & limits</h2><ul class="notes">
-  <li>One tax year, resident individual, listed securities. Progressive schedules for non-priority countries use simplified national brackets (single filer); Switzerland uses Zurich city, Canada uses Ontario, the US is federal only.</li>
+  <li>One tax year, resident individual, listed securities. Progressive schedules for non-priority countries use simplified national brackets (single filer); Switzerland uses Zurich city, Canada uses Ontario, Luxembourg uses tax class 1, the US is federal only.</li>
   <li>Investing vs trading is measured by attribution. Investing tax is the tax with trading set to zero; trading tax is the extra tax once trading is added. That captures cross-basket loss offsets, such as German option losses offsetting fund gains.</li>
   <li>Dividends: foreign withholding is credited up to the domestic rate and shown as a separate line, because leakage above the credit is a real cost.</li>
-  <li>Not modelled: crypto, severance, inheritance and gift tax, social-security charges outside CH and FR, exact holding-company structures, the Danish ABIS list per ETF, or minimum-tax rules for very high incomes.</li>
-  <li class="warn">Cells marked "To verify" come from established rules or secondary sources. Check the primary source linked in the table before you file or move.</li>
+  <li>Not modelled: crypto, severance, inheritance and gift tax, social-security charges outside CH, FR and SK, exact holding-company structures, the Danish ABIS list per ETF, or minimum-tax rules for very high incomes.</li>
+  <li class="warn">All 38 countries were checked against 2026-dated sources in November 2026; each country's notes say what is simplified. Rules change every January: check the linked source before you file or move.</li>
  </ul></div>`;
   $('#rules-q').addEventListener('input',e=>{rulesQ=e.target.value;renderRules();});
   host.addEventListener('input',e=>{const k=e.target.dataset.fx;if(k){const v=+e.target.value;if(v>0){FX[k]=v;save();}}});
