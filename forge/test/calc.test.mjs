@@ -140,7 +140,7 @@ t('overall levels', () => {
   assert.equal(C.scoreTier(87), 4, 'Peak 87 = Spartan'); assert.equal(C.scoreTier(76), 3, 'Balance 76 = Viking');
   assert.equal(C.scoreTier(95), 5); assert.equal(C.scoreTier(4.9), 0); assert.equal(C.scoreTier(null), null);
 });
-t('Wattbike converted to a BikeErg 1,000 m through watts', () => {
+t('Wattbike max effort ranked through watts', () => {
   near(C.bikeErgTime(202.5), 120, 0.1, 'Concept2: 2:00 per 1,000 m = 202 W');
   near(C.wattbikeEquiv(345, 100.5).time, 100.5, 0.1, 'an effort as long as the equivalent time converts exactly');
   const short = C.wattbikeEquiv(450, 60), long = C.wattbikeEquiv(450, 120);

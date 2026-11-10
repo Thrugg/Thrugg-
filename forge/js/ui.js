@@ -344,8 +344,9 @@ function poseSvg(kind) {
 
 /* ---------- ARENA ---------- */
 const EVENT_GROUPS = { strength: ['bench', 'squat', 'deadlift', 'ohp'], explosive: ['vjump'], speed: ['sprint60', 'sprint100', 'sprint200', 'sprint400'], power: ['row100', 'row200', 'row250', 'row500', 'row1min', 'bike1000', 'ski500'], aerobic: ['vo2', 'run5k', 'run10k'], upper: ['pullups', 'pushups'] };
-const bikeMachine = () => { const last = S.prs.filter(p => p.event === 'bike1000').sort((a, b) => a.date < b.date ? 1 : -1)[0]; if (last?.machine) return last.machine; try { return localStorage.getItem('forge.bikeMachine') || 'bikeerg'; } catch { return 'bikeerg'; } };
-const fmtVal = (id, v) => { const k = EVENTS[id].kind; return k === 'lift' ? `${nf(kgShow(v), 1)} ${kgU()}` : k === 'rowtime' ? `${nf(v)} m` : k === 'vo2' ? `${nf(v, 1)}` : k === 'jump' ? `${nf(cmShow(v), 1)} ${cmU()}` : k === 'reps' ? `${nf(v)} ${t('arena.repsU')}` : fmtTime(v); };
+/* Wattbike: ranked as a 1,000 m-equivalent time internally, always shown as the watts held for that time. */
+const bikeW = sec => Math.round(0.35 / (sec / 1000) ** 3);
+const fmtVal = (id, v) => { const k = EVENTS[id].kind; return id === 'bike1000' ? `${nf(bikeW(v))} W` : k === 'lift' ? `${nf(kgShow(v), 1)} ${kgU()}` : k === 'rowtime' ? `${nf(v)} m` : k === 'vo2' ? `${nf(v, 1)}` : k === 'jump' ? `${nf(cmShow(v), 1)} ${cmU()}` : k === 'reps' ? `${nf(v)} ${t('arena.repsU')}` : fmtTime(v); };
 function screenArena(M) {
   const A = M.ar, sex = S.profile.sex;
   let h = `<header class="hdr"><h1>${t('arena.title')}</h1><p class="muted">${t('arena.lead')}</p></header>`;
@@ -397,6 +398,7 @@ function gapTxt(id, r) {
   if (k === 'vo2') return `+${nf(r.next - r.value, 1)}`;
   if (k === 'jump') return `+${nf(cmShow(r.next - r.value), 1)} ${cmU()}`;
   if (k === 'reps') return `+${Math.max(1, Math.ceil(r.next - r.value))} ${t('arena.repsU')}`;
+  if (id === 'bike1000') return `+${nf(Math.max(1, bikeW(r.next) - bikeW(r.value)))} W`;
   const d = r.value - r.next; return d >= 60 ? `−${fmtTime(d)}` : `−${d.toFixed(2)} s`;
 }
 function progress(r) { if (r.tier >= 7) return 1; const lo = r.tier ? C.invcdf(TIER_P[r.tier - 1]) : C.invcdf(0.005), hi = C.invcdf(TIER_P[r.tier]); return C.clamp((C.invcdf(r.p) - lo) / (hi - lo), 0, 1); }
@@ -521,12 +523,7 @@ function prSheet(eventId, dom) {
     if (k === 'sprint') return `${field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="12.34" required>`)}<div class="g2">${field(t('arena.timing'), `<select name="timing">${['electronic', 'hand', 'gps'].map(x => `<option value="${x}">${t('arena.t.' + x)}</option>`).join('')}</select>`)}${field(t('arena.wind'), `<input type="number" step="any" name="wind">`)}</div>`;
     if (k === 'row') return field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="${id === 'row500' ? '1:32.0' : '17.5'}" required>`);
     if (k === 'rowtime') return field(t('arena.meters'), `<input type="number" name="meters" required>`);
-    if (k === 'erg' && id === 'bike1000') {
-      const m = bikeMachine();
-      return `<div class="seg" role="radiogroup" aria-label="${t('arena.machine')}">${['bikeerg', 'wattbike'].map(x => `<label><input type="radio" name="machine" value="${x}"${x === m ? ' checked' : ''}><span>${t('arena.mach.' + x)}</span></label>`).join('')}</div>
-        <div data-mach="bikeerg"${m === 'bikeerg' ? '' : ' hidden'}>${field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="1:40.0">`)}</div>
-        <div data-mach="wattbike"${m === 'wattbike' ? '' : ' hidden'}><div class="g2">${field(t('arena.avgW'), `<input type="number" inputmode="numeric" name="watts" min="60" max="2600" placeholder="420">`)}${field(t('arena.dur'), `<input type="text" inputmode="decimal" name="dur" placeholder="1:40">`)}</div><p class="xs muted" id="wbOut">${t('arena.wbHow')}</p></div>`;
-    }
+    if (k === 'erg' && id === 'bike1000') return `<div class="g2">${field(t('arena.avgW'), `<input type="number" inputmode="numeric" name="watts" min="60" max="2600" placeholder="420" required>`)}${field(t('arena.dur'), `<input type="text" inputmode="decimal" name="dur" placeholder="1:40" required>`)}</div><p class="xs muted" id="wbOut">${t('arena.wbHow')}</p>`;
     if (k === 'erg') return field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="1:45.0" required>`);
     if (k === 'race') return field(t('arena.timeLong'), `<input type="text" inputmode="decimal" name="time" placeholder="${id === 'run5k' ? '22:30' : '47:00'}" required>`);
     if (k === 'jump') return `${field(`${t('arena.cm')} (${cmU()})`, `<input type="number" step="any" inputmode="decimal" name="cm" required>`)}${field(t('arena.jumpMethod'), `<select name="method">${['mat', 'reach'].map(x => `<option value="${x}">${t('arena.jm.' + x)}</option>`).join('')}</select>`)}<p class="xs muted">${t('arena.jumpHow')}</p>`;
@@ -537,7 +534,6 @@ function prSheet(eventId, dom) {
     const f = d.querySelector('form');
     const wire = () => {
       const pb = $('#prbody', d), out = $('#wbOut', d);
-      pb.querySelectorAll('input[name=machine]').forEach(r => r.onchange = () => { pb.querySelectorAll('[data-mach]').forEach(x => x.hidden = x.dataset.mach !== r.value); });
       if (out) { const upd = () => { const w = +fv(f, 'watts'), du = parseTime(fv(f, 'dur')), q = C.wattbikeEquiv(w, du); out.textContent = q ? t(q.ratio < 0.75 || q.ratio > 1.33 ? 'arena.wbFar' : 'arena.wbEq', { t: fmtTime(q.time), w: nf(Math.round(q.watts1k)), wkg: nf(q.watts1k / model().kg, 1) }) : t('arena.wbHow'); }; f.elements.watts.oninput = upd; f.elements.dur.oninput = upd; }
     };
     wire();
@@ -546,8 +542,8 @@ function prSheet(eventId, dom) {
       e.preventDefault(); const id = fv(f, 'event'), k = EVENTS[id].kind, pr = { id: uid(), event: id, date: fv(f, 'date') || C.today() };
       if (k === 'lift') Object.assign(pr, { weight: kgRead(fv(f, 'weight')), reps: +fv(f, 'reps') || 1, rir: +fv(f, 'rir') || 0, bw: kgRead(fv(f, 'bw')) });
       else if (k === 'sprint') Object.assign(pr, { time: parseTime(fv(f, 'time')), timing: fv(f, 'timing'), wind: fv(f, 'wind') == null ? null : +fv(f, 'wind') });
-      else if (id === 'bike1000' && fv(f, 'machine') === 'wattbike') { Object.assign(pr, { machine: 'wattbike', watts: +fv(f, 'watts'), dur: parseTime(fv(f, 'dur')) }); try { localStorage.setItem('forge.bikeMachine', 'wattbike'); } catch { } }
-      else if (k === 'row' || k === 'erg' || k === 'race') { pr.time = parseTime(fv(f, 'time')); if (id === 'bike1000') { pr.machine = 'bikeerg'; try { localStorage.setItem('forge.bikeMachine', 'bikeerg'); } catch { } } }
+      else if (id === 'bike1000') Object.assign(pr, { machine: 'wattbike', watts: +fv(f, 'watts'), dur: parseTime(fv(f, 'dur')) });
+      else if (k === 'row' || k === 'erg' || k === 'race') pr.time = parseTime(fv(f, 'time'));
       else if (k === 'jump') Object.assign(pr, { cm: cmRead(fv(f, 'cm')), method: fv(f, 'method') });
       else if (k === 'reps') Object.assign(pr, { reps: +fv(f, 'reps'), bw: kgRead(fv(f, 'bw')) });
       else if (k === 'rowtime') pr.meters = +fv(f, 'meters');
@@ -562,12 +558,12 @@ function prSheet(eventId, dom) {
 }
 function eventSheet(id) {
   const M = model(), who = M.who, an = C.anchorsFor(id, { sex: who.sex, bw: who.kg, age: who.age }), ev = EVENTS[id], src = SOURCES[ev.src];
-  const rows = TIERS.map((_, i) => { const v = i === 0 ? null : an.dec(C.valueAtP(TIER_P[i - 1], an.A)); return `<tr><td>${tierBadge(i)}</td><td>${v == null ? '–' : (an.lowerBetter ? '≤ ' : '≥ ') + fmtVal(id, v)}${id === 'bike1000' && v ? `<small class="muted"> · ${nf(Math.round(0.35 / (v / 1000) ** 3))} W</small>` : ''}</td><td class="muted">${t(ev.kind === 'sprint' ? 'tier.ffa' : 'tier.band')[i]}</td></tr>`; }).reverse().join('');
+  const rows = TIERS.map((_, i) => { const v = i === 0 ? null : an.dec(C.valueAtP(TIER_P[i - 1], an.A)); return `<tr><td>${tierBadge(i)}</td><td>${v == null ? '–' : (id === 'bike1000' ? `≥ ${fmtVal(id, v)}<br><small class="muted">${t('arena.wbFor', { t: fmtTime(v) })}</small>` : (an.lowerBetter ? '≤ ' : '≥ ') + fmtVal(id, v))}</td><td class="muted">${t(ev.kind === 'sprint' ? 'tier.ffa' : 'tier.band')[i]}</td></tr>`; }).reverse().join('');
   const prs = S.prs.filter(p => p.event === id).sort((a, b) => a.date < b.date ? 1 : -1);
-  const tipKey = { lift: 'lift', sprint: 'sprint', vo2: 'vo2', race: 'vo2', jump: 'jump', reps: 'reps', erg: 'erg' }[ev.kind] || 'row';
-  sheet(`<h2>${t('arena.ev.' + id)}</h2><h3>${t('arena.standards')}</h3><p class="muted xs">${ev.kind === 'lift' || ev.kind === 'reps' ? `${t('arena.bwThen')}: ${nf(kgShow(who.kg), 1)} ${kgU()}, ` : ''}${t('sex.' + who.sex)}${['vo2', 'sprint', 'jump', 'race'].includes(ev.kind) ? `, ${t('arena.ageN', { a: who.age })}` : ''}${ev.kind === 'sprint' && an.factor < 0.9995 ? `. ${t('arena.ffaStd', { k: nf(an.factor, 4) })}` : ''}</p>${id === 'bike1000' ? `<p class="xs muted">${t('arena.wbStd')} ${t('arena.wbTbl')}</p>` : ''}<table class="tbl std">${rows}</table>
-    <h3>${t('arena.history')}</h3>${prs.length ? `<ul class="hist">${prs.map(p => { const r = C.evaluatePR(p, who); return `<li><span>${df(p.date)}</span><b>${r.value ? fmtVal(id, r.value) : '–'}</b>${r.rankable ? tierBadge(r.tier) : ''}${r.level ? `<span class="lvl">FFA ${r.level}</span>` : ''}${r.note ? `<small>${p.machine === 'wattbike' ? `${nf(p.watts)} W · ${fmtTime(p.dur)} · ` : ''}${t('arena.note.' + r.note)}</small>` : r.est ? `<small>${t('arena.note.est')}</small>` : ''}<button class="lnk danger x" data-delpr="${p.id}" aria-label="${t('common.del')}">×</button></li>`; }).join('')}</ul>` : `<p class="muted">${t('arena.none')}</p>`}
-    <h3>${t('arena.improve')}</h3><ul>${t('arena.tips.' + tipKey).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+  const tipKey = { lift: 'lift', sprint: 'sprint', vo2: 'vo2', race: 'vo2', jump: 'jump', reps: 'reps', erg: 'erg' }[ev.kind] || 'row', tipK = id === 'bike1000' ? 'wattbike' : tipKey;
+  sheet(`<h2>${t('arena.ev.' + id)}</h2><h3>${t('arena.standards')}</h3><p class="muted xs">${ev.kind === 'lift' || ev.kind === 'reps' ? `${t('arena.bwThen')}: ${nf(kgShow(who.kg), 1)} ${kgU()}, ` : ''}${t('sex.' + who.sex)}${['vo2', 'sprint', 'jump', 'race'].includes(ev.kind) ? `, ${t('arena.ageN', { a: who.age })}` : ''}${ev.kind === 'sprint' && an.factor < 0.9995 ? `. ${t('arena.ffaStd', { k: nf(an.factor, 4) })}` : ''}</p>${id === 'bike1000' ? `<p class="xs muted">${t('arena.wbStd')}</p>` : ''}<table class="tbl std">${rows}</table>
+    <h3>${t('arena.history')}</h3>${prs.length ? `<ul class="hist">${prs.map(p => { const r = C.evaluatePR(p, who); return `<li><span>${df(p.date)}</span><b>${r.value ? fmtVal(id, r.value) : '–'}</b>${r.rankable ? tierBadge(r.tier) : ''}${r.level ? `<span class="lvl">FFA ${r.level}</span>` : ''}${r.note ? `<small>${p.machine === 'wattbike' ? `${t('arena.wbDid', { w: nf(p.watts), t: fmtTime(p.dur) })} · ` : ''}${t('arena.note.' + r.note, { t: fmtTime(r.value), w: fmtVal(id, r.value) })}</small>` : r.est ? `<small>${t('arena.note.est')}</small>` : ''}<button class="lnk danger x" data-delpr="${p.id}" aria-label="${t('common.del')}">×</button></li>`; }).join('')}</ul>` : `<p class="muted">${t('arena.none')}</p>`}
+    <h3>${t('arena.improve')}</h3><ul>${t('arena.tips.' + tipK).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
     <p class="xs muted">${t('common.source')}: ${src.url ? `<a href="${src.url}" target="_blank" rel="noopener">${esc(src.name)}</a>` : esc(src.name)}${ev.kind === 'sprint' ? `, <a href="${SOURCES.wma.url}" target="_blank" rel="noopener">${esc(SOURCES.wma.name)}</a>` : ''}. ${esc(src.pop?.[getLang()] || '')} ${confChip(src.conf)}${ev.src === 'c2m' ? ' · ' + t('arena.note.modelled') : ''}${an.clampedBw ? ' · ' + t('arena.note.clampedBw') : ''}</p>
     <div class="row"><button class="btn ghost" data-close>${t('common.close')}</button><button class="btn pri" data-addpr>${t('arena.add')}</button></div>`, d => {
     d.querySelectorAll('[data-delpr]').forEach(b => b.onclick = e => { e.preventDefault(); if (confirm(t('common.confirmDel'))) { remove('prs', b.dataset.delpr); d.close(); render(); } });
