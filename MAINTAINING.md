@@ -19,6 +19,8 @@ This is the rulebook for the weekly update, and for anyone adding a hike by hand
 6. **Record it:** add a section at the top of `data/changelog.md` (date, hike count, what was added or changed).
 7. **Commit and push** to `main` with a message like `Weekly hikes: +7 (Hexenseen, Taubensee, …)`. GitHub Pages publishes within a minute or two.
 
+Route lines are traced by GitHub (see "Routes traced on GitHub" in the README), not by this update: don't trace routes yourself. Once a hike has a traced line, `python3 tools/build.py` warns when its `km` or `up` disagrees with that line by more than about 20 %. Treat those warnings in the repair step: check the figure against the sources and fix either the figure or the route points.
+
 After `python3 tools/build.py`, if `src/` or `sw.js` changed, bump the version text `V` in `sw.js` so phones pick up the new page at once. A hikes-only update needs no bump: the catalogue is always fetched fresh when there is signal.
 
 Never delete a hike or change an `id`: logbook entries point at ids. If a hike is wrong, fix its fields; if a trail has closed, keep the hike and say so at the start of `b`. Don't touch `src/` unless a build is broken. Keep personal names out of the repository: it is public.

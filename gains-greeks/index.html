@@ -1168,10 +1168,24 @@ function renderOLOut(){
 }
 
 /* ---------- live quote via the desktop app's browser ---------- */
-const QF={mcp:null,ok:false,tab:null,busy:false,msg:'',err:false};
+const QF={mcp:null,ok:false,tab:null,busy:false,msg:'',err:false,fn:false};
+/* Prices through the "quote" function in your own Supabase project (works on the phone too), else through the Claude desktop browser. */
+const QFN={missing:sessionStorage.getItem('gg.quotefn')==='missing'};
+async function quoteFnReady(){if(QFN.missing||!window.Cloud||!Cloud.configured())return false;const s=await Cloud.session().catch(()=>null);return !!s;}
+(async()=>{QF.fn=await quoteFnReady();if(QF.fn){QF.ok=true;renderQuote();}})();
+if(window.Cloud)Cloud.on(async()=>{const was=QF.fn;QF.fn=await quoteFnReady();if(QF.fn!==was){QF.ok=QF.fn||!!QF.mcp;renderQuote();}});
+async function fetchQuoteFn(sym){
+ const c=await Cloud.client();const{data,error}=await c.functions.invoke('quote',{body:{s:sym}});
+ if(!error)return data;
+ const st=error.context&&error.context.status;
+ if(st===404){let b=null;try{b=await error.context.json();}catch(e){}if(b&&b.error==='not_found')throw{code:'nosym'};}
+ if(st===404||error.name==='FunctionsFetchError'||error.name==='FunctionsRelayError'){QFN.missing=true;sessionStorage.setItem('gg.quotefn','missing');throw{code:'fn_missing'};}
+ if(st===401)throw{code:'fn_signin'};
+ throw{code:'fn_down'};
+}
 const QH='host:claude_browser';
 (async()=>{try{const m=window.claude&&window.claude.use?await window.claude.use('mcp'):null;if(!m)return;QF.mcp=m;
- const l=await m.listTools(QH).catch(()=>null);QF.ok=!!(l&&l.servers&&l.servers.some(x=>x.server===QH));}catch(e){}renderQuote();})();
+ const l=await m.listTools(QH).catch(()=>null);QF.ok=QF.fn||!!(l&&l.servers&&l.servers.some(x=>x.server===QH));if(!(l&&l.servers&&l.servers.some(x=>x.server===QH)))QF.mcp=null;}catch(e){}renderQuote();})();
 function renderQuote(){
  const el=$('#o-links'),b=$('#o-fetch');if(!el)return;
  if(b){b.hidden=!QF.ok;b.disabled=QF.busy;b.textContent=QF.busy?'Fetching…':'Fetch';}
@@ -1181,6 +1195,9 @@ function renderQuote(){
  el.innerHTML=st+links;
 }
 function quoteErr(e,sym){const c=e&&e.code;
+ if(c==='fn_missing')return 'Automatic prices need the "quote" function in your Supabase project (5 minutes, see Live prices in the README). Use the links below for now.';
+ if(c==='fn_signin')return 'Sign in to sync first: the price function only answers your own account.';
+ if(c==='fn_down')return 'The price source did not answer. Try again in a minute, or use the links below.';
  if(c==='server_not_connected'){QF.ok=false;return 'Automatic price needs the Claude desktop app with its browser available. Use the links below for now.';}
  if(c==='not_in_manifest'||c==='approval_required'||c==='blocked_by_policy')return 'Browser access is not allowed for this page. Turn it on from the artifact\'s Permissions menu, or use the links below.';
  if(c==='cancelled')return 'Cancelled in the desktop app.';
@@ -1189,8 +1206,10 @@ function quoteErr(e,sym){const c=e&&e.code;
  if(c==='tool_error')return 'The desktop browser could not load the quote: '+String(e.message||'').slice(0,140);
  return `Could not reach the desktop browser (${c||'unknown error'}). Check that the Claude app is open, then press Fetch.`;}
 async function fetchQuote(){
- const o=O(),sym=String(o.sym||'').trim().toUpperCase();if(!sym||!QF.mcp||QF.busy)return;
- QF.busy=true;QF.err=false;QF.msg=`Fetching ${sym} from Yahoo Finance…`;renderQuote();
+ const o=O(),sym=String(o.sym||'').trim().toUpperCase();if(!sym||(!QF.mcp&&!QF.fn)||QF.busy)return;
+ QF.busy=true;QF.err=false;QF.msg=`Fetching ${sym}…`;renderQuote();
+ if(QF.fn){try{const m=await fetchQuoteFn(sym);applyQuote(m,sym);QF.busy=false;renderQuote();return;}
+  catch(e){if(e.code!=='fn_missing'||!QF.mcp){QF.err=true;QF.msg=quoteErr(e,sym);QF.busy=false;QF.fn=!QFN.missing;QF.ok=QF.fn||!!QF.mcp;renderQuote();return;}QF.fn=false;}}
  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=1d`;
  const txt=r=>!r?'':typeof r.payload==='string'?r.payload:(r.content||[]).filter(x=>x.type==='text').map(x=>x.text).join('\n');
  try{
@@ -1225,7 +1244,7 @@ function applyQuote(m,sym){
  const reg=m.currentTradingPeriod&&m.currentTradingPeriod.regular,now=Date.now()/1000;
  const when=m.regularMarketTime?new Date(m.regularMarketTime*1000).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
  const kind=reg&&now>=reg.start&&now<reg.end?'intraday, delayed':'last close';
- QF.msg=`${m.symbol||sym} ${nf2.format(S)} ${cur} · ${m.fullExchangeName||m.exchangeName||'Yahoo'} · ${kind}${when?' '+when:''}${far?' · strikes re-centred on '+PRESETS[o.preset==='custom'?'long_call':o.preset]:''}${curNote}`;
+ QF.msg=`${m.symbol||sym} ${nf2.format(S)} ${cur} · ${m.fullExchangeName||m.exchangeName||m.source||'Yahoo'} · ${kind}${when?' '+when:''}${far?' · strikes re-centred on '+PRESETS[o.preset==='custom'?'long_call':o.preset]:''}${curNote}`;
  save();
  const set=(id,v)=>{const e=$(id);if(e)e.value=v;};set('#o-S',S);set('#o-cur',o.cur);set('#o-lo',o.lo);set('#o-hi',o.hi);set('#o-target',o.target);
  renderLegs();olQueue();toast(`${m.symbol||sym} ${nf2.format(S)} ${cur} loaded`);
