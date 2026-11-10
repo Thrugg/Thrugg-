@@ -2,6 +2,12 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 10 Nov 2026 (2) · Second batch
+
+- Cordée: **Weekend pick** at the top of the Weather tab (three hikes for Saturday or Sunday, one per area, weighing forecast, drive, snow, season, the dog and what is not done yet); **Year in review** in the Logbook (totals, records, new areas, photos, and the flyover of that year).
+- Safety Net Score: **Progress**, one point a month with the score trend and the month you reach the next level.
+- Gains & Greeks: **Before 31 December** on the Tax desk: unused allowance, the two loss pots, January cash for the fund prepayment, open short options, and what to set aside (detailed for Germany).
+
 ## 10 Nov 2026 · All apps
 
 - Sync (Safety Net Score, Gains & Greeks, Forge): devices are now merged field by field. A phone with old numbers can no longer replace newer ones, and the open tab or filter no longer counts as a change.

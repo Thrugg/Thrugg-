@@ -190,6 +190,7 @@ const UI = {
     if (!WX) { $('#wxBest').innerHTML = '<li class="empty">Forecast is loading…</li>'; return; }
     const age = Math.round((Date.now() - WX.ts) / 6e4);
     $('#wxUpdated').textContent = age < 2 ? 'Updated just now' : `Updated ${age} min ago`;
+    this.renderWeekend();
     const list = (this.filtered || HK).map(h => ({ h, s: dayScore(wxOf(h), wxDay) })).filter(x => x.s != null)
       .sort((a, b) => (b.s - (inSeason(b.h) ? 0 : 40)) - (a.s - (inSeason(a.h) ? 0 : 40)));
     $('#wxScope').textContent = `· ${fmtDate(WX.days[wxDay], { wd: true })}, from your ${list.length} filtered hikes`;
@@ -202,6 +203,38 @@ const UI = {
       const s = Math.round(xs.reduce((t, x) => t + x.s, 0) / xs.length), w = wxOf(xs[0].h);
       return { a, s, html: `<div class="wx-area"><span>${esc(a)} <span class="muted">· ${xs.length}</span></span><span class="wx-mini">${ic(wmo(w.code[wxDay])[0])}${Math.round(w.tx[wxDay])}°</span><span class="score ${scoreCls(s)}">${s}</span></div>` };
     }).sort((p, q) => q.s - p.s).map(x => x.html).join('');
+  },
+  /* Weekend pick: three hikes for the coming Saturday or Sunday, weighing the forecast, the drive, snow,
+     season, the dog and what you have not done yet. One per area, so the three are real alternatives. */
+  renderWeekend() {
+    const box = $('#wxWeekend'); if (!box) return;
+    if (!WX || !WX.days) { box.innerHTML = ''; return; }
+    const days = WX.days.map((t, i) => ({ i, wd: new Date(t + 'T12:00').getDay() })).filter(d => d.wd === 6 || d.wd === 0).slice(0, 2);
+    if (!days.length) { box.innerHTML = ''; return; }
+    const dm = doneMap(), withDog = !!dogName(), cand = [];
+    for (const h of HK) {
+      if (h.g === 'expert' && !isWish(h.id)) continue;
+      const cm = snowCm(h); if (cm != null && cm >= 30) continue;
+      if (withDog && dogStatus(h).s === 'no') continue;
+      let best = null;
+      for (const d of days) { const s = dayScore(wxOf(h), d.i); if (s != null && (!best || s > best.s)) best = { s, i: d.i }; }
+      if (!best || best.s < 55) continue;
+      const drive = driveMin(h), why = [];
+      let v = best.s - Math.max(0, drive - 60) / 6;
+      if (!inSeason(h)) v -= 25;
+      if (cm != null && cm >= SNOW_MIN) { v -= 15; why.push(`${cm} cm of snow at the top`); } else if (cm != null) why.push('snow-free');
+      if (dm[h.id]) v -= 12; else why.push('not done yet');
+      if (isWish(h.id)) { v += 8; why.push('on your bucket list'); }
+      if (withDog && dogStatus(h).s === 'good') { v += 4; why.push('good with ' + dogName()); }
+      cand.push({ h, v, s: best.s, i: best.i, drive, why });
+    }
+    cand.sort((a, b) => b.v - a.v);
+    const picks = [], seen = new Set();
+    for (const c of cand) { if (seen.has(c.h.ar)) continue; seen.add(c.h.ar); picks.push(c); if (picks.length === 3) break; }
+    if (!picks.length) { box.innerHTML = `<h3 class="sec-title">Weekend pick</h3><p class="muted" style="margin:0 0 14px">No hike has a good enough forecast for this weekend yet. Look again nearer the day.</p>`; return; }
+    box.innerHTML = `<h3 class="sec-title">Weekend pick <span class="muted">· ${days.map(d => fmtDate(WX.days[d.i], { wd: true })).join(' and ')}</span></h3><ol class="hike-list" id="wxPicks" style="margin-bottom:16px">${picks.map(c =>
+      `<li class="pick-why">${fmtDate(WX.days[c.i], { wd: true })} · ${fmtDur(c.drive)} drive · ${esc(c.why.join(' · '))}</li>` + this.row(c.h, dm, `<span class="score ${scoreCls(c.s)}" title="${scoreWord(c.s)} day">${c.s}</span>`)).join('')}</ol>`;
+    this.bindRows($('#wxPicks'));
   },
   renderMapDaybar() {
     const bar = $('#wxMapbar'); bar.hidden = !this.state.wxOnMap || !WX;
