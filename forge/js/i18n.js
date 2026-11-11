@@ -400,14 +400,31 @@ const EN2 = {
   arena: {
     howScores: 'How the scores work', peakShort: 'Your ceiling: the two best domains.', balanceShort: 'Every domain counts; a weak one drags it down.',
     badEntry: 'Enter a result first.',
-    tips: { wattbike: ['Same air and magnet settings every time, written down, so efforts compare.', 'Pacing: settle at target watts after a hard first 10 s, hold, then empty the tank over the last 20 s.', 'Intervals: 6 × 40 s hard / 2 min easy; one longer steady ride a week builds the base.'] },
+    tips: {
+      ljump: ['Horizontal jumps twice a week: 3–5 sets of 3 broad jumps or bounds, full rest, stick every landing.', 'Hip power drives distance: hip thrusts, Romanian deadlifts and kettlebell swings alongside your squat.', 'Technique is worth 10–20 cm: big arm swing, take off at about 30–40°, reach the heels forward on landing.'],
+      wb6: ['Sprint fresh: 4–6 all-out efforts of 6 s with 3 min of rest, once or twice a week.', 'Keep the same air and magnet settings every test, or results do not compare.', 'Heavy leg strength (squat, deadlift) raises the ceiling; the short sprints teach you to use it.'],
+      mbthrow: ['Explosive pressing once or twice a week: 4–5 sets of 3–5 medicine-ball chest passes or clap push-ups, full rest.', 'A stronger bench press raises the ceiling; throws with a lighter ball train the speed.', 'Always test with the same ball weight and the same wall.'],
+      wattbike: ['Same air and magnet settings every time, written down, so efforts compare.', 'Pacing: settle at target watts after a hard first 10 s, hold, then empty the tank over the last 20 s.', 'Intervals: 6 × 40 s hard / 2 min easy; one longer steady ride a week builds the base.']
+    },
     avgW: 'Average power (W)', dur: 'Effort length (m:ss)', wbFor: 'for {t}', wbDid: '{w} W for {t}',
     wbHow: 'Ride all-out for about 1:30–2:00 and enter the average watts and the time from the Wattbike screen. Ignore its distance.',
     wbEq: 'Ranked as {w} W held for {t} ({wkg} W/kg).',
     wbFar: 'Ranked as {w} W held for {t}. Your effort was much shorter or longer than that, so this is a rough estimate. Next time, ride for about {t}.',
     wbStd: 'Each level is the power to hold for the time shown. Wattbike publishes no ranking of its users, so Forge compares your watts with Concept2 BikeErg 1,000 m results, the closest machine with a public ranking. Watts mean the same on both: a Wattbike reads within about 2 % of a calibration rig.',
-    ev: { bike1000: 'Wattbike max effort' },
-    note: { wattbike: 'counted as {w} over {t}', wattbikeFar: 'effort length far from the ranked duration: rough estimate' }, implausible: 'That would beat the world record. Check the entry: minutes and seconds, kg and lb.',
+    ev: { bike1000: 'Wattbike max effort', sljump: 'Standing long jump', wb6: 'Wattbike 6-second peak power', mbthrow: 'Seated medicine-ball throw' },
+    dist: 'Distance jumped', distM: 'Distance thrown (m)', peakW: 'Peak power (W)', ball: 'Ball', ballN: '{kg} kg ball', best: 'best',
+    tracked: 'Tracked, not ranked', trackNone: 'No result yet · tracked, not ranked', trackUp: '{d} on your previous best',
+    trackWhy: 'Nobody has measured this test in the general adult population, so Forge shows your progress and gives no tier. It does not count in the scores.',
+    protocol: 'How to test', improveTrack: 'How to improve it',
+    vsLow: 'Top {p} % of {sex} your age (thin reference: one Spanish study, counts half)',
+    lowStd: 'These levels rest on one study of 410 Spanish adults that reports averages only, so the percentiles are modelled. This event counts half as much as the vertical jump in your Explosive power score.',
+    sayers: 'About {w} W peak leg power ({wkg} W/kg) by the Sayers formula, give or take {se} W.',
+    how: {
+      sljump: 'Toes behind a line, feet shoulder-width. Swing the arms, jump forward off both feet and land on both. Measure from the line to the back of the nearest heel. Two practice jumps, then the best of three. A fall backwards does not count.',
+      wb6: 'Warm up 10 minutes with two or three short sprints. Use the Wattbike 6-second peak power test, seated, following the instructions on its screen, with the air and magnet settings the bike suggests for your weight. Enter the peak watts. Best of two, three minutes apart.',
+      mbthrow: 'Sit on the floor with your back, shoulders and head against a wall, legs straight. Hold the ball at your chest and push it away as far as you can with both hands, back staying on the wall. Measure from the wall to where the ball first lands. Best of three. Usual balls: 4 kg for men, 3 kg for women.'
+    },
+    note: { thin: 'Thin reference data: counts half in the domain score.', wattbike: 'counted as {w} over {t}', wattbikeFar: 'effort length far from the ranked duration: rough estimate' }, implausible: 'That would beat the world record. Check the entry: minutes and seconds, kg and lb.',
     radarAlt: 'Domain scores: {s}.', bosses: 'Closest level-ups', bossesLead: 'The next tier or level that takes the smallest improvement.', bossGap: 'now {now}, {p} % to go',
     ffa: '{l} on the French federation’s grid. {pts} combined-events points.', ffaAge: '{l} on the French federation’s grid: worth {o} at open age (age factor × {k}). {pts} combined-events points.', ffaBelow: 'Below D7', retest: 'over a year old',
     glTitle: 'Powerlifting score', glTotal: 'Total {tot} at {bw}: {pts} IPF GL points', glBench: 'Bench alone: {pts} GL points',
@@ -433,14 +450,12 @@ const EN2 = {
   },
   lvl: { kicker: 'New tier in {ev}', from: 'Up from {a}.', first: 'Your first ranked record here.', ok: 'Onwards' },
   new: {
-    title: 'What changed in this version', lead: 'A full review against the research. Some of your numbers moved; here is why.',
+    title: 'What changed in this version', lead: 'Explosive power is no longer judged on the vertical jump alone.',
     items: [
-      ['Sprints use real federation levels', 'Times are age-adjusted with the official World Masters factors, then placed on the French federation’s grid (D7 to IA). A tier can shift by one.'],
-      ['The trend line no longer runs behind', 'During a cut the old line read about a week late. The new one sits on your real weight.'],
-      ['Maintenance in your own logging units', 'Once you log, Forge trusts your weight trend and logged calories over the formula, and shows the ratio between the two.'],
-      ['Steps count for more', 'Walking cost now follows your height and speed: about 0.6 kcal per kg per km instead of 0.5.'],
-      ['Scores averaged more fairly', 'Peak and domain scores are averaged on the bell-curve scale. Most move by a point or two.'],
-      ['New', 'Weekly habits and 12-week seasons, your week in review, closest level-ups, duels, a healthspan panel, a what-if planner and a calm mode.']
+      ['Standing long jump (ranked)', 'Horizontal power, which the vertical jump misses. The adult reference is thin (one Spanish study), so it counts half as much as the vertical jump and says so.'],
+      ['Wattbike 6-second peak power (tracked)', 'Your raw power in watts and watts per kg. No population data exist, so you get a progress line and no tier.'],
+      ['Seated medicine-ball throw (tracked)', 'Upper-body power, which no jump can show. Tracked against yourself for the same reason.'],
+      ['Leg power in watts', 'Your vertical jump now also shows the peak power it implies for your bodyweight (Sayers formula).']
     ]
   },
   set: {
@@ -554,14 +569,31 @@ const FR2 = {
   arena: {
     howScores: 'Comment marchent les scores', peakShort: 'Ton plafond : tes deux meilleurs domaines.', balanceShort: 'Chaque domaine compte ; un point faible le tire vers le bas.',
     badEntry: 'Saisis d’abord un résultat.',
-    tips: { wattbike: ['Mêmes réglages air et aimant à chaque fois, notés, pour comparer les efforts.', 'Allure : cale-toi sur tes watts cibles après 10 s fortes, tiens, puis vide-toi sur les 20 dernières secondes.', 'Intervalles : 6 × 40 s fort / 2 min facile ; une sortie longue et régulière par semaine construit la base.'] },
+    tips: {
+      ljump: ['Sauts horizontaux deux fois par semaine : 3 à 5 séries de 3 sauts en longueur ou foulées bondissantes, repos complet, réception stable à chaque fois.', 'La puissance des hanches fait la distance : hip thrusts, soulevés de terre roumains et swings de kettlebell en plus du squat.', 'La technique vaut 10 à 20 cm : grand balancier des bras, décollage à environ 30–40°, talons projetés vers l’avant à la réception.'],
+      wb6: ['Sprinte frais : 4 à 6 efforts maximaux de 6 s avec 3 min de repos, une ou deux fois par semaine.', 'Garde les mêmes réglages d’air et d’aimant à chaque test, sinon les résultats ne se comparent pas.', 'La force des jambes (squat, soulevé de terre) relève le plafond ; les sprints courts apprennent à s’en servir.'],
+      mbthrow: ['Poussées explosives une ou deux fois par semaine : 4 à 5 séries de 3 à 5 passes de médecine-ball ou pompes claquées, repos complet.', 'Un développé couché plus fort relève le plafond ; les lancers avec un ballon plus léger entraînent la vitesse.', 'Teste toujours avec le même ballon et le même mur.'],
+      wattbike: ['Mêmes réglages air et aimant à chaque fois, notés, pour comparer les efforts.', 'Allure : cale-toi sur tes watts cibles après 10 s fortes, tiens, puis vide-toi sur les 20 dernières secondes.', 'Intervalles : 6 × 40 s fort / 2 min facile ; une sortie longue et régulière par semaine construit la base.']
+    },
     avgW: 'Puissance moyenne (W)', dur: 'Durée de l’effort (m:ss)', wbFor: 'pendant {t}', wbDid: '{w} W pendant {t}',
     wbHow: 'Roule à fond environ 1:30–2:00 et saisis les watts moyens et la durée affichés par le Wattbike. Ignore sa distance.',
     wbEq: 'Classé comme {w} W tenus {t} ({wkg} W/kg).',
     wbFar: 'Classé comme {w} W tenus {t}. Ton effort était bien plus court ou plus long que ça, donc c’est une estimation grossière. La prochaine fois, roule environ {t}.',
     wbStd: 'Chaque niveau est la puissance à tenir pendant la durée indiquée. Wattbike ne publie aucun classement de ses utilisateurs : Forge compare tes watts aux résultats Concept2 BikeErg sur 1 000 m, la machine la plus proche avec un classement public. Les watts ont le même sens sur les deux : un Wattbike mesure à environ 2 % près d’un banc d’étalonnage.',
-    ev: { bike1000: 'Wattbike effort max' },
-    note: { wattbike: 'compté comme {w} sur {t}', wattbikeFar: 'durée loin de celle du classement : estimation grossière' }, implausible: 'Ça battrait le record du monde. Vérifie la saisie : minutes et secondes, kg et lb.',
+    ev: { bike1000: 'Wattbike effort max', sljump: 'Saut en longueur sans élan', wb6: 'Wattbike pic de puissance 6 s', mbthrow: 'Lancer de médecine-ball assis' },
+    dist: 'Distance sautée', distM: 'Distance lancée (m)', peakW: 'Puissance maximale (W)', ball: 'Ballon', ballN: 'ballon de {kg} kg', best: 'record',
+    tracked: 'Suivi, non classé', trackNone: 'Aucun résultat · suivi, non classé', trackUp: '{d} sur ton record précédent',
+    trackWhy: 'Personne n’a mesuré ce test dans la population adulte générale : Forge montre ta progression, sans palier. Il ne compte pas dans les scores.',
+    protocol: 'Comment tester', improveTrack: 'Comment progresser',
+    vsLow: 'Top {p} % des {sex} de ton âge (référence mince : une étude espagnole, compte pour moitié)',
+    lowStd: 'Ces niveaux reposent sur une seule étude de 410 adultes espagnols qui ne donne que des moyennes : les centiles sont modélisés. Cette épreuve compte moitié moins que la détente verticale dans ton score d’Explosivité.',
+    sayers: 'Environ {w} W de puissance maximale des jambes ({wkg} W/kg) selon la formule de Sayers, à {se} W près.',
+    how: {
+      sljump: 'Orteils derrière une ligne, pieds à largeur d’épaules. Balance les bras, saute vers l’avant à deux pieds et réceptionne-toi à deux pieds. Mesure de la ligne à l’arrière du talon le plus proche. Deux sauts d’essai, puis le meilleur de trois. Une chute en arrière ne compte pas.',
+      wb6: 'Échauffe-toi 10 minutes avec deux ou trois sprints courts. Utilise le test de pic de puissance 6 secondes du Wattbike, assis, en suivant les consignes à l’écran, avec les réglages d’air et d’aimant que le vélo propose pour ton poids. Saisis les watts maximaux. Meilleur de deux essais, à trois minutes d’intervalle.',
+      mbthrow: 'Assieds-toi au sol, dos, épaules et tête contre un mur, jambes tendues. Tiens le ballon contre la poitrine et pousse-le le plus loin possible à deux mains, le dos restant au mur. Mesure du mur au premier point de chute. Meilleur de trois. Ballons usuels : 4 kg pour les hommes, 3 kg pour les femmes.'
+    },
+    note: { thin: 'Référence mince : compte pour moitié dans le score du domaine.', wattbike: 'compté comme {w} sur {t}', wattbikeFar: 'durée loin de celle du classement : estimation grossière' }, implausible: 'Ça battrait le record du monde. Vérifie la saisie : minutes et secondes, kg et lb.',
     radarAlt: 'Scores par domaine : {s}.', bosses: 'Paliers les plus proches', bossesLead: 'Le prochain palier ou niveau qui demande le plus petit progrès.', bossGap: 'aujourd’hui {now}, encore {p} %',
     ffa: '{l} sur la grille de la fédération française. {pts} points d’épreuves combinées.', ffaAge: '{l} sur la grille de la fédération française : vaut {o} toutes catégories (coefficient d’âge × {k}). {pts} points d’épreuves combinées.', ffaBelow: 'Sous D7', retest: 'plus d’un an',
     glTitle: 'Score de force athlétique', glTotal: 'Total {tot} à {bw} : {pts} points IPF GL', glBench: 'Développé couché seul : {pts} points GL',
@@ -587,14 +619,12 @@ const FR2 = {
   },
   lvl: { kicker: 'Nouveau palier en {ev}', from: 'Tu viens de {a}.', first: 'Ton premier record classé ici.', ok: 'En avant' },
   new: {
-    title: 'Ce qui a changé dans cette version', lead: 'Une revue complète face à la recherche. Certains de tes chiffres ont bougé ; voici pourquoi.',
+    title: 'Ce qui a changé dans cette version', lead: 'L’explosivité n’est plus jugée sur la seule détente verticale.',
     items: [
-      ['Les sprints utilisent de vrais niveaux fédéraux', 'Les temps sont corrigés de l’âge avec les coefficients officiels des World Masters, puis placés sur la grille de la fédération française (D7 à IA). Un palier peut bouger d’un cran.'],
-      ['La courbe de tendance n’est plus en retard', 'Pendant une sèche, l’ancienne courbe lisait environ une semaine de retard. La nouvelle colle à ton poids réel.'],
-      ['La maintenance dans tes propres unités de saisie', 'Dès que tu saisis, Forge se fie à ta tendance de poids et à tes calories saisies plutôt qu’à la formule, et affiche le ratio entre les deux.'],
-      ['Les pas comptent davantage', 'Le coût de la marche suit maintenant ta taille et ta vitesse : environ 0,6 kcal par kg et par km au lieu de 0,5.'],
-      ['Des scores moyennés plus justement', 'Les scores Pic et de domaine sont moyennés sur l’échelle de la courbe en cloche. La plupart bougent d’un point ou deux.'],
-      ['Nouveau', 'Habitudes hebdo et saisons de 12 semaines, bilan de ta semaine, paliers les plus proches, duels, un panneau longévité, un simulateur « et si » et un mode serein.']
+      ['Saut en longueur sans élan (classé)', 'La puissance horizontale, que la détente verticale ne voit pas. La référence adulte est mince (une étude espagnole) : l’épreuve compte moitié moins que la détente verticale, et c’est indiqué.'],
+      ['Wattbike pic de puissance 6 s (suivi)', 'Ta puissance brute en watts et en watts par kg. Aucune donnée de population n’existe : tu as une courbe de progression, pas de palier.'],
+      ['Lancer de médecine-ball assis (suivi)', 'La puissance du haut du corps, qu’aucun saut ne montre. Suivi face à toi-même pour la même raison.'],
+      ['Puissance des jambes en watts', 'Ta détente verticale affiche aussi la puissance maximale qu’elle implique pour ton poids (formule de Sayers).']
     ]
   },
   set: {

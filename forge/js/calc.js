@@ -1,5 +1,5 @@
 /* Forge — calculation engine. Pure functions, no DOM, metric units. Tested in test/calc.test.mjs. */
-import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION, REPS, ERG, VJ, VJ_P, DOMAINS, DOMAIN_AGG, FFA, FFA_LEVELS, FFA_TIER_START, WMA, WA_POINTS, GL, GRIP } from './data.js';
+import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION, REPS, ERG, VJ, VJ_P, SLJ, SLJ_P, DOMAINS, DOMAIN_AGG, FFA, FFA_LEVELS, FFA_TIER_START, WMA, WA_POINTS, GL, GRIP } from './data.js';
 
 export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 export const sum = a => a.reduce((s, x) => s + (x || 0), 0);
@@ -457,6 +457,10 @@ export function anchorsFor(id, { sex, bw, age }) {
     const band = (age || 30) < 20 ? 18 : clamp(Math.floor((age || 30) / 5) * 5, 20, 65);
     return { A: VJ_P.map((p, i) => ({ p, v: VJ[s][band][i] })), enc: x => x, dec: v => v, unit: 'cm', band, beyond: (age || 30) > 69 };
   }
+  if (ev.kind === 'ljump') {
+    const m = sljMean(s, age || 30), sd = SLJ.cv * m;
+    return { A: SLJ_P.map(p => ({ p, v: m + invcdf(p) * sd })), enc: x => x, dec: v => v, unit: 'cm', mean: m, sd, beyond: (age || 30) > 64, low: true };
+  }
   if (ev.kind === 'reps') {
     const t = REPS[id][s], row = interpRows(bw || (s === 'm' ? 80 : 60), t.bw, t.rows);
     const A = []; SL_P.forEach((p, i) => { if (A.length && row[i] <= A[A.length - 1].v) A[A.length - 1] = { p, v: A[A.length - 1].v }; else A.push({ p, v: row[i] }); }); // "< 1" up to Novice: 0 reps still at that percentile
@@ -464,6 +468,17 @@ export function anchorsFor(id, { sex, bw, age }) {
   }
   throw new Error('unknown event ' + id);
 }
+/* Standing long jump: modelled mean for a sex and age (see SLJ in data.js). Flat before 26 and after 57. */
+export function sljMean(sex, age) {
+  const A = SLJ.age; let a;
+  if (age <= A[0][0]) a = A[0][1]; else if (age >= A[A.length - 1][0]) a = A[A.length - 1][1];
+  else { let i = 0; while (age > A[i + 1][0]) i++; a = A[i][1] + (age - A[i][0]) / (A[i + 1][0] - A[i][0]) * (A[i + 1][1] - A[i][1]); }
+  return SLJ.sex[sex === 'm' ? 'm' : 'f'] * a / SLJ.all;
+}
+/* Peak leg power from a countermovement jump (Sayers 1999): W = 60.7 × height (cm) + 45.3 × mass (kg) − 2055.
+   Standard error about 370 W, so it is shown as a rounded figure, never ranked. */
+export const SAYERS_SEE = 370;
+export const sayers = (cm, kg) => cm > 0 && kg > 0 ? 60.7 * cm + 45.3 * kg - 2055 : null;
 export function bfAnchors(sex, age) {
   const band = clamp(Math.floor((age || 30) / 5) * 5, 20, 85);
   return { A: BF_P.map((p, i) => ({ p, v: BF_NHANES[sex === 'm' ? 'm' : 'f'][band][i] })), band };
@@ -521,6 +536,8 @@ export function prValue(pr) {
   if (ev.kind === 'row' || ev.kind === 'erg') return { value: +pr.time, rankable: +pr.time > 0 };
   if (ev.kind === 'race') return { value: +pr.time, rankable: +pr.time > 0, note: 'vdot' };
   if (ev.kind === 'jump') return { value: +pr.cm, rankable: +pr.cm > 0, note: pr.method === 'reach' ? 'reach' : null };
+  if (ev.kind === 'ljump') return { value: +pr.cm, rankable: +pr.cm > 0, note: 'thin' };
+  if (ev.kind === 'track') return { value: pr.event === 'wb6' ? +pr.watts : +pr.meters, rankable: false, track: true };
   if (ev.kind === 'reps') return { value: +pr.reps, rankable: +pr.reps >= 1 };
   if (ev.kind === 'rowtime') return { value: +pr.meters, rankable: +pr.meters > 0 };
   if (ev.kind === 'vo2') {
@@ -542,6 +559,8 @@ export function plausible(pr, sex = 'm') {
     case 'rowtime': return v <= (m ? 460 : 400) && v >= 50;
     case 'race': return v >= ev.dist * (m ? 0.151 : 0.168) && v < ev.dist * 0.9;
     case 'jump': return v >= 5 && v <= 125;
+    case 'ljump': return v >= 30 && v <= 380;
+    case 'track': return pr.event === 'wb6' ? v >= 100 && v <= 2700 : v >= 0.5 && v <= 12;
     case 'reps': return v <= 200;
     case 'vo2': return v >= 8 && v <= 97;
   }
@@ -564,8 +583,25 @@ export function evaluatePR(pr, who) {
 /* Averaging percentile scores directly treats 95 → 99 like 50 → 54, although the first is a far bigger jump in
    performance. Scores are therefore averaged on the z-scale (probit) and converted back. */
 export const zmean = xs => xs.length === 1 ? xs[0] : Math.round(1e4 * 100 * cdf(mean(xs.map(x => invcdf(clamp(x / 100, 0.0005, 0.9995)))))) / 1e4; // rounded: the cdf/inverse pair is exact to about 1e-6
+/* Same, with weights: an event with thin reference data (weight < 1) pulls the average less. */
+export function zmeanW(xs) {
+  if (xs.length === 1) return xs[0].score;
+  const W = xs.reduce((a, x) => a + x.w, 0), z = xs.reduce((a, x) => a + x.w * invcdf(clamp(x.score / 100, 0.0005, 0.9995)), 0) / W;
+  return Math.round(1e4 * 100 * cdf(z)) / 1e4;
+}
 export const geomean = xs => Math.exp(mean(xs.map(v => Math.log(Math.max(1, v)))));
 /* Best PR per event (by percentile), then domain scores, Peak and Balance. */
+/* Best result per tracked (unranked) event. Medicine-ball throws only compare within the same ball weight:
+   the ball of the most recent throw is the one shown. */
+export function trackBest(prs, id) {
+  let xs = (prs || []).filter(p => p.event === id && prValue(p).value > 0);
+  if (!xs.length) return null;
+  const last = xs.reduce((a, b) => (a.date || '') > (b.date || '') ? a : b);
+  if (id === 'mbthrow') xs = xs.filter(p => (+p.ball || 0) === (+last.ball || 0));
+  const best = xs.reduce((a, b) => prValue(b).value > prValue(a).value ? b : a);
+  const prev = xs.filter(p => p !== best && (p.date || '') < (best.date || '')).reduce((a, b) => !a || prValue(b).value > prValue(a).value ? b : a, null);
+  return { pr: best, value: prValue(best).value, n: xs.length, last, prev: prev ? prValue(prev).value : null };
+}
 export function arena(prs, who, leanP) {
   const best = {};
   for (const pr of prs || []) {
@@ -576,9 +612,9 @@ export function arena(prs, who, leanP) {
     if (!best[pr.event] || score > best[pr.event].score) best[pr.event] = { pr, r, score, decay };
   }
   const domains = {};
-  for (const [id, b] of Object.entries(best)) (domains[EVENTS[id].domain] ||= []).push(b.score);
+  for (const [id, b] of Object.entries(best)) (domains[EVENTS[id].domain] ||= []).push({ score: b.score, w: EVENTS[id].w || 1 });
   const dom = {};
-  for (const [d, xs] of Object.entries(domains)) { xs.sort((a, b) => b - a); dom[d] = DOMAIN_AGG[d] === 'max' ? xs[0] : zmean(xs.slice(0, 3)); }
+  for (const [d, xs] of Object.entries(domains)) { xs.sort((a, b) => b.score - a.score); dom[d] = DOMAIN_AGG[d] === 'max' ? xs[0].score : zmeanW(xs.slice(0, 3)); }
   const vals = DOMAINS.map(d => dom[d]).filter(x => x > 0); // performance domains only
   const sorted = [...vals].sort((a, b) => b - a);
   const peak = sorted.length >= 2 ? zmean(sorted.slice(0, 2)) : null;

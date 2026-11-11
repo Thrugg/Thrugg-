@@ -2,7 +2,7 @@
    Every number here comes from a source listed in SOURCES. Values marked `modelled` or `est`
    are derived by Forge from those sources; the method is described in MAINTAINING-forge.md. */
 
-export const DATA_VERSION = '2026.11';
+export const DATA_VERSION = '2026.11.1';
 
 export const SOURCES = {
   sl: { name: 'Strength Level standards (1RM, by bodyweight)', url: 'https://strengthlevel.com/strength-standards', pop: { en: 'Lifters who log lifts on Strength Level (self-selected gym-goers)', fr: 'Pratiquants qui enregistrent leurs charges sur Strength Level (public de salle)' }, date: '03/2026', conf: 'medium' },
@@ -23,6 +23,10 @@ export const SOURCES = {
   wb: { name: 'Wattbike efforts ranked through watts against the Concept2 Online Ranking, 2024 season (BikeErg 1,000 m)', url: 'https://log.concept2.com/rankings', pop: { en: 'Wattbike publishes no population ranking, so your watts are compared with the closest machine that does: people who rank a BikeErg 1,000 m (n = 492 men, 146 women)', fr: 'Wattbike ne publie aucun classement de population : tes watts sont comparés à la machine la plus proche qui en a un, les classés au 1 000 m BikeErg (n = 492 hommes, 146 femmes)' }, date: '2024', conf: 'low' },
   c2x: { name: 'Concept2 Online Ranking, 2024 season (SkiErg 500 m)', url: 'https://log.concept2.com/rankings', pop: { en: 'People who rank results on that machine; small samples for women (n ≈ 140)', fr: 'Utilisateurs classés sur cette machine ; petits effectifs chez les femmes (n ≈ 140)' }, date: '2024', conf: 'low' },
   chms: { name: 'Canadian Health Measures Survey cycle 5, 2016–17 (Statistics Canada, Health Reports 30(10), 2019)', url: 'https://www150.statcan.gc.ca/n1/pub/82-003-x/2019010/article/00002/tbl/tbl04-eng.htm', pop: { en: 'Nationally representative Canadians, survey-weighted; countermovement jump with arm swing on a force plate', fr: 'Échantillon national représentatif (Canada), pondéré ; saut avec contre-mouvement et bras, sur plateforme de force' }, date: '2016–17', conf: 'high' },
+  adultfit: { name: 'Marin-Jimenez et al. 2024, Eur J Sport Sci (standing long jump in adults, Adult-Fit project)', url: 'https://onlinelibrary.wiley.com/doi/full/10.1002/ejsc.12182', pop: { en: '410 Spanish adults aged 18–64 from one region, not a national survey; means and spread only, so percentiles are modelled. Counts half as much as the vertical jump', fr: '410 adultes espagnols de 18 à 64 ans d’une seule région, pas une enquête nationale ; moyennes et dispersion seulement, donc centiles modélisés. Compte moitié moins que la détente verticale' }, date: '2024', conf: 'low' },
+  wb6: { name: 'Herbert et al. 2015, J Strength Cond Res 29(7) (6-second peak power test on a Wattbike)', url: 'https://journals.lww.com/nsca-jscr/fulltext/2015/07000/reliability_of_a_cycle_ergometer_peak_power_test.36.aspx', pop: { en: 'The test is reliable, but nobody has measured it in the general adult population: tracked against yourself only', fr: 'Le test est fiable, mais personne ne l’a mesuré dans la population adulte générale : suivi face à toi-même uniquement' }, date: '2015', conf: 'medium' },
+  smb: { name: 'Seated medicine-ball chest throw (reliability: Beckham et al. 2019; recruits: NSCA TSAC Report)', url: 'https://www.nsca.com/education/articles/tsac-report/the-seated-medicine-ball-throw-performed-by-law-enforcement-recruits-normative-data-and-training-implications/', pop: { en: 'Reference figures exist only for athletes, recruits and older adults: tracked against yourself only', fr: 'Il n’existe de références que pour des sportifs, des recrues et des seniors : suivi face à toi-même uniquement' }, date: '2019', conf: 'medium' },
+  sayers: { name: 'Sayers et al. 1999, Med Sci Sports Exerc 31:572 (peak power from jump height and body mass)', url: 'https://pubmed.ncbi.nlm.nih.gov/10211854/', date: '1999', conf: 'medium' },
   vdot: { name: 'Race time → VO₂max equivalent (Daniels & Gilbert VDOT), ranked on FRIEND 2022', url: 'https://pubmed.ncbi.nlm.nih.gov/34809986/', pop: { en: 'Your race time converted to the VO₂max it usually takes, then compared with measured VO₂max of adults your age', fr: 'Ton temps converti en VO₂max habituellement nécessaire, puis comparé aux VO₂max mesurées des adultes de ton âge' }, date: '2022', conf: 'medium' },
   kouri: { name: 'Kouri et al. 1995, Clin J Sport Med 5:223–228 (FFMI of drug-free vs steroid-using athletes)', date: '1995', conf: 'medium' }
 };
@@ -93,6 +97,14 @@ export const VJ = {
   m: { 18: [32.6,36.3,40.7,43.8,46.3,48.7,51.0,53.5,56.3,60.1,63.2], 20: [32.6,36.6,41.2,44.3,47.0,49.4,51.7,54.1,56.9,60.7,63.8], 25: [31.5,35.5,40.0,43.1,45.7,48.0,50.3,52.6,55.3,59.0,61.9], 30: [30.1,33.9,38.2,41.1,43.6,45.8,47.9,50.2,52.8,56.3,59.1], 35: [28.8,32.3,36.3,39.1,41.4,43.5,45.5,47.7,50.2,53.5,56.2], 40: [27.5,30.7,34.4,37.0,39.1,41.1,43.1,45.1,47.5,50.7,53.3], 45: [26.2,29.1,32.5,34.9,36.9,38.8,40.6,42.6,44.9,48.0,50.5], 50: [24.8,27.4,30.6,32.8,34.7,36.4,38.2,40.0,42.2,45.1,47.6], 55: [23.4,25.7,28.5,30.6,32.3,33.9,35.6,37.3,39.3,42.2,44.5], 60: [21.7,23.8,26.4,28.2,29.8,31.3,32.8,34.4,36.3,39.0,41.2], 65: [19.9,21.7,24.0,25.7,27.1,28.5,29.8,31.3,33.1,35.5,37.6] },
   f: { 18: [23.6,25.6,28.0,29.8,31.3,32.8,34.2,35.8,37.6,40.2,42.4], 20: [22.8,24.7,27.1,28.9,30.4,31.8,33.3,34.8,36.7,39.3,41.4], 25: [22.2,24.1,26.5,28.3,29.9,31.3,32.8,34.3,36.2,38.8,41.0], 30: [21.7,23.6,26.1,27.9,29.4,30.9,32.3,33.9,35.8,38.5,40.7], 35: [21.0,22.9,25.4,27.2,28.7,30.2,31.6,33.2,35.1,37.8,40.0], 40: [20.1,22.0,24.4,26.1,27.7,29.1,30.5,32.1,34.0,36.6,38.7], 45: [19.0,20.8,23.1,24.8,26.3,27.7,29.1,30.6,32.4,34.9,37.0], 50: [17.7,19.5,21.7,23.3,24.7,26.1,27.4,28.8,30.5,32.9,34.9], 55: [16.4,18.1,20.2,21.8,23.1,24.4,25.6,27.0,28.6,30.9,32.7], 60: [15.2,16.8,18.8,20.2,21.5,22.7,23.9,25.2,26.7,28.8,30.6], 65: [14.1,15.6,17.4,18.8,20.0,21.1,22.2,23.4,24.9,26.9,28.5] }
 };
+
+/* Standing long jump, Adult-Fit (Marin-Jimenez 2024, table 1): mean (SD) in cm for 410 Spanish adults aged 18–64.
+   The paper gives sex means over all ages and age-group means over both sexes, not sex × age cells and no percentiles.
+   Forge therefore models: mean(sex, age) = sex mean × age-group mean / overall mean (age interpolated between group
+   mid-points), spread = 16 % of that mean. The 16 % reproduces the paper's own SD for ages 18–34 with both sexes
+   pooled (35.0 cm) once the gap between the sexes is added back. Low confidence: the event carries weight 0.5. */
+export const SLJ = { all: 143.03, sex: { m: 164.37, f: 121.05 }, sexSd: { m: 34.57, f: 28.86 }, age: [[26, 159.64], [42, 146.26], [57, 121.41]], cv: 0.16 };
+export const SLJ_P = [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95];
 
 /* NHANES 1999–2004 DXA % body fat: 5th, 25th, 50th, 75th, 95th percentile by 5-year band (key = band start). */
 export const BF_P = [0.05, 0.25, 0.50, 0.75, 0.95];
@@ -182,6 +194,9 @@ export const EVENTS = {
   bike1000: { domain: 'power', kind: 'erg', src: 'wb', q: { m: 0.03, f: 0.02 } },
   ski500: { domain: 'power', kind: 'erg', src: 'c2x', q: { m: 0.03, f: 0.02 } },
   vjump: { domain: 'explosive', kind: 'jump', src: 'chms', q: { m: 1, f: 1 } },
+  sljump: { domain: 'explosive', kind: 'ljump', src: 'adultfit', q: { m: 1, f: 1 }, w: 0.5, low: true },
+  wb6: { domain: 'explosive', kind: 'track', unit: 'W', src: 'wb6' },
+  mbthrow: { domain: 'explosive', kind: 'track', unit: 'm', src: 'smb' },
   pullups: { domain: 'upper', kind: 'reps', src: 'slr', q: { m: 0.10, f: 0.05 } },
   pushups: { domain: 'upper', kind: 'reps', src: 'slr', q: { m: 0.15, f: 0.10 } },
   vo2: { domain: 'aerobic', kind: 'vo2', src: 'friend', q: { m: 1, f: 1 } },
@@ -192,6 +207,8 @@ export const EVENTS = {
    so that domain keeps the best result; the others average the best three. */
 export const DOMAINS = ['strength', 'explosive', 'speed', 'power', 'aerobic', 'upper'];
 export const DOMAIN_AGG = { aerobic: 'max' };
+/* An event may carry a weight below 1 (EVENTS[id].w) when its reference data are thin: it then moves the domain
+   score less. Events of kind 'track' have no adult reference data at all: stored and shown, never ranked. */
 
 /* Occupation baseline METs for awake, non-exercise hours (Forge estimates on the Compendium scale). */
 export const OCCUPATION = { desk: 1.3, mixed: 1.6, standing: 2.2, manual: 3.0 };

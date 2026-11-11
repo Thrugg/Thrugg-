@@ -9,7 +9,7 @@ import { parseShortcut, readHealthFile, summarise } from './health.js';
 import { analyse, editor, measure } from './photo.js';
 import { parseRenphoCsv, mergeRenpho, mergeLogs, bodySource, renphoStats, dxaCalibration } from './renpho.js';
 import { weekStart, coreQuests, stepsGoal, season, seasonRecap, weeklyReview, bosses, duelEncode, duelDecode, duelScore, vo2Band, whtrBand, stanceBand, SEASON_WEEKS } from './coach.js';
-export const VERSION = '2026.11';
+export const VERSION = '2026.11.1';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -343,10 +343,18 @@ function poseSvg(kind) {
 }
 
 /* ---------- ARENA ---------- */
-const EVENT_GROUPS = { strength: ['bench', 'squat', 'deadlift', 'ohp'], explosive: ['vjump'], speed: ['sprint60', 'sprint100', 'sprint200', 'sprint400'], power: ['row100', 'row200', 'row250', 'row500', 'row1min', 'bike1000', 'ski500'], aerobic: ['vo2', 'run5k', 'run10k'], upper: ['pullups', 'pushups'] };
+const EVENT_GROUPS = { strength: ['bench', 'squat', 'deadlift', 'ohp'], explosive: ['vjump', 'sljump', 'wb6', 'mbthrow'], speed: ['sprint60', 'sprint100', 'sprint200', 'sprint400'], power: ['row100', 'row200', 'row250', 'row500', 'row1min', 'bike1000', 'ski500'], aerobic: ['vo2', 'run5k', 'run10k'], upper: ['pullups', 'pushups'] };
 /* Wattbike: ranked as a 1,000 m-equivalent time internally, always shown as the watts held for that time. */
 const bikeW = sec => Math.round(0.35 / (sec / 1000) ** 3);
-const fmtVal = (id, v) => { const k = EVENTS[id].kind; return id === 'bike1000' ? `${nf(bikeW(v))} W` : k === 'lift' ? `${nf(kgShow(v), 1)} ${kgU()}` : k === 'rowtime' ? `${nf(v)} m` : k === 'vo2' ? `${nf(v, 1)}` : k === 'jump' ? `${nf(cmShow(v), 1)} ${cmU()}` : k === 'reps' ? `${nf(v)} ${t('arena.repsU')}` : fmtTime(v); };
+const fmtVal = (id, v) => { const k = EVENTS[id].kind; return id === 'wb6' ? `${nf(v)} W` : id === 'mbthrow' ? `${nf(v, 2)} m` : k === 'ljump' ? `${nf(cmShow(v), cmU() === 'cm' ? 0 : 1)} ${cmU()}` : id === 'bike1000' ? `${nf(bikeW(v))} W` : k === 'lift' ? `${nf(kgShow(v), 1)} ${kgU()}` : k === 'rowtime' ? `${nf(v)} m` : k === 'vo2' ? `${nf(v, 1)}` : k === 'jump' ? `${nf(cmShow(v), 1)} ${cmU()}` : k === 'reps' ? `${nf(v)} ${t('arena.repsU')}` : fmtTime(v); };
+/* Tracked events (no adult reference data): best result, progress against the previous best, never a tier. */
+function trackRow(id, M) {
+  const b = C.trackBest(S.prs, id), name = t('arena.ev.' + id);
+  if (!b) return `<div class="ev empty" data-act="event" data-id="${id}"><span>${name}</span><small>${t('arena.trackNone')}</small></div>`;
+  const extra = id === 'wb6' ? `${nf(b.value / (+b.pr.bw || M.who.kg), 1)} W/kg` : t('arena.ballN', { kg: nf(+b.pr.ball || 0) });
+  const up = b.prev != null && b.value > b.prev ? ` · ${t('arena.trackUp', { d: id === 'wb6' ? `+${nf(b.value - b.prev)} W` : `+${nf(b.value - b.prev, 2)} m` })}` : '';
+  return `<div class="ev" data-act="event" data-id="${id}"><div class="evh"><span>${name}</span><span class="chip">${t('arena.tracked')}</span></div><div class="evv"><b>${fmtVal(id, b.value)}</b><small>${df(b.pr.date)}</small></div><div class="evp">${extra}${up}</div><small class="muted">${t('arena.trackWhy')}</small></div>`;
+}
 function screenArena(M) {
   const A = M.ar, sex = S.profile.sex;
   let h = `<header class="hdr"><h1>${t('arena.title')}</h1><p class="muted">${t('arena.lead')}</p></header>`;
@@ -378,11 +386,12 @@ function screenArena(M) {
   h += duelCard(M);
   for (const [dom, ids] of Object.entries(EVENT_GROUPS)) {
     h += card(t('arena.dom.' + dom) + (A.dom[dom] != null ? ` <span class="dscore">${sc(A.dom[dom])}</span> ${tierBadge(C.scoreTier(A.dom[dom]))}` : ''), ids.map(id => {
+      if (EVENTS[id].kind === 'track') return trackRow(id, M);
       const b = A.best[id];
       if (!b) return `<div class="ev empty" data-act="event" data-id="${id}"><span>${t('arena.ev.' + id)}</span><small>${t('arena.none')}</small></div>`;
       const r = b.r, lvlTxt = r.nextLevel && (r.tier >= 7 || Math.abs(r.nextLevel.time - r.next) > 0.005) ? t('arena.next', { gap: `−${(r.value - r.nextLevel.time).toFixed(2)} s`, tier: 'FFA ' + r.nextLevel.name }) + '. ' : '', stale = daysSince(b.pr.date) > 365 ? ` <span class="chip">${t('arena.retest')}</span>` : '';
       const nextTxt = lvlTxt + (r.tier < 7 ? t('arena.next', { gap: gapTxt(id, r), tier: tierName(r.tier + 1)[0] }) : t('arena.top'));
-      return `<div class="ev" data-act="event" data-id="${id}"><div class="evh"><span>${t('arena.ev.' + id)}</span>${tierBadge(r.tier)}</div><div class="evv"><b>${fmtVal(id, r.value)}</b><small>${df(b.pr.date)}${stale}</small></div><div class="evp">${r.open != null ? t(r.factor < 0.9995 ? 'arena.ffaAge' : 'arena.ffa', { l: r.level ? 'FFA ' + r.level : t('arena.ffaBelow'), o: fmtTime(r.open), k: nf(r.factor, 4), pts: nf(r.points) }) : EVENTS[id].q[sex] >= 1 ? t('arena.vsAge', { p: topPct(r.p), sex: t('sexPl.' + sex) }) : `${t('arena.vsPart', { p: topPct(r.p) })}. ${t('arena.vsAll', { p: topPct(r.pop.mid), lo: topPct(r.pop.hi), hi: topPct(r.pop.lo), sex: t('sexPl.' + sex) })}`}</div>${heat(progress(r))}<small class="muted">${nextTxt}</small></div>`;
+      return `<div class="ev" data-act="event" data-id="${id}"><div class="evh"><span>${t('arena.ev.' + id)}</span>${tierBadge(r.tier)}</div><div class="evv"><b>${fmtVal(id, r.value)}</b><small>${df(b.pr.date)}${stale}</small></div><div class="evp">${r.open != null ? t(r.factor < 0.9995 ? 'arena.ffaAge' : 'arena.ffa', { l: r.level ? 'FFA ' + r.level : t('arena.ffaBelow'), o: fmtTime(r.open), k: nf(r.factor, 4), pts: nf(r.points) }) : EVENTS[id].low ? t('arena.vsLow', { p: topPct(r.p), sex: t('sexPl.' + sex) }) : EVENTS[id].q[sex] >= 1 ? t('arena.vsAge', { p: topPct(r.p), sex: t('sexPl.' + sex) }) : `${t('arena.vsPart', { p: topPct(r.p) })}. ${t('arena.vsAll', { p: topPct(r.pop.mid), lo: topPct(r.pop.hi), hi: topPct(r.pop.lo), sex: t('sexPl.' + sex) })}`}</div>${id === 'vjump' && C.sayers(r.value, M.who.kg) > 0 ? `<div class="evp">${t('arena.sayers', { w: nf(rnd(C.sayers(r.value, M.who.kg), 10)), wkg: nf(C.sayers(r.value, M.who.kg) / M.who.kg, 1), se: nf(C.SAYERS_SEE) })}</div>` : ''}${heat(progress(r))}<small class="muted">${nextTxt}</small></div>`;
     }).join('') + (dom === 'strength' && (A.gl || A.benchGl) ? `<div class="kv"><span>${t('arena.glTitle')}</span><b>${A.gl ? t('arena.glTotal', { tot: `${nf(kgShow(A.gl.total), 1)} ${kgU()}`, bw: `${nf(kgShow(A.gl.bw), 1)} ${kgU()}`, pts: nf(A.gl.points, 1) }) : t('arena.glBench', { pts: nf(A.benchGl, 1) })}</b><small>${t('arena.glText', { c: t('arena.ageClass.' + C.ageClass(M.age)) })}${A.gl && A.benchGl ? ' ' + t('arena.glBench', { pts: nf(A.benchGl, 1) }) + '.' : ''}</small></div>` : '') + `<button class="btn ghost sm" data-act="pradd" data-dom="${dom}">${t('arena.add')}</button>`);
   }
   h += card(t('arena.ladder'), `<ol class="ladder">${TIERS.map((_, i) => `<li>${tierBadge(i)}<span>${esc(tierName(i)[1])}</span><small>${t('tier.band')[i]}</small></li>`).reverse().join('')}</ol><p class="muted xs">${t('arena.ladderNote')}</p>${field(t('arena.variant'), selIn('profile.variant', S.profile.variant, [['classic', t('set.variant.classic')], ['f', t('set.variant.f')]]))}`);
@@ -396,7 +405,7 @@ function gapTxt(id, r) {
   if (k === 'lift') return `+${nf(kgShow(r.next - r.value), 1)} ${kgU()}`;
   if (k === 'rowtime') return `+${nf(r.next - r.value)} m`;
   if (k === 'vo2') return `+${nf(r.next - r.value, 1)}`;
-  if (k === 'jump') return `+${nf(cmShow(r.next - r.value), 1)} ${cmU()}`;
+  if (k === 'jump' || k === 'ljump') return `+${nf(cmShow(r.next - r.value), 1)} ${cmU()}`;
   if (k === 'reps') return `+${Math.max(1, Math.ceil(r.next - r.value))} ${t('arena.repsU')}`;
   if (id === 'bike1000') return `+${nf(Math.max(1, bikeW(r.next) - bikeW(r.value)))} W`;
   const d = r.value - r.next; return d >= 60 ? `−${fmtTime(d)}` : `−${d.toFixed(2)} s`;
@@ -527,6 +536,9 @@ function prSheet(eventId, dom) {
     if (k === 'erg') return field(t('arena.time'), `<input type="text" inputmode="decimal" name="time" placeholder="1:45.0" required>`);
     if (k === 'race') return field(t('arena.timeLong'), `<input type="text" inputmode="decimal" name="time" placeholder="${id === 'run5k' ? '22:30' : '47:00'}" required>`);
     if (k === 'jump') return `${field(`${t('arena.cm')} (${cmU()})`, `<input type="number" step="any" inputmode="decimal" name="cm" required>`)}${field(t('arena.jumpMethod'), `<select name="method">${['mat', 'reach'].map(x => `<option value="${x}">${t('arena.jm.' + x)}</option>`).join('')}</select>`)}<p class="xs muted">${t('arena.jumpHow')}</p>`;
+    if (k === 'ljump') return `${field(`${t('arena.dist')} (${cmU()})`, `<input type="number" step="any" inputmode="decimal" name="cm" required>`)}<p class="xs muted">${t('arena.how.sljump')}</p>`;
+    if (id === 'wb6') return `<div class="g2">${field(t('arena.peakW'), `<input type="number" inputmode="numeric" name="watts" min="100" max="2700" required>`)}${field(`${t('arena.bwThen')} (${kgU()})`, `<input type="number" step="any" name="bw" value="${r1(kgShow(model().kg))}">`)}</div><p class="xs muted">${t('arena.how.wb6')}</p>`;
+    if (id === 'mbthrow') return `<div class="g2">${field(t('arena.distM'), `<input type="number" step="any" inputmode="decimal" name="meters" placeholder="4.80" required>`)}${field(t('arena.ball'), `<select name="ball">${[2, 3, 4, 5].map(x => `<option value="${x}"${x === (model().who.sex === 'm' ? 4 : 3) ? ' selected' : ''}>${x} kg</option>`).join('')}</select>`)}</div><p class="xs muted">${t('arena.how.mbthrow')}</p>`;
     if (k === 'reps') return `<div class="g2">${field(t('arena.repsMax'), `<input type="number" inputmode="numeric" name="reps" min="1" required>`)}${field(`${t('arena.bwThen')} (${kgU()})`, `<input type="number" step="any" name="bw" value="${r1(kgShow(model().kg))}">`)}</div><p class="xs muted">${t('arena.repsHow.' + id)}</p>`;
     return `${field(t('arena.method'), `<select name="method">${['lab', 'cycle', 'watch', 'cooper'].map(x => `<option value="${x}">${t('arena.vm.' + x)}</option>`).join('')}</select>`)}<div class="g2">${field(t('arena.value'), `<input type="number" step="any" name="value">`)}${field(t('arena.cooperM'), `<input type="number" name="meters">`)}</div>`;
   };
@@ -545,6 +557,9 @@ function prSheet(eventId, dom) {
       else if (id === 'bike1000') Object.assign(pr, { machine: 'wattbike', watts: +fv(f, 'watts'), dur: parseTime(fv(f, 'dur')) });
       else if (k === 'row' || k === 'erg' || k === 'race') pr.time = parseTime(fv(f, 'time'));
       else if (k === 'jump') Object.assign(pr, { cm: cmRead(fv(f, 'cm')), method: fv(f, 'method') });
+      else if (k === 'ljump') pr.cm = cmRead(fv(f, 'cm'));
+      else if (id === 'wb6') Object.assign(pr, { watts: +fv(f, 'watts'), bw: kgRead(fv(f, 'bw')) });
+      else if (id === 'mbthrow') Object.assign(pr, { meters: +String(fv(f, 'meters') ?? '').replace(',', '.'), ball: +fv(f, 'ball') });
       else if (k === 'reps') Object.assign(pr, { reps: +fv(f, 'reps'), bw: kgRead(fv(f, 'bw')) });
       else if (k === 'rowtime') pr.meters = +fv(f, 'meters');
       else Object.assign(pr, { method: fv(f, 'method'), value: fv(f, 'value') == null ? null : +fv(f, 'value'), meters: fv(f, 'meters') == null ? null : +fv(f, 'meters') });
@@ -556,12 +571,26 @@ function prSheet(eventId, dom) {
     };
   });
 }
+function trackSheet(id) {
+  const M = model(), who = M.who, src = SOURCES[EVENTS[id].src], b = C.trackBest(S.prs, id);
+  const prs = S.prs.filter(p => p.event === id).sort((a, b) => a.date < b.date ? 1 : -1);
+  sheet(`<h2>${t('arena.ev.' + id)}</h2><p><span class="chip">${t('arena.tracked')}</span></p><p class="muted">${t('arena.trackWhy')}</p>
+    <h3>${t('arena.protocol')}</h3><p>${t('arena.how.' + id)}</p>
+    <h3>${t('arena.history')}</h3>${prs.length ? `<ul class="hist">${prs.map(p => { const v = C.prValue(p).value; return `<li><span>${df(p.date)}</span><b>${fmtVal(id, v)}</b>${b && p.id === b.pr.id ? `<span class="chip ok">${t('arena.best')}</span>` : ''}<small>${id === 'wb6' ? `${nf(v / (+p.bw || who.kg), 1)} W/kg` : t('arena.ballN', { kg: nf(+p.ball || 0) })}</small><button class="lnk danger x" data-delpr="${p.id}" aria-label="${t('common.del')}">×</button></li>`; }).join('')}</ul>` : `<p class="muted">${t('arena.none')}</p>`}
+    <h3>${t('arena.improveTrack')}</h3><ul>${t('arena.tips.' + id).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+    <p class="xs muted">${t('common.source')}: ${src.url ? `<a href="${src.url}" target="_blank" rel="noopener">${esc(src.name)}</a>` : esc(src.name)}. ${esc(src.pop?.[getLang()] || '')}</p>
+    <div class="row"><button class="btn ghost" data-close>${t('common.close')}</button><button class="btn pri" data-addpr>${t('arena.add')}</button></div>`, d => {
+    d.querySelectorAll('[data-delpr]').forEach(x => x.onclick = e => { e.preventDefault(); if (confirm(t('common.confirmDel'))) { remove('prs', x.dataset.delpr); d.close(); render(); } });
+    d.querySelector('[data-addpr]').onclick = e => { e.preventDefault(); d.close(); prSheet(id); };
+  });
+}
 function eventSheet(id) {
+  if (EVENTS[id].kind === 'track') return trackSheet(id);
   const M = model(), who = M.who, an = C.anchorsFor(id, { sex: who.sex, bw: who.kg, age: who.age }), ev = EVENTS[id], src = SOURCES[ev.src];
   const rows = TIERS.map((_, i) => { const v = i === 0 ? null : an.dec(C.valueAtP(TIER_P[i - 1], an.A)); return `<tr><td>${tierBadge(i)}</td><td>${v == null ? '–' : (id === 'bike1000' ? `≥ ${fmtVal(id, v)}<br><small class="muted">${t('arena.wbFor', { t: fmtTime(v) })}</small>` : (an.lowerBetter ? '≤ ' : '≥ ') + fmtVal(id, v))}</td><td class="muted">${t(ev.kind === 'sprint' ? 'tier.ffa' : 'tier.band')[i]}</td></tr>`; }).reverse().join('');
   const prs = S.prs.filter(p => p.event === id).sort((a, b) => a.date < b.date ? 1 : -1);
-  const tipKey = { lift: 'lift', sprint: 'sprint', vo2: 'vo2', race: 'vo2', jump: 'jump', reps: 'reps', erg: 'erg' }[ev.kind] || 'row', tipK = id === 'bike1000' ? 'wattbike' : tipKey;
-  sheet(`<h2>${t('arena.ev.' + id)}</h2><h3>${t('arena.standards')}</h3><p class="muted xs">${ev.kind === 'lift' || ev.kind === 'reps' ? `${t('arena.bwThen')}: ${nf(kgShow(who.kg), 1)} ${kgU()}, ` : ''}${t('sex.' + who.sex)}${['vo2', 'sprint', 'jump', 'race'].includes(ev.kind) ? `, ${t('arena.ageN', { a: who.age })}` : ''}${ev.kind === 'sprint' && an.factor < 0.9995 ? `. ${t('arena.ffaStd', { k: nf(an.factor, 4) })}` : ''}</p>${id === 'bike1000' ? `<p class="xs muted">${t('arena.wbStd')}</p>` : ''}<table class="tbl std">${rows}</table>
+  const tipKey = { lift: 'lift', sprint: 'sprint', vo2: 'vo2', race: 'vo2', jump: 'jump', ljump: 'ljump', reps: 'reps', erg: 'erg' }[ev.kind] || 'row', tipK = id === 'bike1000' ? 'wattbike' : tipKey;
+  sheet(`<h2>${t('arena.ev.' + id)}</h2><h3>${t('arena.standards')}</h3><p class="muted xs">${ev.kind === 'lift' || ev.kind === 'reps' ? `${t('arena.bwThen')}: ${nf(kgShow(who.kg), 1)} ${kgU()}, ` : ''}${t('sex.' + who.sex)}${['vo2', 'sprint', 'jump', 'ljump', 'race'].includes(ev.kind) ? `, ${t('arena.ageN', { a: who.age })}` : ''}${ev.kind === 'sprint' && an.factor < 0.9995 ? `. ${t('arena.ffaStd', { k: nf(an.factor, 4) })}` : ''}</p>${id === 'bike1000' ? `<p class="xs muted">${t('arena.wbStd')}</p>` : ''}${ev.low ? `<p class="xs muted">${t('arena.lowStd')}</p>` : ''}${ev.kind === 'ljump' ? `<p class="xs muted">${t('arena.how.sljump')}</p>` : ''}<table class="tbl std">${rows}</table>
     <h3>${t('arena.history')}</h3>${prs.length ? `<ul class="hist">${prs.map(p => { const r = C.evaluatePR(p, who); return `<li><span>${df(p.date)}</span><b>${r.value ? fmtVal(id, r.value) : '–'}</b>${r.rankable ? tierBadge(r.tier) : ''}${r.level ? `<span class="lvl">FFA ${r.level}</span>` : ''}${r.note ? `<small>${p.machine === 'wattbike' ? `${t('arena.wbDid', { w: nf(p.watts), t: fmtTime(p.dur) })} · ` : ''}${t('arena.note.' + r.note, { t: fmtTime(r.value), w: fmtVal(id, r.value) })}</small>` : r.est ? `<small>${t('arena.note.est')}</small>` : ''}<button class="lnk danger x" data-delpr="${p.id}" aria-label="${t('common.del')}">×</button></li>`; }).join('')}</ul>` : `<p class="muted">${t('arena.none')}</p>`}
     <h3>${t('arena.improve')}</h3><ul>${t('arena.tips.' + tipK).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
     <p class="xs muted">${t('common.source')}: ${src.url ? `<a href="${src.url}" target="_blank" rel="noopener">${esc(src.name)}</a>` : esc(src.name)}${ev.kind === 'sprint' ? `, <a href="${SOURCES.wma.url}" target="_blank" rel="noopener">${esc(SOURCES.wma.name)}</a>` : ''}. ${esc(src.pop?.[getLang()] || '')} ${confChip(src.conf)}${ev.src === 'c2m' ? ' · ' + t('arena.note.modelled') : ''}${an.clampedBw ? ' · ' + t('arena.note.clampedBw') : ''}</p>

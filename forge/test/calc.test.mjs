@@ -123,6 +123,22 @@ t('new Arena events', () => {
   const who = { sex: 'm', kg: 80, age: 32 };
   let r = C.evaluatePR({ event: 'vjump', cm: 45.8, method: 'mat' }, who); near(r.p, 0.5, 0.001, 'CMJ median 30-34');
   r = C.evaluatePR({ event: 'pullups', reps: 13, bw: 81.6 }, who); near(r.p, 0.5, 0.01, 'pull-ups median at 180 lb');
+  // Standing long jump (Adult-Fit 2024): men 164.37, women 121.05, all 143.03; ages 18–34 159.64, 35–49 146.26, 50–64 121.41
+  near(C.sljMean('m', 26), 164.37 * 159.64 / 143.03, 0.01, 'SLJ men at the 18–34 mid-point = 183.5 cm');
+  near(C.sljMean('f', 60), 121.05 * 121.41 / 143.03, 0.01, 'SLJ women 50–64 = 102.8 cm');
+  near(C.sljMean('m', 34), 164.37 * (159.64 + (146.26 - 159.64) * 8 / 16) / 143.03, 0.01, 'SLJ interpolated between age groups');
+  { const m = C.sljMean('m', 26), f = C.sljMean('f', 26), pooled = Math.sqrt(((0.16 * m) ** 2 + (0.16 * f) ** 2) / 2 + ((m - f) / 2) ** 2); near(pooled, 35.01, 0.6, 'a 16 % spread reproduces the paper’s pooled SD for ages 18–34'); }
+  r = C.evaluatePR({ event: 'sljump', cm: C.sljMean('m', 32) }, who); near(r.p, 0.5, 0.001, 'SLJ at the modelled mean = median'); assert.equal(r.note, 'thin');
+  r = C.evaluatePR({ event: 'sljump', cm: C.sljMean('m', 32) * 1.16 }, who); near(r.p, 0.8413, 0.002, 'SLJ one SD above the mean');
+  near(C.sayers(50, 78), 4513.4, 0.1, 'Sayers: 60.7 × 50 + 45.3 × 78 − 2055');
+  r = C.evaluatePR({ event: 'wb6', watts: 1250, bw: 80 }, who); assert.equal(r.rankable, false); assert.equal(r.value, 1250);
+  assert.ok(C.plausible({ event: 'wb6', watts: 1250 }) && !C.plausible({ event: 'wb6', watts: 4000 }) && C.plausible({ event: 'mbthrow', meters: 5.2, ball: 4 }) && !C.plausible({ event: 'mbthrow', meters: 30, ball: 4 }) && !C.plausible({ event: 'sljump', cm: 500 }));
+  { const td = C.today(), prs = [{ id: 'a', event: 'mbthrow', meters: 5.5, ball: 3, date: '2026-01-01' }, { id: 'b', event: 'mbthrow', meters: 4.6, ball: 4, date: '2026-02-01' }, { id: 'c', event: 'mbthrow', meters: 4.9, ball: 4, date: '2026-03-01' }];
+    const b = C.trackBest(prs, 'mbthrow'); assert.equal(b.pr.id, 'c', 'best among throws with the latest ball'); near(b.prev, 4.6, 1e-9, 'previous best, same ball'); assert.equal(C.trackBest(prs, 'wb6'), null);
+    // weighted domain: vertical jump at the median (50) and a long jump one SD up (84.1) at half weight → z = 0.5 × 1 / 1.5
+    const A = C.arena([{ event: 'vjump', cm: 45.8, method: 'mat', date: td }, { event: 'sljump', cm: C.sljMean('m', 32) * 1.16, date: td }, { event: 'wb6', watts: 1250, date: td }], who, null);
+    near(A.dom.explosive, 100 * C.cdf(1 / 3), 0.15, 'long jump counts half'); assert.ok(!A.best.wb6, 'tracked events never enter the scores');
+    const B = C.arena([{ event: 'sljump', cm: C.sljMean('m', 32), date: td }], who, null); near(B.dom.explosive, 50, 0.1, 'alone, the long jump is the domain'); }
   r = C.evaluatePR({ event: 'bike1000', time: 100.5 }, who); near(r.p, 0.5, 0.001, 'BikeErg median');
   r = C.evaluatePR({ event: 'run5k', time: 1200 }, who); assert.ok(r.p > 0.8 && r.p < 0.86, '20:00 5 km at 32 = VDOT 49.8, between P75 (46.5) and P95 (57.9)');
   r = C.evaluatePR({ event: 'pullups', reps: 3, bw: 60 }, { sex: 'f', kg: 60, age: 30 }); assert.ok(r.p > 0.2 && r.p < 0.5, 'women pull-ups with <1 anchors');
