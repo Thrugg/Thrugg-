@@ -1,5 +1,5 @@
 /* Nocturne service worker: network first, cache as a fallback so the morning tag works without signal. */
-const V = 'nocturne-2026.11.13a';
+const V = 'nocturne-2026.11.13b';
 const CORE = ['./', 'index.html', 'app.css', 'js/main.js', 'js/ui.js', 'js/sleep.js', 'js/health.js', 'js/store.js', 'js/i18n.js', 'js/charts.js', 'fonts/fraunces.woff2', 'vendor/fflate.min.js', 'manifest.webmanifest', 'icon-192.png', '../cloud.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('nocturne-') && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
