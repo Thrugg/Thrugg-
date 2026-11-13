@@ -230,3 +230,36 @@ export function demo(today, count = 63) {
   });
   return { nights, tags };
 }
+
+/* ---------- the guide: what the numbers suggest ----------
+   Working ranges of sleep by training load, in minutes: [bottom, top, aim]. They are a starting point, not a measured
+   need: adults are advised 7–9 h; elite athletes report needing 8.3 h (SD 0.9) to feel rested (Sargent 2021) and the
+   2021 consensus on athlete sleep asks for an individual figure rather than one rule (Walsh 2021). */
+export const ACTIVITY = { light: [420, 540, 465], regular: [450, 540, 495], heavy: [480, 570, 525] };
+export const SRI_REF = [74, 81, 86];            // UK Biobank quartiles (Windred 2024)
+const isFree = d => { const w = new Date(toMs(d)).getUTCDay(); return w === 0 || w === 6; };   // woke up on a Saturday or Sunday
+export function timing(nights, dates) {
+  const ds = dates.filter(d => nights[d]); if (!ds.length) return null;
+  const mid = d => (nights[d].on + nights[d].off) / 2;
+  const work = ds.filter(d => !isFree(d)), free = ds.filter(isFree);
+  const mw = median(work.map(mid)), mf = median(free.map(mid));
+  return { n: ds.length, onMed: median(ds.map(d => nights[d].on)), offMed: median(ds.map(d => nights[d].off)), mid: median(ds.map(mid)),
+    midWork: mw, midFree: mf, jetlag: work.length >= 3 && free.length >= 2 ? mf - mw : null,
+    late: ds.filter(d => nights[d].on >= 0).length };
+}
+/* Findings ranked by how much they call for action: level 2 = change this first, 1 = keep an eye on it, 0 = fine. */
+export function advice(nights, tags, dates, target, activity = 'regular') {
+  const s = summary(nights, dates, target); if (!s.n) return null;
+  const tm = timing(nights, dates), [low, high, aim] = ACTIVITY[activity] || ACTIVITY.regular, items = [];
+  const a = Math.round(s.a);
+  items.push({ k: 'volume', level: a < low ? 2 : a < aim ? 1 : 0, short: low - a, toAim: aim - a });
+  if (target > high || target < low) items.push({ k: 'target', level: 1, over: target > high });
+  items.push({ k: 'onset', level: tm.onMed >= 0 ? (a < low ? 2 : 1) : 0, late: tm.late });
+  if (tm.jetlag != null) items.push({ k: 'jetlag', level: Math.abs(tm.jetlag) >= 60 ? 2 : Math.abs(tm.jetlag) >= 30 ? 1 : 0, v: Math.round(tm.jetlag) });
+  if (s.sri.pairs >= 4) items.push({ k: 'sri', level: s.sri.value < SRI_REF[0] ? 2 : s.sri.value < SRI_REF[1] ? 1 : 0, v: Math.round(s.sri.value) });
+  items.push({ k: s.conv < 0.85 ? 'convLow' : 'convHigh', level: s.conv < 0.85 ? 1 : 0, v: Math.round(s.conv * 100) });
+  const b = bridge(nights, tags, dates, target), top = b.rows.filter(r => CAUSES.includes(r.k) && r.min > 0).sort((x, y) => y.min - x.min)[0];
+  if (top) items.push({ k: 'cause', level: top.min >= 5 ? 1 : 0, cause: top.k, perNight: top.min, perWeek: top.min * 7, nights: top.nights.length });
+  items.sort((x, y) => y.level - x.level);
+  return { s, tm, low, high, aim, a, items };
+}

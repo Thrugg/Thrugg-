@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 /* the zip library is a browser script; load it here without tripping over this folder's "type": "module" */
 const fflate = (() => { const m = { exports: {} }; new Function('module', 'exports', 'require', readFileSync(new URL('../vendor/fflate.min.js', import.meta.url), 'utf8'))(m, m.exports, createRequire(import.meta.url)); return m.exports; })();
 
+const i18nKeys = (await import('../js/i18n.js')).keys().en;
 const T = 'HKCategoryTypeIdentifierSleepAnalysis', V = 'HKCategoryValueSleepAnalysis';
 const rec = (src, value, start, end, tz) => ` <Record type="${T}" sourceName="${src}" sourceVersion="11.1" creationDate="${end} +0100" startDate="${start} +0100" endDate="${end} +0100" value="${V}${value}"${tz ? `>\n  <MetadataEntry key="HKTimeZone" value="${tz}"/>\n </Record>` : '/>'}`;
 const wrap = body => `<?xml version="1.0" encoding="UTF-8"?>\n<HealthData locale="fr_DE">\n <ExportDate value="2026-11-13 06:30:00 +0100"/>\n <Record type="HKQuantityTypeIdentifierStepCount" sourceName="iPhone" unit="count" startDate="2026-11-10 08:00:00 +0100" endDate="2026-11-10 08:10:00 +0100" value="900"/>\n${body}\n</HealthData>\n`;
@@ -166,4 +167,22 @@ test('every text used on screen exists in English and in French', async () => {
   const used = [...src.matchAll(/\bt\('([a-zA-Z0-9.]+)'[,)]/g)].map(m => m[1]);
   for (const k of used) assert.ok(en.includes(k), 'missing text: ' + k);
   for (const k of ['tab.bridge', 'tab.numbers', 'tab.nights', 'tab.plan', 'tab.settings', 'row.notInBed', 'row.awakeInBed', 'how.1', 'how.5', 'imp.how1', 'imp.how4', ...S.CAUSES.map(c => 'cause.' + c)]) assert.ok(en.includes(k), 'missing text: ' + k);
+});
+
+test('the guide: ranges, timing and ranked findings', () => {
+  const night = (on, off, a) => ({ a, b: off - on + 10, on, off, w: off - on - a, s: [[on, off]], m: 1, bs: on - 10 });
+  const nights = {}, tags = {};
+  // 28 days to Fri 13 Nov 2026: workday nights 00:30 → 06:50, days off (woke Sat/Sun) 01:40 → 08:40
+  for (const d of S.range('2026-11-13', 28)) { const w = new Date(d + 'T00:00:00Z').getUTCDay(), free = w === 0 || w === 6; nights[d] = free ? night(100, 520, 400) : night(30, 410, 365); }
+  tags['2026-11-10'] = { t: ['screen'] }; nights['2026-11-10'] = night(90, 410, 305);
+  const tm = S.timing(nights, S.range('2026-11-13', 28));
+  assert.equal(tm.midWork, 220); assert.equal(tm.midFree, 310); assert.equal(tm.jetlag, 90); assert.equal(tm.late, 28);
+  const g = S.advice(nights, tags, S.range('2026-11-13', 28), 510, 'regular'), it = k => g.items.find(i => i.k === k);
+  assert.deepEqual([g.low, g.high, g.aim], [450, 540, 495]);
+  assert.equal(it('volume').level, 2); assert.equal(it('volume').short, 450 - g.a);
+  assert.equal(it('onset').level, 2); assert.equal(it('jetlag').level, 2); assert.equal(it('jetlag').v, 90);
+  assert.equal(it('cause').cause, 'screen'); assert.equal(it('convHigh').level, 0); assert.equal(it('target'), undefined);
+  assert.ok(g.items[0].level >= g.items[g.items.length - 1].level, 'most pressing first');
+  assert.equal(S.advice(nights, tags, S.range('2026-11-13', 28), 600, 'light').items.find(i => i.k === 'target').over, true);
+  for (const k of ['volume2', 'volume1', 'volume0', 'onset1', 'onset0', 'jetlag1', 'jetlagNeg', 'jetlag0', 'sri1', 'sri0', 'convLow', 'convHigh', 'cause', 'targetOver', 'targetUnder']) for (const p of ['.t', '.b']) assert.ok(i18nKeys.includes('adv.' + k + p), 'adv.' + k + p);
 });

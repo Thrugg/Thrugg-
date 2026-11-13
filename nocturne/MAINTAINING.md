@@ -13,7 +13,7 @@ No personal data belongs in this folder: the repository is public. Tests and exa
 | `js/sleep.js` | The engine, pure functions: one night from raw Health samples, regularity index, summary, the bridge, the plan, example nights |
 | `js/health.js` | Apple Health import: streaming reader for export.zip / export.xml, sleep-record accumulator, merge into stored nights |
 | `js/charts.js` | The waterfall (HTML), the night-by-night chart and the columns (SVG) |
-| `js/ui.js` | All screens: Bridge, Numbers, Nights, Plan, Settings, import and night sheets |
+| `js/ui.js` | All screens: Bridge, Numbers, Nights, Plan, Guide, Settings, import and night sheets |
 | `js/i18n.js` | English and French. A test checks that both have the same keys and that every key used on screen exists |
 | `js/store.js` | State, save, backup |
 | `test/nocturne.test.mjs` | `node --test nocturne/test/*.mjs` |
@@ -51,6 +51,14 @@ Sync is off until the person switches it on for the device (`nocturne.sync` = `1
 - **Sleep Regularity Index** (`sri`): Phillips et al. 2017, Sci Rep 7:3216. Minute by minute over 18:00 → 18:00, only pairs of consecutive days that both have data; shown from 4 pairs. Reference shown in the app: UK Biobank, 60,977 adults, median 81.0, IQR 73.8–86.3 (Windred et al., Sleep 2024;47(1):zsad253).
 - **Onset spread**: sample standard deviation of onset clock time, with median and range. Conversion = total asleep ÷ total time in bed.
 - **Plan** (`baseline`, `planTimes`, `tonight`, `progress`): starting point = last 28 days with data (average asleep, average time in bed, median lights-out and wake). Extra time in bed = extra sleep ÷ conversion (default 65 %; 60–67 % gives the brief's 75–90 min for +45–60 min). Lights out = wake − (starting time in bed + extra). It moves 15 min earlier every 3 nights from the starting bedtime. When "in bed" is not recorded on most nights, 15 min to fall asleep is assumed (`LATENCY`). Progress compares nights after the start date with the frozen starting point and shows the measured conversion once there are 5 nights and 15 more minutes in bed.
+
+## The guide (`advice`, `timing` in `sleep.js`; `renderGuide` in `ui.js`)
+
+Always on the last 28 days. Findings are ranked: 2 = change first, 1 = keep an eye on it, 0 = fine.
+
+- Volume: average asleep against a working range by training load (`ACTIVITY`, minutes `[bottom, top, aim]`: light 7 h–9 h aim 7 h 45, regular 7 h 30–9 h aim 8 h 15, heavy 8 h–9 h 30 aim 8 h 45). These are judgement figures built on the 7–9 h adult recommendation, Sargent 2021 (175 elite athletes: self-assessed need 8.3 h, SD 0.9; obtained 6.7 h) and Walsh 2021 (individual figure over one rule). There is no validated formula from training load to sleep need; the screen says so.
+- Target outside the range → a finding. Onset: median at or after midnight. Days off vs workdays: difference of median mid-sleep (nights ending Sat/Sun vs the rest; needs 3 and 2 nights), 30 and 60 min thresholds. Regularity against UK Biobank quartiles 74 / 81 / 86. Conversion under 85 %. Costliest tagged cause from the 28-day bridge (5 min a night or more).
+- Explainers (before midnight, testosterone, mood, recovery) quote: Nikbakhtian 2021 (88,026 adults; onset 22:00–22:59 lowest CVD incidence; HR 1.12 for 23:00–23:59, 1.25 after midnight, 1.24 before 22:00; in men only before 22:00 significant), Leproult & Van Cauter 2011 (10 men, 8 nights of 5 h, daytime testosterone −10 to −15 %), Schmid 2012 (first-half-only sleep lowered morning testosterone; 02:45–07:00 for two nights did not), Daghlas 2021 (OR 0.77 per hour earlier midpoint, 95 % CI 0.63–0.94, Mendelian randomisation), Walsh 2021. Each is worded as small study or association. Update the text in `i18n.js` (`ex.*`, `guide.*`, `adv.*`) and the `SOURCES` list together.
 
 ## Not done yet
 

@@ -8,7 +8,7 @@ import { t, setLang, lang } from './i18n.js';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ui = { wf: null, bed: null, shown: 30, session: undefined, morningOpen: false, busy: false };
-const TABS = ['bridge', 'numbers', 'nights', 'plan', 'settings'], SPANS = [7, 14, 28, 90];
+const TABS = ['bridge', 'numbers', 'nights', 'plan', 'guide', 'settings'], SPANS = [7, 14, 28, 90];
 const today = () => E.localDate();
 
 /* ---------- words and figures ---------- */
@@ -192,6 +192,41 @@ function renderPlan() {
   return h;
 }
 
+/* ---------- Guide ---------- */
+const SOURCES = [
+  ['Sargent et al., Int J Sports Physiol Perform 2021', 'https://doi.org/10.1123/ijspp.2020-0896'],
+  ['Walsh et al., Br J Sports Med 2021', 'https://doi.org/10.1136/bjsports-2020-102025'],
+  ['Leproult & Van Cauter, JAMA 2011', 'https://doi.org/10.1001/jama.2011.710'],
+  ['Schmid et al., Clin Endocrinol 2012', 'https://doi.org/10.1111/j.1365-2265.2012.04419.x'],
+  ['Daghlas et al., JAMA Psychiatry 2021', 'https://doi.org/10.1001/jamapsychiatry.2021.0959'],
+  ['Nikbakhtian et al., Eur Heart J Digit Health 2021', 'https://doi.org/10.1093/ehjdh/ztab088'],
+  ['Windred et al., Sleep 2024', 'https://doi.org/10.1093/sleep/zsad253']
+];
+function renderGuide() {
+  const end = E.lastNight(S.nights); if (!end) return needData();
+  const dates = E.range(end, 28), g = E.advice(S.nights, S.tags, dates, S.target, S.activity), tm = g.tm;
+  const lead = g.items[0].level === 0 ? t('guide.allFine') : t('guide.lead', { n: g.s.n, to: day(end) });
+  let h = `<section><h1>${esc(t('guide.h1'))}</h1><p class="sub">${esc(lead)}</p><ol class="advice">`;
+  for (const it of g.items) {
+    const v = { ...it, a: dur(g.a), low: dur(g.low), high: dur(g.high), aim: dur(g.aim), short: dur(Math.max(0, it.short || 0)), toAim: dur(Math.max(0, it.toAim || 0)), target: dur(S.target),
+      on: clock(tm.onMed), off: clock(tm.offMed), n: g.s.n, late: it.late, jl: dur(Math.abs(it.v || 0)), cause: it.cause ? t('cause.' + it.cause) : '', perNight: dur(it.perNight || 0), perWeek: dur(it.perWeek || 0), nights: it.nights,
+      mw: clock(tm.midWork ?? tm.mid), mf: clock(tm.midFree ?? tm.mid), q1: E.SRI_REF[0], q2: E.SRI_REF[1], q3: E.SRI_REF[2] };
+    const key = it.k === 'volume' ? (it.level === 2 ? 'volume2' : it.level === 1 ? 'volume1' : 'volume0') : it.k === 'onset' ? (it.level ? 'onset1' : 'onset0') : it.k === 'jetlag' ? (it.level ? (it.v > 0 ? 'jetlag1' : 'jetlagNeg') : 'jetlag0') : it.k === 'sri' ? (it.level ? 'sri1' : 'sri0') : it.k === 'target' ? (it.over ? 'targetOver' : 'targetUnder') : it.k;
+    const to = { volume: 'plan', onset: 'plan', jetlag: 'plan', sri: 'numbers', convLow: 'numbers', convHigh: 'plan', cause: 'bridge', target: 'settings' }[it.k];
+    h += `<li class="lv${it.level}"><span class="lv">${esc(t('guide.lv' + it.level))}</span><h3>${esc(t('adv.' + key + '.t', v))}</h3><p>${esc(t('adv.' + key + '.b', v))}</p>${it.level && to ? `<button class="link" data-act="tab" data-tab="${to}">${esc(t('guide.go.' + to))}</button>` : ''}</li>`;
+  }
+  h += '</ol></section>';
+  h += `<section><h2>${esc(t('guide.volT'))}</h2><p class="sub">${esc(t('guide.volLead'))}</p><div class="seg" role="group" aria-label="${esc(t('guide.volT'))}">${Object.keys(E.ACTIVITY).map(k => `<button data-act="activity" data-k="${k}" aria-pressed="${S.activity === k}">${esc(t('act.' + k))}</button>`).join('')}</div><p class="note" style="margin-top:8px">${esc(t('act.' + S.activity + '.d'))}</p>`;
+  const lo = 360, hi = 600, x = m => Math.max(0, Math.min(100, (m - lo) / (hi - lo) * 100));
+  h += `<div class="rng" role="img" aria-label="${esc(t('guide.rngAria', { low: dur(g.low), high: dur(g.high), a: dur(g.a), target: dur(S.target) }))}"><i class="band" style="left:${x(g.low)}%;width:${x(g.high) - x(g.low)}%"></i><i class="you" style="left:${x(g.a)}%"></i><i class="tgt" style="left:${x(S.target)}%"></i></div>
+    <div class="legend"><span><i style="background:var(--line-2)"></i>${esc(t('guide.rngBand', { low: dur(g.low), high: dur(g.high) }))}</span><span><i class="l" style="background:var(--accent)"></i>${esc(t('guide.rngYou', { a: dur(g.a) }))}</span><span><i class="l" style="background:var(--moon)"></i>${esc(t('guide.rngTarget', { target: dur(S.target) }))}</span></div>
+    <p class="note" style="margin-top:12px">${esc(t('guide.volWhy'))}</p><details><summary>${esc(t('guide.testT'))}</summary><p>${esc(t('guide.test1'))}</p><p>${esc(t('guide.test2'))}</p></details></section>`;
+  const you = { on: clock(tm.onMed), off: clock(tm.offMed), mid: clock(tm.mid), a: dur(g.a), late: tm.late, n: tm.n };
+  h += `<section><h2>${esc(t('guide.timeT'))}</h2><p class="sub">${esc(t('guide.timeLead', you))}</p>${['midnight', 'testo', 'mood', 'rest'].map(k => `<div class="explain"><h3>${esc(t('ex.' + k + '.t'))}</h3><p>${esc(t('ex.' + k + '.1'))}</p><p>${esc(t('ex.' + k + '.2'))}</p><p class="you">${esc(t('ex.' + k + '.you', you))}</p></div>`).join('')}
+    <details><summary>${esc(t('guide.srcT'))}</summary><ul>${SOURCES.map(([n, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${esc(n)}</a></li>`).join('')}</ul><p>${esc(t('guide.srcNote'))}</p></details></section>`;
+  return h;
+}
+
 /* ---------- Settings ---------- */
 function renderSettings() {
   const im = S.imp, cloud = !!window.Cloud && window.Cloud.configured(), choice = syncChoice();
@@ -248,7 +283,7 @@ function paintChrome() {
 export function render() {
   setLang(S.lang); paintChrome();
   const tab = TABS.includes(S.ui.tab) ? S.ui.tab : 'bridge';
-  $('#main').innerHTML = { bridge: renderBridge, numbers: renderNumbers, nights: renderNights, plan: renderPlan, settings: renderSettings }[tab]();
+  $('#main').innerHTML = { bridge: renderBridge, numbers: renderNumbers, nights: renderNights, plan: renderPlan, guide: renderGuide, settings: renderSettings }[tab]();
 }
 export function refreshSession() {
   if (!window.Cloud || !window.Cloud.configured()) { ui.session = null; return; }
@@ -275,6 +310,7 @@ function signUpSheet() {
 
 const acts = {
   tab: el => go(el.dataset.tab),
+  activity: el => { S.activity = el.dataset.k; save(); render(); },
   span: el => { S.ui.span = +el.dataset.n; ui.wf = null; save(); render(); },
   tag: el => { toggleTag(el.dataset.d, el.dataset.k); if ($('#sheet').open) { render(); nightSheet(el.dataset.d); } else { ui.morningOpen = true; render(); } },
   'morning-edit': () => { ui.morningOpen = true; render(); },
