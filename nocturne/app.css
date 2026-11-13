@@ -182,3 +182,17 @@ label.pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px;
 .explain h3 { font-size: 16px; }
 .explain p { color: var(--text-2); font-size: 15px; }
 .explain p.you { color: var(--text); }
+/* plan: three kinds of night */
+.types > div { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; font-variant-numeric: tabular-nums; align-items: start; }
+.types > div.hd { font-size: 12.5px; color: var(--muted); padding: 0 0 6px; }
+.types > div.now { border-left: 2px solid var(--accent); padding-left: 10px; margin-left: -12px; }
+.types span { font-weight: 600; } .types span:first-child { font-weight: 400; }
+.types small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.wakes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.wakes input { width: 100%; padding: 0 6px; }
+.wakes label.field > span { font-size: 13.5px; min-height: 2.6em; align-items: flex-end; }
+.offadd { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: end; margin-top: 12px; }
+.offadd .btn { grid-column: 1 / -1; justify-self: start; }
+.offadd input { min-width: 0; -webkit-appearance: none; appearance: none; }
+.offadd label.field { margin: 0; } .offadd input { width: 100%; background: var(--raise); border: 1px solid var(--line-2); border-radius: 10px; min-height: 44px; padding: 0 8px; color: var(--text); font-size: 16px; }
+.offadd .btn { min-height: 44px; }

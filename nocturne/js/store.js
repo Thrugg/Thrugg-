@@ -12,7 +12,8 @@ const DEF = () => ({
   activity: 'regular',                        // training load for the guide: light, regular, heavy
   nights: {},                                 // by wake date, see sleep.js
   tags: {},                                   // by wake date: { t: ['screen', …] or ['clean'], n: 'note' }
-  plan: { wake: null, gain: 50, conv: 0.65, wind: 45, start: null, base: null },
+  plan: { wake: { work: null, weekend: null, off: null }, gain: 50, conv: 0.65, wind: 45, start: null, base: null },
+  off: [],                                    // time off: [{ a: 'YYYY-MM-DD', b: 'YYYY-MM-DD' }], by wake date
   imp: null,                                  // last import: { at, file, n, first, last, added, updated, bedOnly, sources }
   demo: false,
   ui: { tab: 'bridge', span: 7 }              // stays on the device (see main.js)
@@ -22,11 +23,19 @@ export let S = DEF();
 function merge(base, x) {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return x ?? base;
   const out = { ...base };
-  for (const [k, v] of Object.entries(x)) out[k] = (base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k] !== null && k !== 'nights' && k !== 'tags') ? merge(base[k], v) : v;
+  for (const [k, v] of Object.entries(x)) out[k] = (base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k] !== null && k !== 'nights' && k !== 'tags' && k !== 'base') ? merge(base[k], v) : v;
   return out;
 }
+/* Plans made before the three kinds of night had one wake time and one starting point: keep the wake time for
+   workdays and ask for a restart, since the old starting point mixed weekdays and weekends. */
+function migrate(x) {
+  if (typeof x.plan.wake === 'number' || x.plan.wake == null) x.plan.wake = { work: x.plan.wake ?? null, weekend: null, off: null };
+  if (x.plan.base && !x.plan.base.work) { x.plan.base = null; x.plan.start = null; }
+  if (!Array.isArray(x.off)) x.off = [];
+  return x;
+}
 export function load() {
-  try { const raw = localStorage.getItem(KEY); S = raw ? merge(DEF(), JSON.parse(raw)) : DEF(); } catch (e) { S = DEF(); }
+  try { const raw = localStorage.getItem(KEY); S = raw ? migrate(merge(DEF(), JSON.parse(raw))) : DEF(); } catch (e) { S = DEF(); }
   return S;
 }
 let timer = null;
@@ -35,7 +44,7 @@ export function save(now) { clearTimeout(timer); if (now) write(); else timer = 
 /* write a pending change at once (the page is being closed or put in the background) */
 export function flush() { if (timer) { clearTimeout(timer); write(); } }
 export function reset() { S = DEF(); save(true); }
-export function replaceAll(x) { S = merge(DEF(), x); save(true); }
+export function replaceAll(x) { S = migrate(merge(DEF(), x)); save(true); }
 
 export const syncChoice = () => { try { return localStorage.getItem(SYNC_FLAG); } catch (e) { return null; } };
 export const setSyncChoice = v => { try { localStorage.setItem(SYNC_FLAG, v); } catch (e) { } };

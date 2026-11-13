@@ -171,16 +171,36 @@ export function bedBridge(nights, dates, target) {
   return { target, gapMin, actualMin: target - gapMin, rows: [{ k: 'notInBed', v: target - b, min: notInBed }, { k: 'awakeInBed', v: b - a, min: awake }] };
 }
 
-/* ---------- the plan: a fixed wake time, bedtime worked out backwards ----------
+/* ---------- the plan: a wake time as the anchor, bedtime worked out backwards ----------
    plan = { wake, gain, conv, wind, start, base }. `base` is frozen when the plan starts, so progress is measured
    against the same starting point all the way through. */
-export function baseline(nights, end, days = BASE_DAYS) {
-  const ns = range(end, days).filter(d => nights[d]).map(d => nights[d]); if (!ns.length) return null;
+export function baselineOf(ns, end) {
+  if (!ns.length) return null;
   const meas = ns.filter(n => n.m);
   const useMeasured = meas.length >= ns.length / 2;   // most nights have "in bed" recorded: trust it
   const b = useMeasured ? mean(meas.map(n => n.b)) : mean(ns.map(n => n.off - n.on)) + LATENCY;
   const bed = useMeasured ? median(meas.map(n => n.bs)) : median(ns.map(n => n.on)) - LATENCY;
   return { n: ns.length, a: Math.round(mean(ns.map(n => n.a))), b: Math.round(b), bed: Math.round(bed), wake: Math.round(median(ns.map(n => n.off))), wakeAvg: Math.round(mean(ns.map(n => n.off))), measured: useMeasured ? 1 : 0, end };
+}
+export const baseline = (nights, end, days = BASE_DAYS) => baselineOf(range(end, days).filter(d => nights[d]).map(d => nights[d]), end);
+
+/* Three kinds of night, named after the day you wake up on: a workday, a weekend day, or time off (date ranges the
+   person enters: holidays, leave, public holidays). Each has its own wake time, its own starting point and its own
+   bedtime; nothing in the plan assumes the week is uniform. */
+export const TYPES = ['work', 'weekend', 'off'];
+const weekendDay = d => { const w = new Date(toMs(d)).getUTCDay(); return w === 0 || w === 6; };
+export const dayType = (d, off = []) => (off || []).some(r => d >= r.a && d <= r.b) ? 'off' : weekendDay(d) ? 'weekend' : 'work';
+export const tonightWake = (now = new Date()) => localDate(new Date(now.getTime() + 9 * 36e5));   // from 15:00 on, "tonight" ends tomorrow
+export const OFF_DAYS = 180, TYPE_MIN = 3;
+/* A starting point per kind of night. With fewer than 3 nights of a kind, it is borrowed (time off ← weekend ← workday ← all) and says so. */
+export function baselineBy(nights, end, off = []) {
+  const of = (ty, days) => { const ns = range(end, days).filter(d => nights[d] && dayType(d, off) === ty).map(d => nights[d]); return ns.length >= TYPE_MIN ? baselineOf(ns, end) : null; };
+  const all = baseline(nights, end) || baselineOf(Object.keys(nights).sort().slice(-BASE_DAYS).map(d => nights[d]), end);
+  const out = { work: of('work', BASE_DAYS), weekend: of('weekend', BASE_DAYS), off: of('off', OFF_DAYS) };
+  if (!out.work) out.work = { ...all, from: 'all' };
+  if (!out.weekend) out.weekend = { ...out.work, from: out.work.from || 'work' };
+  if (!out.off) out.off = { ...out.weekend, from: out.weekend.from || 'weekend' };
+  return out;
 }
 export function planTimes(base, plan) {
   const extraBed = Math.round(plan.gain / plan.conv);          // extra time in bed needed for the planned extra sleep
@@ -205,6 +225,28 @@ export function progress(nights, plan, base) {
   const dA = a - base.a, dB = b == null ? null : b - base.b;
   const last7 = ns.slice(-7), a7 = mean(last7.map(n => n.a));
   return { n: ns.length, a, dA, dB, conv: ns.length >= 5 && dB != null && dB >= 15 ? dA / dB : null, a7, done: last7.length >= 7 && a7 >= base.a + plan.gain };
+}
+
+/* The plan for each kind of night. plan.wake = { work, weekend, off } (minutes); the extra sleep asked of a kind of
+   night stops at the target, so a weekend already close to it is not pushed further. */
+export function planBy(bases, plan, target, today) {
+  const out = {};
+  for (const ty of TYPES) {
+    const base = bases[ty], gain = Math.max(0, Math.min(plan.gain, target - base.a)), wake = plan.wake[ty] ?? Math.round(base.wake / 5) * 5;
+    out[ty] = { ...tonight(base, { ...plan, wake, gain }, today), wake, gain, base };
+  }
+  const mid = x => (x.bed + x.wake) / 2;
+  out.week = { goal: Math.round((5 * out.work.goal + 2 * out.weekend.goal) / 7), base: Math.round((5 * bases.work.a + 2 * bases.weekend.a) / 7), gap: Math.round(mid(out.weekend) - mid(out.work)) };
+  return out;
+}
+export function progressBy(nights, plan, bases, off, target) {
+  if (!plan.start) return null;
+  const ds = Object.keys(nights).filter(d => d > plan.start).sort(); if (!ds.length) return { n: 0 };
+  const goalOf = ty => bases[ty].a + Math.max(0, Math.min(plan.gain, target - bases[ty].a));
+  const rows = ds.map(d => { const ty = dayType(d, off), n = nights[d]; return { ty, a: n.a, dA: n.a - bases[ty].a, dB: (bases[ty].measured ? (n.m ? n.b : null) : n.off - n.on + LATENCY), baseB: bases[ty].b, toGoal: n.a - goalOf(ty) }; });
+  const by = {}; for (const ty of TYPES) { const r = rows.filter(x => x.ty === ty); if (r.length) by[ty] = { n: r.length, a: mean(r.map(x => x.a)), dA: mean(r.map(x => x.dA)) }; }
+  const withB = rows.filter(x => x.dB != null), dB = withB.length ? mean(withB.map(x => x.dB - x.baseB)) : null, dA = mean(rows.map(x => x.dA)), last7 = rows.slice(-7);
+  return { n: rows.length, by, dA, dB, conv: rows.length >= 5 && dB != null && dB >= 15 ? dA / dB : null, done: last7.length >= 7 && mean(last7.map(x => x.toGoal)) >= 0 };
 }
 
 /* ---------- example nights (neutral, invented; the repository is public) ---------- */
@@ -237,8 +279,8 @@ export function demo(today, count = 63) {
    2021 consensus on athlete sleep asks for an individual figure rather than one rule (Walsh 2021). */
 export const ACTIVITY = { light: [420, 540, 465], regular: [450, 540, 495], heavy: [480, 570, 525] };
 export const SRI_REF = [74, 81, 86];            // UK Biobank quartiles (Windred 2024)
-const isFree = d => { const w = new Date(toMs(d)).getUTCDay(); return w === 0 || w === 6; };   // woke up on a Saturday or Sunday
-export function timing(nights, dates) {
+export function timing(nights, dates, off = []) {
+  const isFree = d => dayType(d, off) !== 'work';   // woke up on a weekend day or during time off
   const ds = dates.filter(d => nights[d]); if (!ds.length) return null;
   const mid = d => (nights[d].on + nights[d].off) / 2;
   const work = ds.filter(d => !isFree(d)), free = ds.filter(isFree);
@@ -248,9 +290,9 @@ export function timing(nights, dates) {
     late: ds.filter(d => nights[d].on >= 0).length };
 }
 /* Findings ranked by how much they call for action: level 2 = change this first, 1 = keep an eye on it, 0 = fine. */
-export function advice(nights, tags, dates, target, activity = 'regular') {
+export function advice(nights, tags, dates, target, activity = 'regular', off = []) {
   const s = summary(nights, dates, target); if (!s.n) return null;
-  const tm = timing(nights, dates), [low, high, aim] = ACTIVITY[activity] || ACTIVITY.regular, items = [];
+  const tm = timing(nights, dates, off), [low, high, aim] = ACTIVITY[activity] || ACTIVITY.regular, items = [];
   const a = Math.round(s.a);
   items.push({ k: 'volume', level: a < low ? 2 : a < aim ? 1 : 0, short: low - a, toAim: aim - a });
   if (target > high || target < low) items.push({ k: 'target', level: 1, over: target > high });

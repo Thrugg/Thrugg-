@@ -101,9 +101,9 @@ function renderNumbers() {
     <div class="fig"><b>${dur(s.a)}</b><span>${esc(t('num.asleep', { gap: dur(S.target - Math.round(s.a)), target: dur(S.target) }))}</span></div>
     <div class="fig"><b>${Math.round(s.conv * 100)}<small> %</small></b><span>${esc(t('num.conv', { b: dur(s.b) }))}</span></div></div></section>`;
   // regularity
-  const shown = dates.slice(-42), p = S.plan.start && S.plan.base ? E.planTimes(S.plan.base, S.plan) : null;
+  const shown = dates.slice(-42), p = S.plan.start && S.plan.base ? planNow().by.work : null;
   h += `<section><h2>${esc(t('num.regT'))}</h2><p class="sub">${esc(sri != null ? t('num.regLead', { v: sri, pairs: s.sri.pairs }) : t('num.regNeed'))}</p>`;
-  h += actogram({ nights: S.nights, dates: shown, width: width(), label: t('num.actoAria'), lang: loc(), plan: p ? { bed: p.bed, wake: S.plan.wake } : null });
+  h += actogram({ nights: S.nights, dates: shown, width: width(), label: t('num.actoAria'), lang: loc(), plan: p ? { bed: p.bed, wake: p.wake } : null });
   h += `<div class="legend"><span><i style="background:var(--moon)"></i>${esc(t('leg.asleep'))}</span><span><i style="background:var(--line)"></i>${esc(t('leg.bed'))}</span>${p ? `<span><i class="l" style="background:var(--accent)"></i>${esc(t('leg.plan'))}</span>` : ''}</div>`;
   h += `<p class="note" style="margin-top:12px">${esc(t('num.onsetLine', { med: clock(s.onMed), sd: Math.round(s.onSd ?? 0), min: clock(s.onMin), max: clock(s.onMax), wmed: clock(s.offMed), wsd: Math.round(s.offSd ?? 0) }))}${shown.length < dates.length ? ' ' + esc(t('num.actoCut', { n: shown.length })) : ''}</p>`;
   h += `<details><summary>${esc(t('num.sriHowT'))}</summary><p>${esc(t('num.sriHow1'))}</p><p>${esc(t('num.sriHow2'))}</p></details></section>`;
@@ -150,45 +150,57 @@ function nightSheet(d) {
 }
 
 /* ---------- Plan ---------- */
-const round5 = m => Math.round(m / 5) * 5;
+const NOPLAN = () => ({ wake: { work: null, weekend: null, off: null }, start: null, base: null });
 function planNow() {
-  const end = E.lastNight(S.nights), live = E.baseline(S.nights, end), started = !!(S.plan.start && S.plan.base), base = started ? S.plan.base : live;
-  const p = { ...S.plan, wake: S.plan.wake ?? round5(base.wake) };
-  return { end, live, started, base, p, tn: E.tonight(base, p, today()) };
+  const end = E.lastNight(S.nights), live = E.baselineBy(S.nights, end, S.off), started = !!(S.plan.start && S.plan.base), bases = started ? S.plan.base : live;
+  const by = E.planBy(bases, S.plan, S.target, today());
+  return { end, live, started, bases, by, tonightType: E.dayType(E.tonightWake(), S.off) };
 }
 function renderPlan() {
   if (!E.lastNight(S.nights)) return needData();
-  const { live, started, base, p, tn } = planNow();
-  const first = tn.steps ? Math.max(tn.bed, base.bed - E.STEP_MIN) : tn.bed, bedShow = started ? tn.bedTonight : first, windShow = bedShow - p.wind;
-  let h = `<section><h1>${esc(t('plan.h1', { v: clock(bedShow) }))}</h1><p class="sub">${esc(tn.steps === 0 ? t('plan.noShift') : started ? (tn.final ? t('plan.final') : t('plan.step', { k: tn.step, n: tn.steps, end: clock(tn.bed), every: E.STEP_NIGHTS, m: E.STEP_MIN })) : t('plan.preview', { first: clock(first), end: clock(tn.bed), n: tn.steps, days: tn.days, every: E.STEP_NIGHTS, m: E.STEP_MIN }))}</p>`;
-  h += `<div class="tonight"><div><b>${clock(windShow)}</b><span>${esc(t('plan.wind'))}</span></div><div class="key"><b>${clock(bedShow)}</b><span>${esc(t('plan.bed'))}</span></div><div><b>${clock(p.wake)}</b><span>${esc(t('plan.wake'))}</span></div></div>`;
+  const { started, bases, by, tonightType } = planNow(), ty = ui.planType && E.TYPES.includes(ui.planType) ? ui.planType : tonightType;
+  const show = x => { const first = x.steps ? Math.max(x.bed, x.base.bed - E.STEP_MIN) : x.bed; return started ? x.bedTonight : first; };
+  const tn = by[tonightType], bedShow = show(tn);
+  let h = `<section><h1>${esc(t('plan.h1', { v: clock(bedShow) }))}</h1><p class="sub">${esc(t('plan.tom.' + tonightType))} ${esc(tn.steps === 0 ? t('plan.noShift') : started ? (tn.final ? t('plan.final') : t('plan.step', { k: tn.step, n: tn.steps, end: clock(tn.bed), every: E.STEP_NIGHTS, m: E.STEP_MIN })) : t('plan.preview', { first: clock(bedShow), end: clock(tn.bed), n: tn.steps, days: tn.days, every: E.STEP_NIGHTS, m: E.STEP_MIN }))}</p>`;
+  h += `<div class="tonight"><div><b>${clock(bedShow - S.plan.wind)}</b><span>${esc(t('plan.wind'))}</span></div><div class="key"><b>${clock(bedShow)}</b><span>${esc(t('plan.bed'))}</span></div><div><b>${clock(tn.wake)}</b><span>${esc(t('plan.wake'))}</span></div></div>`;
   h += `<div class="row" style="margin-top:18px">${started ? '' : `<button class="btn pri" data-act="plan-start">${esc(t('plan.start'))}</button>`}</div></section>`;
+  // the three kinds of night side by side
+  h += `<section><h2>${esc(t('plan.typesT'))}</h2><div class="types" role="table"><div role="row" class="hd"><span></span><span>${esc(t('plan.bed'))}</span><span>${esc(t('plan.wake'))}</span><span>${esc(t('plan.colGoal'))}</span></div>`;
+  for (const k of E.TYPES) h += `<div role="row"${k === tonightType ? ' class="now"' : ''}><span>${esc(t('type.' + k))}<small>${esc(t('plan.colNow', { a: dur(by[k].base.a) }))}</small></span><span>${clock(show(by[k]))}${started && !by[k].final ? `<small>→ ${clock(by[k].bed)}</small>` : !started && by[k].steps ? `<small>→ ${clock(by[k].bed)}</small>` : ''}</span><span>${clock(by[k].wake)}</span><span>${dur(by[k].goal)}<small>${by[k].gain ? '+' + dur(by[k].gain) : esc(t('plan.atTarget'))}</small></span></div>`;
+  h += `</div><p class="note" style="margin-top:12px">${esc(t('plan.weekAvg', { goal: dur(by.week.goal), base: dur(by.week.base), target: dur(S.target) }))} ${esc(Math.abs(by.week.gap) >= 60 ? t('plan.gapWarn', { d: dur(Math.abs(by.week.gap)) }) : t('plan.gapOk', { d: dur(Math.abs(by.week.gap)) }))}</p>`;
+  const borrowed = E.TYPES.filter(k => bases[k].from);
+  if (borrowed.length) h += `<p class="note">${borrowed.map(k => esc(t('plan.borrow', { type: t('type.' + k), from: t('from.' + bases[k].from) }))).join(' ')}</p>`;
+  h += '</section>';
   if (started) {
-    const pr = E.progress(S.nights, S.plan, base);
+    const pr = E.progressBy(S.nights, S.plan, bases, S.off, S.target);
     h += `<section><h2>${esc(t('plan.progT', { d: day(S.plan.start) }))}</h2>`;
     if (!pr.n) h += `<p class="sub">${esc(t('plan.progNone'))}</p>`;
     else {
-      h += `<ul class="maths"><li><span>${esc(t('plan.progA', { n: pr.n }))}</span><b>${dur(pr.a)} (${delta(pr.dA)})</b></li><li><span>${esc(t('plan.progGoal'))}</span><b>${dur(tn.goal)} (${delta(p.gain)})</b></li>${pr.dB != null ? `<li><span>${esc(t('plan.progB'))}</span><b>${delta(pr.dB)}</b></li>` : ''}${pr.conv != null ? `<li><span>${esc(t('plan.progConv'))}</span><b>${Math.round(pr.conv * 100)} %</b></li>` : ''}</ul>`;
-      h += `<p class="note">${esc(pr.done ? t('plan.reached') : pr.conv == null ? t('plan.convLater') : t('plan.convNote', { v: Math.round(p.conv * 100) }))}</p>`;
+      h += `<ul class="maths">${E.TYPES.filter(k => pr.by[k]).map(k => `<li><span>${esc(t('plan.progType', { type: t('type.' + k), n: pr.by[k].n }))}</span><b>${dur(pr.by[k].a)} (${delta(pr.by[k].dA)})</b></li>`).join('')}<li><span>${esc(t('plan.progAll', { n: pr.n }))}</span><b>${delta(pr.dA)}</b></li>${pr.dB != null ? `<li><span>${esc(t('plan.progB'))}</span><b>${delta(pr.dB)}</b></li>` : ''}${pr.conv != null ? `<li><span>${esc(t('plan.progConv'))}</span><b>${Math.round(pr.conv * 100)} %</b></li>` : ''}</ul>`;
+      h += `<p class="note">${esc(pr.done ? t('plan.reached') : pr.conv == null ? t('plan.convLater') : t('plan.convNote', { v: Math.round(S.plan.conv * 100) }))}</p>`;
     }
     h += `<div class="row" style="margin-top:12px">${pr.done ? `<button class="btn pri" data-act="plan-start">${esc(t('plan.next'))}</button>` : ''}<button class="btn sm" data-act="plan-stop">${esc(t('plan.stop'))}</button></div></section>`;
   }
-  h += `<section><h2>${esc(t('plan.setT'))}</h2>
-    <label class="field"><span>${esc(t('plan.fWake'))}</span><input type="time" data-plan="wake" value="${clock(p.wake)}" step="300"></label>
-    <label class="field"><span>${esc(t('plan.fGain'))}<b>+${p.gain} min</b></span><input type="range" data-plan="gain" min="30" max="90" step="5" value="${p.gain}"></label>
-    <label class="field"><span>${esc(t('plan.fConv'))}<b>${Math.round(p.conv * 100)} %</b></span><input type="range" data-plan="conv" min="50" max="85" step="5" value="${Math.round(p.conv * 100)}"></label>
-    <label class="field"><span>${esc(t('plan.fWind'))}</span><select data-plan="wind">${[30, 45, 60, 90].map(v => `<option value="${v}"${p.wind === v ? ' selected' : ''}>${v} min</option>`).join('')}</select></label>
+  h += `<section><h2>${esc(t('plan.setT'))}</h2><div class="wakes">${E.TYPES.map(k => `<label class="field"><span>${esc(t('plan.fWake.' + k))}</span><input type="time" data-plan="wake" data-type="${k}" value="${clock(by[k].wake)}" step="300"></label>`).join('')}</div>
+    <label class="field"><span>${esc(t('plan.fGain'))}<b>+${S.plan.gain} min</b></span><input type="range" data-plan="gain" min="30" max="90" step="5" value="${S.plan.gain}"></label>
+    <label class="field"><span>${esc(t('plan.fConv'))}<b>${Math.round(S.plan.conv * 100)} %</b></span><input type="range" data-plan="conv" min="50" max="85" step="5" value="${Math.round(S.plan.conv * 100)}"></label>
+    <label class="field"><span>${esc(t('plan.fWind'))}</span><select data-plan="wind">${[30, 45, 60, 90].map(v => `<option value="${v}"${S.plan.wind === v ? ' selected' : ''}>${v} min</option>`).join('')}</select></label>
     <p class="note">${esc(t('plan.convWhy'))}</p></section>`;
-  const phases = Math.max(1, Math.ceil((S.target - base.a) / p.gain));
-  h += `<section><h2>${esc(t('plan.sumT'))}</h2><ul class="maths">
+  // time off
+  const offs = [...S.off].sort((x, y) => y.a.localeCompare(x.a));
+  h += `<section><h2>${esc(t('type.off'))}</h2><p class="sub">${esc(t('plan.offLead'))}</p>${offs.length ? `<ul class="maths">${offs.map(r => `<li><span>${esc(day(r.a))} → ${esc(day(r.b))}</span><button class="link" data-act="off-del" data-a="${r.a}" data-b="${r.b}">${esc(t('plan.offDel'))}</button></li>`).join('')}</ul>` : `<p class="note">${esc(t('plan.offNone'))}</p>`}
+    <div class="offadd"><label class="field"><span>${esc(t('plan.offFrom'))}</span><input type="date" id="offA"></label><label class="field"><span>${esc(t('plan.offTo'))}</span><input type="date" id="offB"></label><button class="btn sm" data-act="off-add">${esc(t('plan.offAdd'))}</button></div></section>`;
+  // the sum, for one kind of night
+  const x = by[ty], base = x.base, phases = Math.max(1, Math.ceil((S.target - base.a) / S.plan.gain));
+  h += `<section><h2>${esc(t('plan.sumT'))}</h2><div class="seg" role="group" aria-label="${esc(t('plan.sumT'))}">${E.TYPES.map(k => `<button data-act="plan-type" data-k="${k}" aria-pressed="${ty === k}">${esc(t('type.' + k))}</button>`).join('')}</div><ul class="maths">
     <li><span>${esc(t('plan.m1', { n: base.n, d: day(base.end || E.lastNight(S.nights)) }))}</span><b>${dur(base.a)}</b></li>
     <li><span>${esc(t('plan.m2'))}</span><b>${dur(base.b)}</b></li>
     <li><span>${esc(t('plan.m3'))}</span><b>${clock(base.bed)} → ${clock(base.wake)}</b></li>
-    <li><span>${esc(t('plan.m4', { g: p.gain }))}</span><b>${dur(tn.goal)}</b></li>
-    <li><span>${esc(t('plan.m5', { g: p.gain, c: Math.round(p.conv * 100) }))}</span><b>+${dur(tn.extraBed)}</b></li>
-    <li><span>${esc(t('plan.m6', { w: clock(p.wake), b: dur(base.b), x: dur(tn.extraBed) }))}</span><b>${clock(tn.bed)}</b></li>
-    <li><span>${esc(t('plan.m7'))}</span><b>${dur(Math.max(0, tn.shift))}</b></li></ul>
-    <p class="note">${esc(base.measured ? t('plan.baseMeasured') : t('plan.baseAssumed', { m: E.LATENCY }))} ${esc(S.target > base.a ? t('plan.phases', { target: dur(S.target), n: phases, g: p.gain }) : '')}${started && live ? ' ' + esc(t('plan.frozen')) : ''}</p>${base.wakeAvg - p.wake >= 15 && tn.shift > 0 ? `<p class="note">${esc(t('plan.lieIn', { avg: clock(base.wakeAvg), w: clock(p.wake), d: dur(base.wakeAvg - p.wake) }))}</p>` : ''}</section>`;
+    <li><span>${esc(t('plan.m4', { g: x.gain }))}</span><b>${dur(x.goal)}</b></li>
+    <li><span>${esc(t('plan.m5', { g: x.gain, c: Math.round(S.plan.conv * 100) }))}</span><b>+${dur(x.extraBed)}</b></li>
+    <li><span>${esc(t('plan.m6', { w: clock(x.wake), b: dur(base.b), x: dur(x.extraBed) }))}</span><b>${clock(x.bed)}</b></li>
+    <li><span>${esc(t('plan.m7'))}</span><b>${dur(Math.max(0, x.shift))}</b></li></ul>
+    <p class="note">${esc(base.measured ? t('plan.baseMeasured') : t('plan.baseAssumed', { m: E.LATENCY }))} ${esc(S.target > base.a ? t('plan.phases', { target: dur(S.target), n: phases, g: S.plan.gain }) : '')}${started ? ' ' + esc(t('plan.frozen')) : ''}</p></section>`;
   return h;
 }
 
@@ -204,7 +216,7 @@ const SOURCES = [
 ];
 function renderGuide() {
   const end = E.lastNight(S.nights); if (!end) return needData();
-  const dates = E.range(end, 28), g = E.advice(S.nights, S.tags, dates, S.target, S.activity), tm = g.tm;
+  const dates = E.range(end, 28), g = E.advice(S.nights, S.tags, dates, S.target, S.activity, S.off), tm = g.tm;
   const lead = g.items[0].level === 0 ? t('guide.allFine') : t('guide.lead', { n: g.s.n, to: day(end) });
   let h = `<section><h1>${esc(t('guide.h1'))}</h1><p class="sub">${esc(lead)}</p><ol class="advice">`;
   for (const it of g.items) {
@@ -254,7 +266,7 @@ async function runImport(file) {
   try {
     const bar = $('#impBar'), cnt = $('#impCount');
     const res = await readHealthFile(file, { since: sinceDate(today()), onProgress: (p, n) => { ui.impAt = p; bar.value = p; cnt.textContent = t('imp.progress', { p: Math.round(p * 100), n: n.toLocaleString(loc()) }); } });
-    if (S.demo) { S.nights = {}; S.tags = {}; S.plan = { ...S.plan, wake: null, start: null, base: null }; S.demo = false; }
+    if (S.demo) { S.nights = {}; S.tags = {}; S.plan = { ...S.plan, ...NOPLAN() }; S.demo = false; }
     const m = mergeNights(S.nights, res.nights); S.nights = m.nights;
     S.imp = { at: new Date().toISOString(), n: res.stats.n, first: res.stats.first, last: res.stats.last, added: m.added, updated: m.updated, bedOnly: res.stats.bedOnly };
     save(true); render();
@@ -320,9 +332,12 @@ const acts = {
   more: () => { ui.shown += 60; render(); },
   close: () => { closeSheet(); },
   'import-open': () => importSheet(),
-  demo: () => { const d = E.demo(today()); S.nights = d.nights; S.tags = d.tags; S.demo = true; S.imp = null; S.plan = { ...S.plan, wake: null, start: null, base: null }; save(); go('bridge'); },
-  'demo-off': () => { S.nights = {}; S.tags = {}; S.demo = false; S.plan = { ...S.plan, wake: null, start: null, base: null }; save(); render(); },
-  'plan-start': () => { const { live, p } = planNow(); S.plan = { ...p, start: today(), base: live }; save(); render(); toast(t('plan.started')); },
+  demo: () => { const d = E.demo(today()); S.nights = d.nights; S.tags = d.tags; S.demo = true; S.imp = null; S.plan = { ...S.plan, ...NOPLAN() }; save(); go('bridge'); },
+  'demo-off': () => { S.nights = {}; S.tags = {}; S.demo = false; S.plan = { ...S.plan, ...NOPLAN() }; save(); render(); },
+  'plan-start': () => { const { live, by } = planNow(); S.plan = { ...S.plan, wake: { work: by.work.wake, weekend: by.weekend.wake, off: by.off.wake }, start: today(), base: live }; save(); render(); toast(t('plan.started')); },
+  'plan-type': el => { ui.planType = el.dataset.k; render(); },
+  'off-add': () => { const a = $('#offA').value, b = $('#offB').value || a; if (!a || b < a) return toast(t('plan.offBad')); S.off = [...S.off.filter(r => !(r.a === a && r.b === b)), { a, b }]; save(); render(); },
+  'off-del': el => { S.off = S.off.filter(r => !(r.a === el.dataset.a && r.b === el.dataset.b)); save(); render(); },
   'plan-stop': () => { S.plan = { ...S.plan, start: null, base: null }; save(); render(); },
   backup: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(exportBackup()); a.download = `nocturne-${today()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); },
   wipe: () => wipeSheet(),
@@ -347,10 +362,10 @@ export function init() {
     if (el.dataset.file === 'health') { if (el.files[0]) runImport(el.files[0]); return; }
     if (el.dataset.file === 'backup') { const f = el.files[0]; if (f) f.text().then(x => { importBackup(x); render(); toast(t('set.restored')); }).catch(() => toast(t('set.restoreFail'))); el.value = ''; return; }
     if (el.dataset.plan) {
-      const k = el.dataset.plan; const { p } = planNow();
-      if (k === 'wake') { const [h, m] = el.value.split(':').map(Number); if (Number.isFinite(h)) p.wake = h * 60 + (m || 0); }
+      const k = el.dataset.plan, p = { ...S.plan, wake: { ...S.plan.wake } };
+      if (k === 'wake') { const [h, m] = el.value.split(':').map(Number); if (Number.isFinite(h)) p.wake[el.dataset.type] = h * 60 + (m || 0); }
       else if (k === 'conv') p.conv = +el.value / 100; else p[k] = +el.value;
-      S.plan = { ...S.plan, wake: p.wake, gain: p.gain, conv: p.conv, wind: p.wind }; save(); render();
+      S.plan = p; save(); render();
     } else if (el.dataset.set === 'target') { S.target = +el.value; save(); render(); }
     else if (el.dataset.set === 'lang') { S.lang = el.value; save(); render(); }
     else if (el.dataset.set === 'theme') { S.theme = el.value; save(); render(); }

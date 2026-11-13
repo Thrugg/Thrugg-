@@ -52,6 +52,19 @@ Sync is off until the person switches it on for the device (`nocturne.sync` = `1
 - **Onset spread**: sample standard deviation of onset clock time, with median and range. Conversion = total asleep ÷ total time in bed.
 - **Plan** (`baseline`, `planTimes`, `tonight`, `progress`): starting point = last 28 days with data (average asleep, average time in bed, median lights-out and wake). Extra time in bed = extra sleep ÷ conversion (default 65 %; 60–67 % gives the brief's 75–90 min for +45–60 min). Lights out = wake − (starting time in bed + extra). It moves 15 min earlier every 3 nights from the starting bedtime. When "in bed" is not recorded on most nights, 15 min to fall asleep is assumed (`LATENCY`). Progress compares nights after the start date with the frozen starting point and shows the measured conversion once there are 5 nights and 15 more minutes in bed.
 
+## Three kinds of night (`dayType`, `baselineBy`, `planBy`, `progressBy`)
+
+The plan does not treat the week as uniform. A night is a **workday**, **weekend** or **time-off** night according to the day you wake up on: time off = wake date inside a range in `S.off` (`[{ a, b }]`, entered in the Plan tab), otherwise Saturday/Sunday = weekend, otherwise workday.
+
+- `plan.wake = { work, weekend, off }`; an unset one defaults to the median wake of that kind of night. `plan.base = { work, weekend, off }`, frozen at the start.
+- Starting point per kind: last 28 days for workdays and weekends, last 180 days for time off, at least 3 nights; otherwise borrowed (time off ← weekend ← workday ← all nights) with `from` set and a note on screen.
+- Per kind: extra sleep = min(phase gain, target − starting sleep), lights out = that kind's wake − (its time in bed + extra ÷ conversion), same 15 min / 3 nights stepping counted in calendar days from the start.
+- "Tonight" is the kind of the next wake-up (`tonightWake`: from 15:00 on, tomorrow).
+- Week figure = (5 × workday + 2 × weekend) ÷ 7. A note warns when weekend and workday mid-sleep in the plan are an hour or more apart.
+- Progress compares each night with the starting point of its own kind.
+- A plan saved before this change (single wake time and starting point) keeps its wake time for workdays and has to be started again (`migrate` in `store.js`).
+- The guide's "days off vs workdays" counts time off as days off. The bridge and the numbers are not split by kind of night.
+
 ## The guide (`advice`, `timing` in `sleep.js`; `renderGuide` in `ui.js`)
 
 Always on the last 28 days. Findings are ranked: 2 = change first, 1 = keep an eye on it, 0 = fine.
