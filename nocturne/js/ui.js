@@ -199,22 +199,26 @@ function renderSettings() {
   h += `<section class="set"><h2>${esc(t('set.targetT'))}</h2><label class="field"><span>${esc(t('set.target'))}<b>${dur(S.target)}</b></span><input type="range" data-set="target" min="420" max="570" step="15" value="${S.target}"></label></section>`;
   h += `<section class="set"><h2>${esc(t('set.lookT'))}</h2><label class="field"><span>${esc(t('set.lang'))}</span><select data-set="lang"><option value="en"${S.lang === 'en' ? ' selected' : ''}>English</option><option value="fr"${S.lang === 'fr' ? ' selected' : ''}>Français</option></select></label><label class="field"><span>${esc(t('set.theme'))}</span><select data-set="theme"><option value="night"${S.theme === 'night' ? ' selected' : ''}>${esc(t('set.night'))}</option><option value="day"${S.theme === 'day' ? ' selected' : ''}>${esc(t('set.day'))}</option></select></label><p class="note">${esc(t('set.late'))}</p></section>`;
   if (cloud) h += `<section class="set"><h2>${esc(t('sync.T'))}</h2><p class="sub">${esc(t('sync.lead'))}</p><label class="check"><input type="checkbox" data-set="sync"${choice === '1' ? ' checked' : ''}><span>${esc(t('sync.consent'))}</span></label><p class="note" id="syncStatus">${esc(ui.session ? t('sync.on', { e: ui.session }) : t('sync.off'))}${choice === '1' && ui.cloudMsg ? ' · ' + esc(ui.cloudMsg) : ''}</p><div class="row"><button class="btn sm" data-act="signin"${choice === '1' ? '' : ' disabled'}>${esc(ui.session ? t('sync.account') : t('sync.signIn'))}</button>${ui.session ? '' : `<button class="btn sm" data-act="signup"${choice === '1' ? '' : ' disabled'}>${esc(t('sync.signUp'))}</button>`}</div></section>`;
-  h += `<section class="set"><h2>${esc(t('set.dataT'))}</h2><div class="row"><button class="btn sm" data-act="backup">${esc(t('set.backup'))}</button><button class="btn sm" data-act="restore">${esc(t('set.restore'))}</button>${S.demo ? `<button class="btn sm" data-act="demo-off">${esc(t('demo.off'))}</button>` : Object.keys(S.nights).length ? '' : `<button class="btn sm" data-act="demo">${esc(t('empty.demo'))}</button>`}<button class="btn sm" data-act="wipe">${esc(t('set.wipe'))}</button></div><p class="note" style="margin-top:12px">${esc(t('set.dataNote'))}</p></section>`;
+  h += `<section class="set"><h2>${esc(t('set.dataT'))}</h2><div class="row"><button class="btn sm" data-act="backup">${esc(t('set.backup'))}</button><label class="btn sm pick">${esc(t('set.restore'))}<input type="file" data-file="backup"></label>${S.demo ? `<button class="btn sm" data-act="demo-off">${esc(t('demo.off'))}</button>` : Object.keys(S.nights).length ? '' : `<button class="btn sm" data-act="demo">${esc(t('empty.demo'))}</button>`}<button class="btn sm" data-act="wipe">${esc(t('set.wipe'))}</button></div><p class="note" style="margin-top:12px">${esc(t('set.dataNote'))}</p></section>`;
   h += `<section><h2>${esc(t('about.T'))}</h2><p class="note">${esc(t('about.1'))}</p><p class="note">${esc(t('about.2'))}</p><p class="note">${esc(t('about.3'))}</p></section>`;
   return h;
 }
 
 /* ---------- import ---------- */
+/* The picker is a real file input inside a label, placed inside the sheet. A hidden input elsewhere on the page,
+   opened from code, does not open on an iPhone while a sheet is up (everything outside the sheet is inert).
+   No "accept" filter either: iOS greys out files it cannot match to a type, and the content is checked anyway. */
+const pickBtn = () => `<label class="btn pri pick">${esc(t('imp.pick'))}<input type="file" data-file="health"></label>`;
 function importSheet() {
-  sheet(`<div class="sheet-head"><h2>${esc(t('imp.T'))}</h2><button class="link" data-act="close">${esc(t('common.close'))}</button></div><ol class="steps">${[1, 2, 3, 4].map(i => `<li>${esc(t('imp.how' + i))}</li>`).join('')}</ol><p class="note">${esc(t('imp.private'))} ${esc(t('imp.again'))}</p><p class="err" id="impErr"></p><div class="row"><button class="btn pri" data-act="import-pick">${esc(t('imp.pick'))}</button></div>`);
+  sheet(`<div class="sheet-head"><h2>${esc(t('imp.T'))}</h2><button class="link" data-act="close">${esc(t('common.close'))}</button></div><ol class="steps">${[1, 2, 3, 4].map(i => `<li>${esc(t('imp.how' + i))}</li>`).join('')}</ol><p class="note">${esc(t('imp.private'))} ${esc(t('imp.again'))}</p><p class="err" id="impErr"></p><div class="row">${pickBtn()}</div>`);
 }
 async function runImport(file) {
-  if (ui.busy) return; ui.busy = true;
+  if (ui.busy) return; ui.busy = true; ui.impAt = 0;
   sheet(`<h2>${esc(t('imp.reading'))}</h2><p class="sub" id="impMsg">${esc(file.name)} · ${(file.size / 1048576).toFixed(file.size > 1e7 ? 0 : 1)} MB</p><progress id="impBar" max="1" value="0"></progress><p class="note" id="impCount" style="margin-top:10px">${esc(t('imp.keepOpen'))}</p>`);
   let lock = null; try { lock = await navigator.wakeLock?.request('screen'); } catch (e) { }
   try {
     const bar = $('#impBar'), cnt = $('#impCount');
-    const res = await readHealthFile(file, { since: sinceDate(today()), onProgress: (p, n) => { bar.value = p; cnt.textContent = t('imp.progress', { p: Math.round(p * 100), n: n.toLocaleString(loc()) }); } });
+    const res = await readHealthFile(file, { since: sinceDate(today()), onProgress: (p, n) => { ui.impAt = p; bar.value = p; cnt.textContent = t('imp.progress', { p: Math.round(p * 100), n: n.toLocaleString(loc()) }); } });
     if (S.demo) { S.nights = {}; S.tags = {}; S.plan = { ...S.plan, wake: null, start: null, base: null }; S.demo = false; }
     const m = mergeNights(S.nights, res.nights); S.nights = m.nights;
     S.imp = { at: new Date().toISOString(), n: res.stats.n, first: res.stats.first, last: res.stats.last, added: m.added, updated: m.updated, bedOnly: res.stats.bedOnly };
@@ -223,8 +227,9 @@ async function runImport(file) {
     sheet(`<h2>${esc(t('imp.doneT', { n: m.added }))}</h2><dl class="kv"><dt>${esc(t('imp.rFound'))}</dt><dd>${res.stats.n}</dd><dt>${esc(t('imp.rRange'))}</dt><dd>${esc(day(res.stats.first))} → ${esc(day(res.stats.last))}</dd><dt>${esc(t('imp.rNew'))}</dt><dd>${m.added}</dd><dt>${esc(t('imp.rUpd'))}</dt><dd>${m.updated}</dd><dt>${esc(t('imp.rSame'))}</dt><dd>${m.same}</dd>${res.stats.bedOnly ? `<dt>${esc(t('imp.rBedOnly'))}</dt><dd>${res.stats.bedOnly}</dd>` : ''}</dl><p class="note">${esc(t('imp.rSrc', { s: src }))}</p><div class="row"><button class="btn pri" data-act="close">${esc(t('common.done'))}</button></div>`);
   } catch (e) {
     console.warn(e);
-    sheet(`<div class="sheet-head"><h2>${esc(t('imp.failT'))}</h2><button class="link" data-act="close">${esc(t('common.close'))}</button></div><p class="sub">${esc(e.code === 'noExport' ? t('imp.errZip') : e.code === 'noSleep' ? t('imp.errSleep') : t('imp.errRead'))}</p><div class="row"><button class="btn pri" data-act="import-pick">${esc(t('imp.pick'))}</button></div>`);
-  } finally { ui.busy = false; try { lock?.release(); } catch (e) { } $('#file').value = ''; }
+    const detail = e.code ? '' : `${file.name} · ${(file.size / 1048576).toFixed(1)} MB · ${Math.round((ui.impAt || 0) * 100)} % · ${e.name || 'Error'}: ${e.message || e}`;
+    sheet(`<div class="sheet-head"><h2>${esc(t('imp.failT'))}</h2><button class="link" data-act="close">${esc(t('common.close'))}</button></div><p class="sub">${esc(e.code === 'noExport' ? t('imp.errZip') : e.code === 'noSleep' ? t('imp.errSleep') : t('imp.errRead'))}</p>${detail ? `<p class="note">${esc(t('imp.errDetail'))} ${esc(detail)}</p>` : ''}<div class="row">${pickBtn()}</div>`);
+  } finally { ui.busy = false; try { lock?.release(); } catch (e) { } }
 }
 
 /* ---------- shell ---------- */
@@ -279,13 +284,11 @@ const acts = {
   more: () => { ui.shown += 60; render(); },
   close: () => { closeSheet(); },
   'import-open': () => importSheet(),
-  'import-pick': () => $('#file').click(),
   demo: () => { const d = E.demo(today()); S.nights = d.nights; S.tags = d.tags; S.demo = true; S.imp = null; S.plan = { ...S.plan, wake: null, start: null, base: null }; save(); go('bridge'); },
   'demo-off': () => { S.nights = {}; S.tags = {}; S.demo = false; S.plan = { ...S.plan, wake: null, start: null, base: null }; save(); render(); },
   'plan-start': () => { const { live, p } = planNow(); S.plan = { ...p, start: today(), base: live }; save(); render(); toast(t('plan.started')); },
   'plan-stop': () => { S.plan = { ...S.plan, start: null, base: null }; save(); render(); },
   backup: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(exportBackup()); a.download = `nocturne-${today()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); },
-  restore: () => $('#backupFile').click(),
   wipe: () => wipeSheet(),
   'wipe-all': () => { reset(); closeSheet(); go('bridge'); toast(t('wipe.done')); },
   'wipe-device': async () => { try { sessionStorage.setItem('nocturne.wipe', '1'); } catch (e) { } setSyncChoice('0'); location.reload(); },
@@ -305,8 +308,8 @@ export function init() {
   });
   document.addEventListener('change', e => {
     const el = e.target;
-    if (el.id === 'file') { if (el.files[0]) runImport(el.files[0]); return; }
-    if (el.id === 'backupFile') { const f = el.files[0]; if (f) f.text().then(x => { importBackup(x); render(); toast(t('set.restored')); }).catch(() => toast(t('set.restoreFail'))); el.value = ''; return; }
+    if (el.dataset.file === 'health') { if (el.files[0]) runImport(el.files[0]); return; }
+    if (el.dataset.file === 'backup') { const f = el.files[0]; if (f) f.text().then(x => { importBackup(x); render(); toast(t('set.restored')); }).catch(() => toast(t('set.restoreFail'))); el.value = ''; return; }
     if (el.dataset.plan) {
       const k = el.dataset.plan; const { p } = planNow();
       if (k === 'wake') { const [h, m] = el.value.split(':').map(Number); if (Number.isFinite(h)) p.wake = h * 60 + (m || 0); }
