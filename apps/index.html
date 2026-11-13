@@ -38,6 +38,7 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
   <li><a class="app" href="../safety-net/"><span class="ic"><img src="../safety-net/icon-192.png" alt=""></span><span><b>Safety Net Score</b><small>Emergency fund sized to unemployment insurance</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../gains-greeks/"><span class="ic"><img src="../gains-greeks/icon-192.png" alt=""></span><span><b>Gains &amp; Greeks</b><small>Investor tax desk and options lab</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../forge/"><span class="ic"><img src="../forge/icon-192.png" alt=""></span><span><b>Forge</b><small>Calories, physique and records from Hobbit to Olympian God</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../nocturne/"><span class="ic"><img src="../nocturne/icon-192.png" alt=""></span><span><b>Nocturne</b><small>Sleep as a bridge: target to actual, by cause</small></span><span class="tag">Synced</span></a></li>
 </ul>
 <h2>In Claude</h2>
 <ul>
@@ -56,6 +57,8 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
   if (items) { const logs = Object.values(items).filter(i => i && !i.x && i.k === 'log' && i.d && String(i.d.date || '').startsWith(y)); if (logs.length) line('../', logs.length + ' hike' + (logs.length === 1 ? '' : 's') + ' logged in ' + y + ' · open for this weekend\'s pick'); }
   const sn = get('safetyNetScore.v1');
   if (sn && sn.history && sn.history[sn.active]) { const h = sn.history[sn.active], k = Object.keys(h).sort().pop(); if (k) line('../safety-net/', 'Safety score ' + h[k].s + ' of 100 · last updated ' + new Date(k + '-01T12:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })); }
+  const noc = get('nocturne.v1');
+  if (noc && noc.nights && !noc.demo) { const ds = Object.keys(noc.nights).sort(), last = ds[ds.length - 1]; if (last) { const age = Math.round((Date.now() - new Date(last + 'T12:00').getTime()) / 864e5); line('../nocturne/', age >= 7 ? 'Weekly import due · last night on file ' + new Date(last + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ds.length + ' nights on file · tag this morning'); } }
   const now = new Date(), days = Math.ceil((new Date(now.getFullYear(), 11, 31) - now) / 864e5);
   if (now.getMonth() >= 10) line('../gains-greeks/', days + ' days left for year-end tax moves · see Before 31 December');
 })();

@@ -8,6 +8,7 @@
 | Safety Net Score | Emergency fund sized to unemployment insurance in 16 countries | https://thrugg.github.io/Thrugg-/safety-net/ | Yes |
 | Gains & Greeks | Investor tax desk, country comparison, options lab | https://thrugg.github.io/Thrugg-/gains-greeks/ | Yes |
 | Forge | Calories that fit how you live, physique tracking, records ranked from Hobbit to Olympian God | https://thrugg.github.io/Thrugg-/forge/ | Yes (photos stay on the phone) |
+| Nocturne | Sleep as a variance bridge: target to actual by cause, regularity, and a bedtime plan counted back from a fixed wake time | https://thrugg.github.io/Thrugg-/nocturne/ | Yes, once switched on in its Settings |
 | Forkcast | Snap a meal, get the nutrition (opens in Claude) | https://claude.ai/artifact/5wenBM41wM6kANsCCpzwRN | In Claude |
 | Prüfstand | German car market analyst (opens in Claude) | https://claude.ai/artifact/EsViuZGJAHhRTYqBgBnQSu | In Claude |
 
@@ -44,6 +45,8 @@ The route line of every hike is traced on GitHub's machines every Tuesday night 
 ## Checks and the yearly rule update
 
 `node --test tests/*.mjs` runs the checks: sync between two simulated devices, and both finance engines against published reference figures. Run it before every change to `cloud.js`, Safety Net Score or Gains & Greeks.
+
+Nocturne has its own checks on invented data (Health import, the bridge adding up, regularity index, plan): `node --test nocturne/test/*.mjs`. Its notes are in [`nocturne/MAINTAINING.md`](nocturne/MAINTAINING.md).
 
 The rules in Safety Net Score and Gains & Greeks are updated once a year, in January: see [`RULES.md`](RULES.md).
 

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nocturne</title>
+<meta name="description" content="The gap between the sleep you want and the sleep you get, as a bridge you can act on.">
+<meta name="theme-color" content="#0e1528">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nocturne">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preload" href="fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="app.css">
+<script src="../cloud.js"></script>
+</head>
+<body>
+<div id="notice" role="status" hidden></div>
+<header id="top"><a class="mark" href="../apps/" aria-label="All apps">Nocturne</a><button id="impChip" class="quiet" data-act="import-open"></button></header>
+<main id="main"></main>
+<nav id="tabs" aria-label="Sections"></nav>
+<dialog id="sheet" aria-modal="true"></dialog>
+<input id="file" type="file" accept=".zip,.xml,application/zip,application/x-zip-compressed,text/xml" hidden>
+<input id="backupFile" type="file" accept=".json,application/json" hidden>
+<div id="toast" role="status"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
