@@ -186,3 +186,29 @@ test('the guide: ranges, timing and ranked findings', () => {
   assert.equal(S.advice(nights, tags, S.range('2026-11-13', 28), 600, 'light').items.find(i => i.k === 'target').over, true);
   for (const k of ['volume2', 'volume1', 'volume0', 'onset1', 'onset0', 'jetlag1', 'jetlagNeg', 'jetlag0', 'sri1', 'sri0', 'convLow', 'convHigh', 'cause', 'targetOver', 'targetUnder']) for (const p of ['.t', '.b']) assert.ok(i18nKeys.includes('adv.' + k + p), 'adv.' + k + p);
 });
+
+test('three kinds of night: workday, weekend, time off', () => {
+  const off = [{ a: '2026-11-02', b: '2026-11-06' }];
+  assert.equal(S.dayType('2026-11-13', off), 'work'); assert.equal(S.dayType('2026-11-14', off), 'weekend'); assert.equal(S.dayType('2026-11-04', off), 'off'); assert.equal(S.dayType('2026-11-07', off), 'weekend');
+  assert.equal(S.tonightWake(new Date(2026, 10, 13, 22, 0)), '2026-11-14'); assert.equal(S.tonightWake(new Date(2026, 10, 14, 1, 0)), '2026-11-14');
+  const night = (on, off2, a) => ({ a, b: off2 - on + 10, on, off: off2, w: off2 - on - a, s: [[on, off2]], m: 1, bs: on - 10 });
+  const nights = {};
+  for (const d of S.range('2026-11-13', 28)) { const ty = S.dayType(d, off); nights[d] = ty === 'work' ? night(30, 410, 365) : ty === 'weekend' ? night(100, 520, 400) : night(60, 540, 460); }
+  const b = S.baselineBy(nights, '2026-11-13', off);
+  assert.deepEqual([b.work.a, b.weekend.a, b.off.a], [365, 400, 460]); assert.deepEqual([b.work.wake, b.weekend.wake, b.off.wake], [410, 520, 540]);
+  assert.equal(b.work.n, 15); assert.equal(b.weekend.n, 8); assert.equal(b.off.n, 5); assert.equal(b.off.from, undefined);
+  const none = S.baselineBy(nights, '2026-11-13', []); assert.equal(none.off.from, 'weekend'); assert.equal(none.off.a, none.weekend.a);
+  const plan = { wake: { work: 405, weekend: 480, off: null }, gain: 50, conv: 0.65, wind: 45, start: null };
+  const by = S.planBy(b, plan, 510, '2026-11-13');
+  assert.equal(by.work.wake, 405); assert.equal(by.work.bed, 405 - (b.work.b + 77)); assert.equal(by.work.goal, 415);
+  assert.equal(by.weekend.wake, 480); assert.equal(by.weekend.bed, 480 - (b.weekend.b + 77)); assert.notEqual(by.weekend.bed, by.work.bed);
+  assert.equal(by.off.wake, 540, 'no wake time set: the usual one for that kind of night'); assert.equal(by.off.gain, 50); assert.equal(by.off.goal, 510);
+  assert.equal(S.planBy(b, plan, 480, '2026-11-13').off.gain, 20, 'extra sleep stops at the target');
+  assert.equal(by.week.goal, Math.round((5 * 415 + 2 * 450) / 7)); assert.equal(by.week.base, 375);
+  // progress: each night against the start of its own kind
+  const after = { ...nights, '2026-11-16': night(0, 405, 395), '2026-11-17': night(0, 405, 395), '2026-11-21': night(60, 480, 410) };
+  const pr = S.progressBy(after, { ...plan, start: '2026-11-13' }, b, off, 510);
+  assert.equal(pr.n, 3); assert.equal(pr.by.work.dA, 30); assert.equal(pr.by.weekend.dA, 10); assert.ok(Math.abs(pr.dA - 70 / 3) < 1e-9);
+  // the guide counts time off as days off
+  assert.equal(S.timing(nights, S.range('2026-11-13', 28), off).midFree, S.median([...Array(8).fill(310), ...Array(5).fill(300)]));
+});
