@@ -229,6 +229,36 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
 .formula { font-family: var(--f-mono); font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; line-height: 1.7; overflow-x: auto; white-space: pre; }
 [hidden] { display: none !important; }
 .foot { margin-top: 28px; font-size: 12px; color: var(--muted); max-width: 90ch; }
+/* relocation sprints */
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; align-items: start; }
+.sp-card .row2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.sp-card .field, .sp-card .inp { min-width: 0; }
+.sp-card input[type=date] { width: 100%; min-width: 0; padding-right: 6px; font-size: 15px; }
+.sp-card textarea { width: 100%; font: inherit; font-size: 15px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 9px; padding: 8px 10px; resize: vertical; }
+.sp-checks { display: grid; gap: 8px; margin-top: 8px; }
+.sp-check { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 150px); gap: 10px; align-items: center; }
+.sp-check label { display: flex; gap: 9px; align-items: center; font-size: 14px; min-height: 36px; }
+.sp-check input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.sp-check .inp input::placeholder { font-size: 12px; }
+.sp-scores { display: grid; grid-template-columns: minmax(0, 1.25fr) 1fr 1fr; gap: 0 10px; margin-top: 8px; }
+.sp-crit, .sp-who { display: grid; grid-template-rows: 22px repeat(5, 40px); align-items: center; gap: 4px 0; }
+.sp-crit span { font-size: 13px; color: var(--ink-2); line-height: 1.2; }
+.sp-who .lbl { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-sc { display: flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
+.sp-sc button { flex: 1 1 0; min-width: 0; height: 34px; padding: 0; border: 0; background: var(--surface); color: var(--muted); font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.sp-sc button + button { border-left: 1px solid var(--line); }
+.sp-sc button[aria-pressed="true"] { background: var(--ink); color: var(--surface); font-weight: 600; }
+.sp-scroll { overflow-x: auto; }
+.sp-table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+.sp-table th, .sp-table td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-top: 1px solid var(--line); }
+.sp-table thead th { border-top: 0; font-family: var(--f-display); font-size: 15px; white-space: nowrap; }
+.sp-table tbody th { font-weight: 500; color: var(--ink-2); }
+.sp-table td b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.sp-table small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; white-space: nowrap; }
+.sp-table .sp-sum th, .sp-table .sp-sum td { border-top: 2px solid var(--ink); }
+.sp-table .sp-sum th { font-weight: 600; color: var(--ink); }
+.sp-table small.sp-split { color: var(--s-b); font-weight: 600; }
+.sp-table small.sp-up { color: var(--good-ink); } .sp-table small.sp-down { color: var(--crit); }
 @media (prefers-reduced-motion: no-preference) { .ring .arc { transition: stroke-dasharray 400ms ease; } .progress .fill { transition: width 400ms ease; } }
 </style>
 
@@ -249,6 +279,7 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
     <button role="tab" id="tab-score" aria-controls="p-score" aria-selected="true" data-tab="score">My score</button>
     <button role="tab" id="tab-compare" aria-controls="p-compare" aria-selected="false" data-tab="compare">Compare countries</button>
     <button role="tab" id="tab-move" aria-controls="p-move" aria-selected="false" data-tab="move">Move planner</button>
+    <button role="tab" id="tab-sprints" aria-controls="p-sprints" aria-selected="false" data-tab="sprints">Relocation sprints</button>
     <button role="tab" id="tab-rules" aria-controls="p-rules" aria-selected="false" data-tab="rules">Rules &amp; sources</button>
     <button role="tab" id="tab-method" aria-controls="p-method" aria-selected="false" data-tab="method">Method</button>
   </nav>
@@ -423,6 +454,24 @@ dl.facts dd { margin: 0; color: var(--ink); line-height: 1.45; }
       <div class="panel pad"><div class="cardhead"><div><h2>Your cover, step by step</h2></div></div><div id="mvSteps"></div></div>
       <div class="panel pad"><div class="cardhead"><div><h2>To do</h2></div></div><ul class="plain" id="mvTodo"></ul>
         <p class="note" style="margin-top:12px">The coordination rules are described in general terms. Countries apply them with their own conditions, so confirm your case with both employment agencies before you resign. Tax on your investments when you leave is a separate question: see <a href="../gains-greeks/#move">Gains &amp; Greeks, Move abroad</a>.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= RELOCATION SPRINTS ================= -->
+  <section id="p-sprints" role="tabpanel" aria-labelledby="tab-sprints" hidden>
+    <div class="stack">
+      <div class="panel pad">
+        <div class="cardhead"><div><h2>Relocation sprints</h2><p>Long weekends lived like ordinary weeks in the places you might move to: commute at rush hour, shop, train, view a flat, go out. Each of you scores the place on the same five criteria, and it is read against home.</p></div></div>
+        <div class="row2" style="max-width:520px">
+          <div class="field"><label for="spNameA">First scorer</label><div class="inp"><input id="spNameA" class="nounit" type="text" maxlength="20"></div></div>
+          <div class="field"><label for="spNameB">Second scorer</label><div class="inp"><input id="spNameB" class="nounit" type="text" maxlength="20"></div></div>
+        </div>
+        <p class="note" id="spExample" style="margin-top:12px" hidden>The places below are suggestions. Rename them, change the currency, or remove them. What you enter is saved on this device and, once you sign in to sync, privately in your own account.</p>
+        <p id="spVerdict" style="margin-top:14px;font-weight:600"></p>
+      </div>
+      <div class="sp-grid" id="spCards"></div>
+      <div class="btnrow"><button class="btn" id="spAdd" type="button">Add a test</button></div>
+      <div class="panel pad"><div class="cardhead"><div><h2>Side by side</h2><p>Home first, then each place you have named.</p></div></div><div id="spCompare"></div></div>
     </div>
   </section>
 
@@ -1669,6 +1718,9 @@ This leaves margin for friction the rules do not capture.</div>
     S.history = S.history || {}; const H = S.history[code] = S.history[code] || {};
     const snap = { s: r.scoreInt, c: Math.round(Math.max(0, Number(p.savings || 0))) };
     if (!H[m] || H[m].s !== snap.s || H[m].c !== snap.c) { H[m] = snap; save(); }
+    /* the four fund levels, kept with the saved state so the Funds Ladder can read its first rung from here */
+    const lv = { c: code, cur: C[code].cur, t: r.T.slice(0, 4).map(x => Math.round(x)) };
+    if (JSON.stringify(S.levels) !== JSON.stringify(lv)) { S.levels = lv; save(); }
     const keys = Object.keys(H).sort().slice(-24), pts = keys.map(k => H[k]);
     panel.hidden = false;
     const fmtM = k => new Date(Number(k.slice(0, 4)), Number(k.slice(5)) - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
@@ -1910,11 +1962,126 @@ This leaves margin for friction the rules do not capture.</div>
     [['mvCosts', 'costs'], ['mvGross', 'gross'], ['mvEss', 'ess']].forEach(([id, k]) => $(id).addEventListener('input', e => set(k, Math.max(0, Number(e.target.value) || 0))));
   })();
 
+  // ---------- relocation sprints ----------
+  /* Long weekends lived like ordinary weeks in the places you might move to, scored by both partners on the same
+     five criteria and set against home. Everything here is typed by the person and saved with the rest of the app. */
+  const SP_CRIT = [['rhythm', 'Daily rhythm', 'A workday there: getting up, the commute, lunch, the evening'], ['nature', 'Mountain and nature access', 'How fast you are outside, and how good it is'], ['language', 'Language friction (5 = none)', '5 = you got by easily, 1 = stuck at every step'], ['social', 'Social and expat feel', 'Could you see your people here?'], ['day3', 'How it felt on day 3', 'Once the novelty had worn off']];
+  const SP_CHECK = [['commute', 'Commute at rush hour', null], ['basket', 'Supermarket basket', 'Your usual basket'], ['gym', 'Gym session', 'Day pass or monthly fee'], ['viewing', 'A flat viewing', 'Monthly rent asked'], ['evening', 'An evening out', 'Dinner for two']];
+  const SP_CUR = ['EUR', 'CHF', 'DKK', 'NOK', 'SEK', 'PLN', 'GBP'];
+  const SP_FXKEY = 'safetyNet.fx';
+  let spFx = { rates: D.FX, date: D.FX.date, live: false };
+  try { const c = JSON.parse(localStorage.getItem(SP_FXKEY)); if (c && c.rates && c.rates.CHF > 0 && c.date > D.FX.date) spFx = { rates: Object.assign({ EUR: 1 }, c.rates), date: c.date, live: true }; } catch (e) { /* ignore */ }
+  function spLoadFx() {
+    if (spLoadFx.done) return; spLoadFx.done = true;
+    fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=CHF,DKK,NOK,SEK,PLN,GBP').then(r => r.ok ? r.json() : null).then(j => {
+      if (!j || !j.rates || !(j.rates.CHF > 0)) return;
+      spFx = { rates: Object.assign({ EUR: 1 }, j.rates), date: j.date, live: true };
+      try { localStorage.setItem(SP_FXKEY, JSON.stringify({ rates: j.rates, date: j.date })); } catch (e) { /* ignore */ }
+      if (S.tab === 'sprints') spRenderCompare();
+    }).catch(() => { /* offline: the built-in rates are used */ });
+  }
+  const spConv = (x, from, to) => x * (spFx.rates[to] || 1) / (spFx.rates[from] || 1);
+  const spId = () => Math.random().toString(36).slice(2, 8);
+  const spNew = (place, cur, hint) => ({ id: spId(), place: place, hint: hint || '', cur: cur || 'EUR', from: '', to: '', budget: 0, spent: 0, done: {}, amt: {}, sc: { a: {}, b: {} }, note: '' });
+  function spState() {
+    if (!S.sprints) S.sprints = {
+      names: ['Me', 'Partner'], example: true,
+      base: Object.assign(spNew('Munich', 'EUR'), { id: 'base' }),
+      tests: [spNew('Zürich area', 'CHF', 'On a workday rhythm'), spNew('Copenhagen', 'DKK'), spNew('Kraków', 'PLN'), spNew('', 'EUR', 'Free slot')]
+    };
+    return S.sprints;
+  }
+  const spFind = id => { const P = spState(); return id === 'base' ? P.base : P.tests.find(x => x.id === id); };
+  const spAvg = (t, k) => { const a = Number(t.sc.a[k]) || 0, b = Number(t.sc.b[k]) || 0; return a && b ? (a + b) / 2 : a || b || null; };
+  function spTotal(t) { const v = SP_CRIT.map(c => spAvg(t, c[0])).filter(x => x != null); return v.length ? v.reduce((x, y) => x + y, 0) / v.length : null; }
+  const spFmt = (x, cur) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(Math.round(x));
+  const spNum = x => x == null ? '–' : x.toFixed(1);
+  const spDays = t => { const a = dayNum(t.from), b = dayNum(t.to); return a != null && b != null && b >= a ? b - a + 1 : null; };
+
+  function spCard(t, isBase) {
+    const P = spState(), names = P.names;
+    const curSel = '<select data-sp="cur" aria-label="Currency">' + SP_CUR.map(c => '<option' + (c === t.cur ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
+    const head = isBase
+      ? '<div class="row2"><div class="field"><label>Home, the baseline</label><div class="inp"><input class="nounit" data-sp="place" type="text" maxlength="40" value="' + esc(t.place) + '"></div></div><div class="field"><label>Currency</label><div class="inp">' + curSel + '</div></div></div><p class="hint muted" style="font-size:12px;margin-top:8px">Score home the same way, and note what the same things cost here. Every test is read against this.</p>'
+      : '<div class="row2"><div class="field"><label>Place</label><div class="inp"><input class="nounit" data-sp="place" type="text" maxlength="40" placeholder="' + esc(t.hint || 'Town or area') + '" value="' + esc(t.place) + '"></div>' + (t.hint && t.place ? '<span class="hint">' + esc(t.hint) + '</span>' : '') + '</div><div class="field"><label>Currency</label><div class="inp">' + curSel + '</div></div></div>' +
+        '<div class="row2" style="margin-top:12px"><div class="field"><label>From</label><div class="inp"><input class="nounit" data-sp="from" type="date" value="' + esc(t.from) + '"></div></div><div class="field"><label>To</label><div class="inp"><input class="nounit" data-sp="to" type="date" value="' + esc(t.to) + '"></div></div></div>' +
+        '<div class="row2" style="margin-top:12px"><div class="field"><label>Budget</label><div class="inp"><input data-sp="budget" type="number" inputmode="decimal" min="0" step="50" value="' + (t.budget || '') + '"><span class="unit">' + t.cur + '</span></div></div><div class="field"><label>Spent</label><div class="inp"><input data-sp="spent" type="number" inputmode="decimal" min="0" step="10" value="' + (t.spent || '') + '"><span class="unit">' + t.cur + '</span></div></div></div>';
+    const checks = SP_CHECK.map(c => '<div class="sp-check"><label><input type="checkbox" data-spc="' + c[0] + '"' + (t.done[c[0]] ? ' checked' : '') + '> <span>' + c[1] + '</span></label>' + (c[2] ? '<div class="inp"><input data-spa="' + c[0] + '" type="number" inputmode="decimal" min="0" step="1" placeholder="' + esc(c[2]) + '" aria-label="' + esc(c[1] + ': ' + c[2]) + '" value="' + (t.amt[c[0]] || '') + '"><span class="unit">' + t.cur + '</span></div>' : '<span></span>') + '</div>').join('');
+    const scoreRow = (who, i) => '<div class="sp-who"><span class="lbl" data-who="' + i + '">' + esc(names[i] || (i ? 'Partner' : 'Me')) + '</span>' + SP_CRIT.map(c => '<div class="sp-sc" role="group" aria-label="' + esc(c[1] + ', ' + (names[i] || '')) + '">' + [1, 2, 3, 4, 5].map(n => '<button type="button" data-sps="' + who + ':' + c[0] + ':' + n + '" aria-pressed="' + (Number(t.sc[who][c[0]]) === n) + '">' + n + '</button>').join('') + '</div>').join('') + '</div>';
+    const tot = spTotal(t);
+    return '<div class="panel pad sp-card" data-spid="' + t.id + '">' + head +
+      '<h3 style="margin-top:18px">' + (isBase ? 'What things cost at home' : 'Things to try') + '</h3><div class="sp-checks">' + checks + '</div>' +
+      '<h3 style="margin-top:18px">Scores, 1 to 5' + (tot != null ? ' <span class="muted" style="font-weight:500">· average ' + tot.toFixed(1) + '</span>' : '') + '</h3>' +
+      '<div class="sp-scores"><div class="sp-crit"><span></span>' + SP_CRIT.map(c => '<span title="' + esc(c[2]) + '">' + c[1] + '</span>').join('') + '</div>' + scoreRow('a', 0) + scoreRow('b', 1) + '</div>' +
+      '<div class="field" style="margin-top:14px"><label>Notes</label><textarea data-sp="note" rows="2" maxlength="600" placeholder="' + (isBase ? 'What you would miss, what you would not' : 'What surprised you. What you would check next time') + '">' + esc(t.note || '') + '</textarea></div>' +
+      (isBase ? '' : '<div class="btnrow" style="margin-top:12px;justify-content:flex-end"><button class="btn" type="button" data-spdel>Remove this test</button></div>') + '</div>';
+  }
+
+  function spRenderCompare() {
+    const P = spState(), base = P.base, bc = base.cur, tests = P.tests.filter(t => t.place);
+    const cols = [base].concat(tests), bTot = spTotal(base);
+    if (!tests.length) { $('spCompare').innerHTML = '<p class="muted">Name a place above to start comparing.</p>'; $('spVerdict').textContent = ''; return; }
+    const th = '<tr><th></th>' + cols.map((t, i) => '<th>' + esc(t.place || 'Home') + (i === 0 ? '<small>baseline</small>' : spDays(t) ? '<small>' + spDays(t) + ' days</small>' : '<small>not dated yet</small>') + '</th>').join('') + '</tr>';
+    const crit = SP_CRIT.map(c => '<tr><th scope="row">' + c[1] + '</th>' + cols.map(t => {
+      const a = Number(t.sc.a[c[0]]) || 0, b = Number(t.sc.b[c[0]]) || 0, v = spAvg(t, c[0]);
+      return '<td>' + (v == null ? '<span class="muted">–</span>' : '<b>' + v.toFixed(1) + '</b>' + (a && b ? '<small' + (Math.abs(a - b) >= 2 ? ' class="sp-split"' : '') + '>' + a + ' · ' + b + '</small>' : '<small>one score</small>')) + '</td>';
+    }).join('') + '</tr>').join('');
+    const totals = '<tr class="sp-sum"><th scope="row">Average</th>' + cols.map((t, i) => { const v = spTotal(t); return '<td>' + (v == null ? '<span class="muted">–</span>' : '<b>' + v.toFixed(1) + '</b>' + (i > 0 && bTot != null ? '<small class="' + (v - bTot >= 0.05 ? 'sp-up' : v - bTot <= -0.05 ? 'sp-down' : '') + '">' + (v - bTot >= 0 ? '+' : '−') + Math.abs(v - bTot).toFixed(1) + ' vs home</small>' : '')) + '</td>'; }).join('') + '</tr>';
+    const cost = (label, get) => '<tr><th scope="row">' + label + '</th>' + cols.map((t, i) => {
+      const x = Number(get(t)) || 0; if (!x) return '<td><span class="muted">–</span></td>';
+      const inBase = spConv(x, t.cur, bc), b0 = Number(get(base)) || 0;
+      return '<td><b>' + spFmt(inBase, bc) + '</b>' + (t.cur !== bc ? '<small>' + spFmt(x, t.cur) + '</small>' : '') + (i > 0 && b0 ? '<small class="' + (inBase > b0 * 1.02 ? 'sp-down' : inBase < b0 * 0.98 ? 'sp-up' : '') + '">' + (inBase >= b0 ? '+' : '−') + Math.abs(Math.round((inBase / b0 - 1) * 100)) + ' % vs home</small>' : '') + '</td>';
+    }).join('') + '</tr>';
+    const done = '<tr><th scope="row">Things tried</th>' + cols.map((t, i) => '<td>' + (i === 0 ? '<span class="muted">–</span>' : SP_CHECK.filter(c => t.done[c[0]]).length + ' of ' + SP_CHECK.length) + '</td>').join('') + '</tr>';
+    const money = '<tr><th scope="row">Trip: spent of budget</th>' + cols.map((t, i) => '<td>' + (i === 0 || !(t.budget || t.spent) ? '<span class="muted">–</span>' : '<b>' + spFmt(spConv(t.spent || 0, t.cur, bc), bc) + '</b><small>of ' + spFmt(spConv(t.budget || 0, t.cur, bc), bc) + '</small>') + '</td>').join('') + '</tr>';
+    $('spCompare').innerHTML = '<div class="sp-scroll"><table class="sp-table"><thead>' + th + '</thead><tbody>' + crit + totals + done + cost('Supermarket basket', t => t.amt.basket) + cost('Gym', t => t.amt.gym) + cost('Rent asked at the viewing', t => t.amt.viewing) + cost('Evening out', t => t.amt.evening) + money + '</tbody></table></div>' +
+      '<p class="note" style="margin-top:12px">Each cell is the average of your two scores, with both underneath; a two-point gap between you is marked. Amounts are converted to ' + bc + ' at the ECB reference rates of ' + new Date(spFx.date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + (spFx.live ? ' (Frankfurter).' : ' (built in; newer rates load when there is signal).') + '</p>';
+    /* one sentence: who leads, and where the two of you disagree most */
+    const scored = tests.map(t => ({ t, v: spTotal(t) })).filter(x => x.v != null).sort((x, y) => y.v - x.v);
+    let verdict = scored.length ? esc(scored[0].t.place) + ' leads so far with ' + scored[0].v.toFixed(1) + (bTot != null ? ', against ' + bTot.toFixed(1) + ' for ' + esc(base.place || 'home') + '.' : '. Score home too, to have something to hold it against.') : 'No scores yet. After each trip, each of you scores it on your own, then compare.';
+    let gap = null; cols.forEach(t => SP_CRIT.forEach(c => { const a = Number(t.sc.a[c[0]]) || 0, b = Number(t.sc.b[c[0]]) || 0; if (a && b && Math.abs(a - b) >= 2 && (!gap || Math.abs(a - b) > gap.d)) gap = { d: Math.abs(a - b), t, c }; }));
+    if (gap) verdict += ' You disagree most on ' + gap.c[1].toLowerCase() + ' in ' + esc(gap.t.place || 'home') + ': worth talking through before the next trip.';
+    $('spVerdict').innerHTML = verdict;
+  }
+  function renderSprints() {
+    const P = spState();
+    $('spNameA').value = P.names[0] || ''; $('spNameB').value = P.names[1] || '';
+    $('spExample').hidden = !P.example;
+    $('spCards').innerHTML = spCard(P.base, true) + P.tests.map(t => spCard(t, false)).join('');
+    $('spAdd').hidden = P.tests.length >= 6;
+    spRenderCompare(); spLoadFx();
+  }
+  (function () {
+    const root = $('p-sprints');
+    const touch = () => { const P = spState(); delete P.example; save(); };
+    const cardOf = e => { const c = e.target.closest('[data-spid]'); return c ? spFind(c.dataset.spid) : null; };
+    root.addEventListener('input', e => {
+      const el = e.target;
+      if (el.id === 'spNameA' || el.id === 'spNameB') { const i = el.id === 'spNameA' ? 0 : 1; spState().names[i] = el.value.slice(0, 20); touch(); root.querySelectorAll('.lbl[data-who="' + i + '"]').forEach(x => { x.textContent = el.value || (i ? 'Partner' : 'Me'); }); return; }
+      const t = cardOf(e); if (!t) return;
+      if (el.dataset.sp) { const k = el.dataset.sp; t[k] = (k === 'budget' || k === 'spent') ? Math.max(0, Number(el.value) || 0) : el.value; touch(); if (k !== 'note') spRenderCompare(); }
+      else if (el.dataset.spa) { const k = el.dataset.spa; t.amt[k] = Math.max(0, Number(el.value) || 0); if (t.amt[k] > 0) { t.done[k] = true; const box = el.closest('.sp-check').querySelector('[data-spc]'); if (box) box.checked = true; } touch(); spRenderCompare(); }
+    });
+    root.addEventListener('change', e => {
+      const el = e.target, t = cardOf(e);
+      if (!t) return;
+      if (el.dataset.spc) { t.done[el.dataset.spc] = el.checked; touch(); spRenderCompare(); }
+      else if (el.dataset.sp === 'cur') renderSprints();
+    });
+    root.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.id === 'spAdd') { spState().tests.push(spNew('', 'EUR')); touch(); renderSprints(); return; }
+      const t = cardOf(e); if (!t) return;
+      if (b.dataset.sps) { const p = b.dataset.sps.split(':'), n = Number(p[2]); t.sc[p[0]][p[1]] = Number(t.sc[p[0]][p[1]]) === n ? 0 : n; touch(); const y = window.scrollY; renderSprints(); window.scrollTo(0, y); const again = root.querySelector('[data-spid="' + t.id + '"] [data-sps="' + b.dataset.sps + '"]'); if (again) again.focus({ preventScroll: true }); }
+      else if (b.hasAttribute('data-spdel')) { const P = spState(); if (b.dataset.sure) { P.tests = P.tests.filter(x => x !== t); touch(); renderSprints(); } else { b.dataset.sure = '1'; b.textContent = 'Tap again to remove'; } }
+    });
+  })();
+
   // ---------- navigation ----------
   function setTab(tab) {
     S.tab = tab; save();
     document.querySelectorAll('[role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    ['score', 'compare', 'move', 'rules', 'method'].forEach(t => { $('p-' + t).hidden = t !== tab; });
+    ['score', 'compare', 'move', 'sprints', 'rules', 'method'].forEach(t => { $('p-' + t).hidden = t !== tab; });
     try { if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab); } catch (e) { /* ignore */ }
     renderTab();
   }
@@ -1923,6 +2090,7 @@ This leaves margin for friction the rules do not capture.</div>
     else if (S.tab === 'compare') renderCompare();
     else if (S.tab === 'rules') renderRules();
     else if (S.tab === 'move') renderMove();
+    else if (S.tab === 'sprints') { const f = document.activeElement; if (!f || !$('p-sprints').contains(f) || f.tagName === 'BUTTON') renderSprints(); } // a resize while typing must not take the field away
   }
   function openCountry(code) {
     const from = S.active; S.active = code; ensureProfile(code, from); save(); writeInputs(); setTab('score');
@@ -1944,7 +2112,7 @@ This leaves margin for friction the rules do not capture.</div>
   document.querySelectorAll('[data-basis]').forEach(b => b.addEventListener('click', () => { S.basis = b.dataset.basis; save(); renderCompare(); }));
   let rz = null; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderTab, 150); });
   const h = (location.hash || '').replace('#', '');
-  setTab(['score', 'compare', 'move', 'rules', 'method'].includes(h) ? h : (S.tab || 'score'));
+  setTab(['score', 'compare', 'move', 'sprints', 'rules', 'method'].includes(h) ? h : (S.tab || 'score'));
 })();
 
 </script>
