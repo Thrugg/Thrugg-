@@ -5,10 +5,14 @@
 | App | What it does | Link | Sync |
 |---|---|---|---|
 | Cordée | Hikes in the Alps: 3D map, weather, dog filter, logbook | https://thrugg.github.io/Thrugg-/ | Yes |
-| Safety Net Score | Emergency fund sized to unemployment insurance in 16 countries | https://thrugg.github.io/Thrugg-/safety-net/ | Yes |
+| Safety Net Score | Emergency fund sized to unemployment insurance in 16 countries, plus the move planner and relocation sprints | https://thrugg.github.io/Thrugg-/safety-net/ | Yes |
 | Gains & Greeks | Investor tax desk, country comparison, options lab | https://thrugg.github.io/Thrugg-/gains-greeks/ | Yes |
 | Forge | Calories that fit how you live, physique tracking, records ranked from Hobbit to Olympian God | https://thrugg.github.io/Thrugg-/forge/ | Yes (photos stay on the phone) |
 | Nocturne | Sleep as a variance bridge: target to actual by cause, regularity, and a bedtime plan counted back from a fixed wake time | https://thrugg.github.io/Thrugg-/nocturne/ | Yes, once switched on in its Settings |
+| Seuil | Rent or buy, for any place: the year buying wins, as a range, with every cost counted | https://thrugg.github.io/Thrugg-/seuil/ | Yes, sign in from its Settings |
+| The Funds Ladder | The next money targets after the emergency fund, as a ladder: what comes next and when you get there | https://thrugg.github.io/Thrugg-/ladder/ | Yes, sign in from its Settings |
+| Grand Tour | Five-star hotels stayed at and wished for, on a five-grade ladder, with value for the grade | https://thrugg.github.io/Thrugg-/grand-tour/ | Yes, sign in from its Settings |
+| Sillage | Fragrance wardrobe: today's pick from the weather, cost per wear, what to sample next | https://thrugg.github.io/Thrugg-/sillage/ | Yes, sign in from its Settings |
 | Forkcast | Snap a meal, get the nutrition (opens in Claude) | https://claude.ai/artifact/5wenBM41wM6kANsCCpzwRN | In Claude |
 | Prüfstand | German car market analyst (opens in Claude) | https://claude.ai/artifact/EsViuZGJAHhRTYqBgBnQSu | In Claude |
 
@@ -22,7 +26,7 @@ A hiking app for mountain and lake hikes in Bavaria, Austria, Switzerland and th
 
 ## Saving and syncing (all apps)
 
-Everything you enter is saved automatically on the device. Sign in once on each device (Cordée: Settings → Sync; other apps: the "Sign in to sync" button at the bottom left) and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once. The sync runs on Supabase (`tools/supabase-setup.sql`, settings in `cloud.js`).
+Everything you enter is saved automatically on the device. Sign in once on each device (Cordée: Settings → Sync; Safety Net Score and Gains & Greeks: the "Sign in to sync" button at the bottom left; Forge, Nocturne, Seuil, The Funds Ladder, Grand Tour and Sillage: in their own Settings) and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once. The sync runs on Supabase (`tools/supabase-setup.sql`, settings in `cloud.js`).
 
 Your logbook, names, settings and inputs live in your browser and your own Supabase project, never in this repository.
 
@@ -47,6 +51,8 @@ The route line of every hike is traced on GitHub's machines every Tuesday night 
 `node --test tests/*.mjs` runs the checks: sync between two simulated devices, and both finance engines against published reference figures. Run it before every change to `cloud.js`, Safety Net Score or Gains & Greeks.
 
 Nocturne has its own checks on invented data (Health import, the bridge adding up, regularity index, plan): `node --test nocturne/test/*.mjs`. Its notes are in [`nocturne/MAINTAINING.md`](nocturne/MAINTAINING.md).
+
+Seuil, The Funds Ladder, Grand Tour and Sillage have their own checks on invented data: `node --test seuil/test/*.mjs ladder/test/*.mjs grand-tour/test/*.mjs sillage/test/*.mjs`. Each folder has a `MAINTAINING.md` with how it works and what to re-check: [`seuil/`](seuil/MAINTAINING.md) (country rules, once a year), [`ladder/`](ladder/MAINTAINING.md), [`grand-tour/`](grand-tour/MAINTAINING.md) (grade bands, once a year), [`sillage/`](sillage/MAINTAINING.md).
 
 The rules in Safety Net Score and Gains & Greeks are updated once a year, in January: see [`RULES.md`](RULES.md).
 
