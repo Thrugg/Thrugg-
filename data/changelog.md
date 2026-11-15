@@ -2,6 +2,12 @@
 
 The newest update is at the top. Hikes added in an update show a **New** badge in the app for 30 days, and the list can be sorted by *Recently added*.
 
+## 15 Nov 2026 · 166 hikes
+
+- From our own trail-sign photos around the Jenner (Hinterbrand, Vorderbrand, Jennerbahn middle and top stations, Königsbachalm, Mitterkaseralm).
+- Added, Berchtesgaden: Gotzenalm from Hinterbrand via the Priesbergalm (hard), Carl-von-Stahl-Haus from Hinterbrand, Schneibstein from Hinterbrand via the Stahlhaus, Kleine Reibn over the Schneibstein and the Seeleinsee (hard), Schützensteig via ferrata on the Kleiner Jenner (expert, A/B), Speicherteich loop at the Jenner Mittelstation (easy).
+- Already in the app from the same signs: Jenner via the Königsbachalm, Jenner from Hinterbrand via the Wasserfallalm (Mitterkaseralm), Jenner to the Mittelstation via the Schneibsteinhaus.
+
 ## 10 Nov 2026 (5) · Fifth batch: every country checked
 
 Gains & Greeks: the 29 countries marked "To verify" were checked against 2026-dated sources (tax authorities, PwC Tax Summaries, KPMG, local firms). All 38 are now marked verified. What changed in the numbers:
