@@ -113,6 +113,10 @@ function hikeLayers(C) {
     { id: 'hk-lbl', type: 'symbol', source: 'hikes', minzoom: 9.5, layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': zi(9.5, 10.5, 14, 12.5), 'text-offset': [0, 1], 'text-anchor': 'top', 'text-max-width': 9, 'text-optional': true }, paint: { 'text-color': C.ink, 'text-halo-color': C.halo, 'text-halo-width': 1.6 } },
     { id: 'home-pt', type: 'circle', source: 'home', paint: { 'circle-radius': 6, 'circle-color': C.lake, 'circle-stroke-color': C.case, 'circle-stroke-width': 2 } },
     { id: 'home-lbl', type: 'symbol', source: 'home', layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': 11, 'text-offset': [0, 1], 'text-anchor': 'top' }, paint: { 'text-color': C.lake, 'text-halo-color': C.halo, 'text-halo-width': 1.5 } },
+    { id: 'my-case', type: 'line', source: 'mytrack', layout: lj, paint: { 'line-color': '#ffffff', 'line-width': zi(7, 3, 14, 7.5), 'line-opacity': 0.85 } },
+    { id: 'my-line', type: 'line', source: 'mytrack', layout: lj, paint: { 'line-color': '#2f7fe0', 'line-width': zi(7, 1.6, 14, 4) } },
+    /* how sure the phone is of the position: a circle of that many metres on the ground */
+    { id: 'me-acc', type: 'circle', source: 'me', paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 0, ['/', ['get', 'acc'], ['get', 'mpp']], 22, ['/', ['*', ['get', 'acc'], 4194304], ['get', 'mpp']]], 'circle-color': '#2f7fe0', 'circle-opacity': 0.07, 'circle-stroke-color': '#2f7fe0', 'circle-stroke-opacity': 0.3, 'circle-stroke-width': 1, 'circle-pitch-alignment': 'map' } },
     { id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 16, 'circle-color': '#2f7fe0', 'circle-opacity': 0.18 } },
     { id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 7, 'circle-color': '#2f7fe0', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5 } },
     { id: 'pos', type: 'circle', source: 'pos', paint: { 'circle-radius': 7, 'circle-color': C.glow, 'circle-stroke-color': C.case, 'circle-stroke-width': 2.5 } }
@@ -120,7 +124,7 @@ function hikeLayers(C) {
 }
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
-const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, me: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY, build: EMPTY, 'build-pre': EMPTY };
+const GEO = { hikes: EMPTY, 'hike-lines': EMPTY, sel: EMPTY, prog: EMPTY, pos: EMPTY, me: EMPTY, mytrack: EMPTY, explore: EMPTY, huts: EMPTY, edit: EMPTY, home: EMPTY, build: EMPTY, 'build-pre': EMPTY };
 
 function buildStyle() {
   setupDem();
@@ -180,7 +184,7 @@ function initMap() {
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showZoom: !isPhone() }), 'bottom-right');
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
-  map.on('load', () => { mapReady = true; pushHikeData(); pushHome(); if (!Builder.on && !UI.detailId) fitRegion(false); });
+  map.on('load', () => { mapReady = true; pushHikeData(); pushHome(); if (!Builder.on && !UI.detailId && !Trail.on) fitRegion(false); });
   map.on('style.load', () => { pushHikeData(); });
   map.on('error', e => { if (e && e.error) console.warn('map:', e.error.message || e.error); });
   map.on('click', onMapClick);

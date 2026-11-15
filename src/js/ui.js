@@ -435,7 +435,7 @@ const UI = {
   async loadDetailWeather(h) {
     const box = $('#dWx'); if (!box) return;
     try { const d = await loadDetailWx(h); if (this.detailId === h.id) this.renderDetailWx(h, d); }
-    catch (e) { box.innerHTML = `<p class="muted">Forecast unavailable right now (${esc(e.message)}). <button class="btn ghost small" id="dWxRetry">Try again</button></p>`; $('#dWxRetry').onclick = () => this.loadDetailWeather(h); }
+    catch (e) { box.innerHTML = `<p class="muted">Forecast unavailable right now (${esc(e.message)}). <button class="btn ghost small" id="dWxRetry">Try again</button></p>`; box.querySelector('#dWxRetry').onclick = () => this.loadDetailWeather(h); }
   },
   renderDetailWx(h, d) {
     const box = $('#dWx'); if (!box) return;
