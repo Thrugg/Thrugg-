@@ -35,10 +35,14 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 <p class="lead">Open one, then Share → Add to Home Screen to keep it on the phone.</p>
 <ul>
   <li><a class="app" href="../"><span class="ic"><img src="../icon-192.png" alt=""></span><span><b>Cordée</b><small>Hikes in the Alps: 3D map, weather, logbook</small></span><span class="tag">Synced</span></a></li>
-  <li><a class="app" href="../safety-net/"><span class="ic"><img src="../safety-net/icon-192.png" alt=""></span><span><b>Safety Net Score</b><small>Emergency fund sized to unemployment insurance</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../safety-net/"><span class="ic"><img src="../safety-net/icon-192.png" alt=""></span><span><b>Safety Net Score</b><small>Emergency fund, move planner, relocation sprints</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../gains-greeks/"><span class="ic"><img src="../gains-greeks/icon-192.png" alt=""></span><span><b>Gains &amp; Greeks</b><small>Investor tax desk and options lab</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../forge/"><span class="ic"><img src="../forge/icon-192.png" alt=""></span><span><b>Forge</b><small>Calories, physique and records from Hobbit to Olympian God</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../nocturne/"><span class="ic"><img src="../nocturne/icon-192.png" alt=""></span><span><b>Nocturne</b><small>Sleep as a bridge: target to actual, by cause</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../seuil/"><span class="ic"><img src="../seuil/icon-192.png" alt=""></span><span><b>Seuil</b><small>Rent or buy: the year buying wins, for any place</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../ladder/"><span class="ic"><img src="../ladder/icon-192.png" alt=""></span><span><b>The Funds Ladder</b><small>Your next money targets, rung by rung</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../grand-tour/"><span class="ic"><img src="../grand-tour/icon-192.png" alt=""></span><span><b>Grand Tour</b><small>Five-star hotels, graded your way</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../sillage/"><span class="ic"><img src="../sillage/icon-192.png" alt=""></span><span><b>Sillage</b><small>Fragrance wardrobe and today's pick</small></span><span class="tag">Synced</span></a></li>
 </ul>
 <h2>In Claude</h2>
 <ul>
@@ -61,6 +65,35 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
   if (noc && noc.nights && !noc.demo) { const ds = Object.keys(noc.nights).sort(), last = ds[ds.length - 1]; if (last) { const age = Math.round((Date.now() - new Date(last + 'T12:00').getTime()) / 864e5); line('../nocturne/', age >= 7 ? 'Weekly import due · last night on file ' + new Date(last + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ds.length + ' nights on file · tag this morning'); } }
   const now = new Date(), days = Math.ceil((new Date(now.getFullYear(), 11, 31) - now) / 864e5);
   if (now.getMonth() >= 10) line('../gains-greeks/', days + ' days left for year-end tax moves · see Before 31 December');
+  /* the four apps of November 2026: a line only once the person's own figures are there, never for the examples */
+  const money = (v, cur) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur || 'EUR', maximumFractionDigits: 0 }).format(Math.round(v)); } catch (e) { return Math.round(v) + ' ' + (cur || ''); } };
+  const se = get('seuil.v1');
+  const seOwn = se && Array.isArray(se.locs) ? se.locs.filter(l => !l.ex && Number(l.price) > 0 && Number(l.rent) > 0) : [];
+  if (seOwn.length) import('../seuil/js/engine.js').then(E => {
+    const l = seOwn.find(x => se.ui && x.id === se.ui.loc) || seOwn[0], a = E.analyse(l), name = l.name || 'Your place';
+    const head = a.be === null ? name + ': renting wins for all ' + E.HORIZON + ' years' : a.be <= 1 ? name + ': buying wins from the first year' : name + ': buying wins after year ' + a.be;
+    line('../seuil/', head + (seOwn.length > 1 ? ' · ' + seOwn.length + ' places' : ''));
+  }).catch(() => { });
+  const la = get('ladder.v1');
+  if (la && Array.isArray(la.rungs) && la.rungs.length) Promise.all([import('../ladder/js/engine.js'), import('../ladder/js/store.js'), import('../ladder/js/i18n.js')]).then(([E, St, I]) => {
+    I.setLang('en');
+    const eff = r => { if (r.kind === 'safety' && r.link) { const sn = St.readSafety(); if (sn && (!sn.cur || sn.cur === la.cur)) return Object.assign({}, r, { parts: null, saved: sn.saved, target: sn.target || r.target }); } return r; };
+    const n = E.nextRung(la.rungs.map(eff));
+    if (!n) { if (la.rungs.some(r => !r.ex)) line('../ladder/', 'Every rung reached · time for the next target'); return; }
+    if (n.ex) return;
+    line('../ladder/', 'Next: ' + (n.name || I.t('kind.' + n.kind)) + ', ' + money(E.needOf(n), la.cur) + ' to go');
+  }).catch(() => { });
+  const gt = get('grandtour.v1');
+  const gtOwn = gt && Array.isArray(gt.hotels) ? gt.hotels.filter(h => !h.ex) : [];
+  if (gtOwn.length) { const st = gtOwn.filter(h => h.status === 'stayed').length, wi = gtOwn.length - st; line('../grand-tour/', st + ' stayed · ' + wi + ' on the wish list'); }
+  const si = get('sillage.v1');
+  if (si && Array.isArray(si.bottles)) {
+    const d = new Date(), today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const w = (si.wears || []).filter(x => x.d === today).map(x => si.bottles.find(b => b.id === x.b)).filter(Boolean).pop();
+    const own = si.bottles.filter(b => !b.ex).length;
+    if (w) line('../sillage/', 'Wearing ' + [w.house, w.name].filter(Boolean).join(' ') + ' today');
+    else if (own) line('../sillage/', own + ' bottle' + (own === 1 ? '' : 's') + ' · nothing logged today, open for the pick');
+  }
 })();
 </script>
 </body>
