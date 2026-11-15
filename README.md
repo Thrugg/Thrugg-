@@ -85,7 +85,8 @@ Photos are made smaller on the device (about 0.3–0.6 MB each) and kept in the 
 
 ## On the trail and in winter
 
-- **Follow me** (on any hike): a blue dot shows where you are on the route, with the distance and climb still to go, and it says so when you are off the marked line. It works while the app is open with the screen on; the phone is kept awake while it runs.
+- **Follow me, anywhere**: the target button on the map shows where you are, even when you are not on one of the hikes. The map follows you (drag it to look around, then **Recenter**), your path is drawn in blue, and the box at the bottom shows your height, how far and how high you have walked, for how long, and the nearest hike start (tap it to open that hike). Tap the target button again, or **Stop**, to end; a walk of more than 200 m can then go straight into the logbook as a track. A walk you have not saved stays on the phone for two hours, so it carries on if the app is closed by mistake.
+- **Follow me on a hike**: from a hike's page, the blue dot is shown on its route with the distance and climb still to go, and it says so when you are off the marked line. Both work while the app is open with the screen on; the phone is kept awake while they run.
 - **Without signal** the app still opens with the catalogue, your logbook, the last forecast you loaded and the map areas you looked at before (default map style and 3D terrain only; satellite and the other map styles need signal). Open the hike once at home and it is there on the mountain.
 - **Snow**: each hike shows the snow depth at its top right now (a weather-model estimate, so a guide and not a measurement), and Find has **Snow-free at the top now**.
 - **Daylight**: the forecast of a hike tells you the latest time to leave the car and still be back an hour before sunset, at your own pace.

@@ -666,7 +666,7 @@ const Photos = {
       const txt = html => { const d = document.createElement('div'); d.innerHTML = html || ''; return d.textContent.trim(); };
       box.innerHTML = list.length ? list.map(p => `<a class="photo" href="${esc(p.i.descriptionurl)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(p.i.thumburl)}" alt="${esc(p.t.replace(/^File:/, '').replace(/\.[a-z]+$/i, ''))}"><span>${esc(txt(p.i.extmetadata?.Artist?.value) || 'Unknown author')} · ${esc(txt(p.i.extmetadata?.LicenseShortName?.value))}</span></a>`).join('')
         : '<span class="muted">No geotagged photos within 4 km. Try the links below.</span>';
-    } catch (e) { if (UI.detailId !== h.id) return; box.innerHTML = '<span class="muted">Wikimedia photo search is busy right now. <button class="btn ghost small" id="phRetry">Try again</button></span>'; $('#phRetry').onclick = () => { box.innerHTML = '<span class="muted">Looking for photos…</span>'; this.load(h); }; }
+    } catch (e) { if (UI.detailId !== h.id) return; box.innerHTML = '<span class="muted">Wikimedia photo search is busy right now. <button class="btn ghost small" id="phRetry">Try again</button></span>'; box.querySelector('#phRetry').onclick = () => { box.innerHTML = '<span class="muted">Looking for photos…</span>'; this.load(h); }; }
   }
 };
 
@@ -718,24 +718,104 @@ const Fly = {
   }
 };
 
-/* ───────────── Follow me: your position on the selected hike ─────────────
-   Works while the app is open and the screen is on (a web app cannot track in the background). Shows where you
-   are on the traced line, what is left, and says so when you have left the path. */
+/* ───────────── Follow me: your position, on a hike or anywhere ─────────────
+   Works while the app is open and the screen is on (a web app cannot track in the background).
+   On a hike (its "Follow me" button): where you are on the traced line, what is left, and a warning when you
+   have left the path. Anywhere (the target button on the map): your position, your height, the nearest hike
+   start, and the walk so far. Both draw the trace of where you have been, and the map keeps you in the middle
+   until you move it yourself. When you stop, the walk can go into the logbook through the GPX import; a walk
+   that is not added is kept on this device for two hours, so following again continues it. */
+const TRACE_GAP = 2 * 3600e3, MPP0 = 78271.517;   // metres per pixel at zoom 0 (512-pixel tiles)
 const Trail = {
   on: false, watch: null, lock: null, h: null, cum: null, c: null, first: true,
+  follow: true, last: null, lastAt: 0, tr: null, savedAt: 0, alt: null, altAsk: 0, bound: false, pending: null,
   async start(h) {
-    if (this.on) this.stop();
     if (!navigator.geolocation) return toast('This browser has no access to your location');
     let r = Routes.cached(h);
     if (!r) { toast('Tracing the route first…'); r = await Routes.get(h).catch(() => null); }
-    if (!r || r.c.length < 2) return toast('No route line for this hike yet. Open it once with signal so it can be traced.', 5000);
-    this.h = h; this.c = r.c; this.cum = [0]; this.first = true;
+    if (!r || r.c.length < 2) return toast('No route line for this hike yet. Open it once with signal so it can be traced. The target button on the map follows you without a hike.', 6000);
+    this.h = h; this.c = r.c; this.cum = [0];
     for (let i = 1; i < r.c.length; i++) this.cum.push(this.cum[i - 1] + havLL(r.c[i - 1], r.c[i]));
-    this.on = true; if (Fly.on) Fly.stop();
-    $('#trailHud').hidden = false; $('#trailTitle').innerHTML = `${esc(h.n)}<small>Looking for your position…</small>`; $('#trailProg').style.width = '0';
+    $('#trailHud').classList.remove('free'); $('#trailProg').style.width = '0';
+    $('#trailTitle').innerHTML = `${esc(h.n)}<small>Looking for your position…</small>`;
+    this.begin();
+  },
+  startFree() {
+    if (!navigator.geolocation) return toast('This browser has no access to your location');
+    this.h = null; this.c = null; this.cum = null;
+    $('#trailHud').classList.add('free');
+    $('#trailTitle').innerHTML = 'Your position<small>Looking for your position…</small>';
+    this.begin();
+  },
+  async begin() {
+    if (this.watch != null) { navigator.geolocation.clearWatch(this.watch); this.watch = null; }
+    this.on = true; this.first = true; this.follow = true; if (Fly.on) Fly.stop();
+    this.loadTrace(); this.bind();
+    $('#trailHud').hidden = false; this.buttons(); $('#btnLocate').setAttribute('aria-pressed', true);
     if (isPhone()) Sheet.to(0);
-    try { if (navigator.wakeLock) this.lock = await navigator.wakeLock.request('screen'); } catch (e) { }
-    this.watch = navigator.geolocation.watchPosition(p => this.fix(p), e => { $('#trailTitle').innerHTML = `${esc(h.n)}<small>${e.code === 1 ? 'Location is switched off for this app. Allow it in the phone settings.' : 'No position yet. It needs a view of the sky.'}</small>`; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+    this.keepAwake();
+    this.watch = navigator.geolocation.watchPosition(p => this.fix(p), e => this.err(e), { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+    /* switching from one mode to the other: show the last position at once */
+    if (this.last && Date.now() - this.lastAt < 60e3) this.fix(this.last, true);
+  },
+  bind() {
+    if (this.bound || !map) return; this.bound = true;
+    /* moving the map by hand stops the map following you, until Recenter or the target button */
+    map.on('dragstart', e => { if (this.on && e.originalEvent && this.follow) { this.follow = false; this.pending = null; this.buttons(); } });
+    /* a position that came while the map was still moving is applied once it stops */
+    map.on('moveend', () => { if (this.on && this.follow && this.pending) { const q = this.pending; this.pending = null; map.easeTo({ center: q, offset: this.offset(), duration: 500 }); } });
+  },
+  async keepAwake() {
+    if (this.lock || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+    try { this.lock = await navigator.wakeLock.request('screen'); this.lock.addEventListener('release', () => { this.lock = null; }); } catch (e) { }
+  },
+  title() { return this.h ? esc(this.h.n) : 'Your position'; },
+  err(e) {
+    if (!this.on) return;
+    /* location switched off: an older dot would look like the current position */
+    if (e.code === 1) { this.last = null; this.lastAt = 0; this.pending = null; setSrc('me', EMPTY); }
+    $('#trailTitle').innerHTML = `${this.title()}<small>${e.code === 1 ? 'Location is switched off for this app. Allow it in the phone settings.' : 'No position yet. It needs a view of the sky.'}</small>`;
+  },
+  fix(p, replay) {
+    if (!this.on) return;
+    this.last = p; if (!replay) this.lastAt = Date.now();
+    const ll = [p.coords.longitude, p.coords.latitude], acc = p.coords.accuracy || 0, alt = this.altitude(p, ll);
+    if (!replay) this.record(ll, acc, alt, p.timestamp || Date.now());
+    setSrc('me', { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: ll }, properties: { acc: Math.max(1, acc), mpp: MPP0 * Math.cos(ll[1] * Math.PI / 180) } }] });
+    if (this.h) this.onHike(ll, p); else this.anywhere(ll, acc, alt);
+    this.camera(ll);
+  },
+  /* the middle of the part of the map you can see: above the sheet and the bar on a phone, right of the panel on
+     a computer */
+  offset() {
+    const hud = $('#trailHud'), hh = hud.hidden ? 0 : hud.offsetHeight + 12, pn = $('#panel');
+    return isPhone() ? [0, -Math.round(((pn ? pn.offsetHeight : 0) + hh) / 2)] : [Math.round((pn ? pn.offsetWidth : 0) / 2), -Math.round((hh + 12) / 2)];
+  },
+  camera(ll) {
+    if (!map) return;
+    if (this.first) { this.first = false; map.easeTo({ center: ll, zoom: Math.max(map.getZoom(), 14), offset: this.offset(), duration: 900 }); return; }
+    if (!this.follow) return;
+    if (map.isMoving()) { this.pending = ll; return; }
+    map.easeTo({ center: ll, offset: this.offset(), duration: 700 });
+  },
+  recenter() {
+    this.follow = true; this.pending = null; this.buttons();
+    if (this.last && map) map.easeTo({ center: [this.last.coords.longitude, this.last.coords.latitude], zoom: Math.max(map.getZoom(), 14), offset: this.offset(), duration: 700 });
+  },
+  buttons() { $('#trailCenter').hidden = !this.on || this.follow; },
+  /* height: the phone's own figure when it gives one, else the terrain model (Open-Meteo), asked at most once a
+     minute and only after moving */
+  altitude(p, ll) {
+    const a = p.coords.altitude;
+    if (a != null && isFinite(a) && (p.coords.altitudeAccuracy == null || p.coords.altitudeAccuracy <= 50)) return a;
+    const k = this.alt;
+    if ((!k || havLL(k.ll, ll) > 0.08) && Date.now() - this.altAsk > 60e3) {
+      this.altAsk = Date.now();
+      fetchT(`https://api.open-meteo.com/v1/elevation?latitude=${ll[1].toFixed(5)}&longitude=${ll[0].toFixed(5)}`, {}, 10000).then(r => r.json()).then(j => {
+        const e = j && j.elevation && j.elevation[0]; if (e != null && isFinite(e)) this.alt = { ll, e };
+      }).catch(() => { });
+    }
+    return k && havLL(k.ll, ll) < 0.25 ? k.e : null;
   },
   /* nearest point of the line: index of the segment, how far along it, and the distance to it in metres */
   nearest(ll) {
@@ -748,10 +828,8 @@ const Trail = {
     }
     return best;
   },
-  fix(p) {
-    if (!this.on) return;
-    const ll = [p.coords.longitude, p.coords.latitude], n = this.nearest(ll), c = this.c, h = this.h;
-    setSrc('me', { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: ll }, properties: {} }] });
+  onHike(ll, p) {
+    const n = this.nearest(ll), c = this.c, h = this.h;
     const tot = this.cum[this.cum.length - 1], along = this.cum[n.i] + (this.cum[n.i + 1] - this.cum[n.i]) * n.t;
     let up = 0; for (let i = n.i + 1; i < c.length; i++) { const a = c[i - 1][2], b = c[i][2]; if (a != null && b != null && b > a) up += (b - a) * (i === n.i + 1 ? 1 - n.t : 1); }
     /* an out-and-back line is traced one way: the way back is the same line again */
@@ -759,13 +837,92 @@ const Trail = {
     const off = n.d > Math.max(60, (p.coords.accuracy || 0) * 1.5);
     $('#trailTitle').innerHTML = `${esc(h.n)}<small>${off ? `About ${Math.round(n.d / 10) * 10} m off the marked line. ` : ''}${back ? `${fmtKm(tot - along)} and ↑ ${fmtM(up)} to the top, ${fmtKm(leftKm)} in all` : `${fmtKm(leftKm)} and ↑ ${fmtM(up)} to go`}${p.coords.accuracy > 40 ? ` · position ±${Math.round(p.coords.accuracy)} m` : ''}</small>`;
     $('#trailProg').style.width = (along / tot * 100).toFixed(1) + '%';
-    if (this.first && map) { this.first = false; map.easeTo({ center: ll, zoom: Math.max(map.getZoom(), 14), duration: 900 }); }
   },
-  stop() {
+  /* the hike whose start is closest, within 5 km */
+  nearStart(ll) {
+    let best = null;
+    for (const h of HK) { const d = hav(h.start, [ll[1], ll[0]]); if (d < 5 && (!best || d < best.d)) best = { h, d }; }
+    return best;
+  },
+  anywhere(ll, acc, alt) {
+    const t = this.tr, bits = [];
+    if (alt != null) bits.push(fmtM(alt));
+    if (t && t.km >= 0.05) { const min = (t.pts[t.pts.length - 1][3] - t.pts[0][3]) / 60; bits.push(`walked ${fmtKm(t.km)}${t.up >= 5 ? ', ↑ ' + fmtM(t.up) : ''}${min >= 1 ? ' in ' + fmtDur(min) : ''}`); }
+    if (acc > 40) bits.push(`position ±${Math.round(acc)} m`);
+    const n = this.nearStart(ll), dist = n ? (n.d < 1 ? Math.max(10, Math.round(n.d * 100) * 10) + ' m' : fmtKm(n.d)) : '';
+    $('#trailTitle').innerHTML = `Your position<small>${bits.join(' · ') || 'Following you'}</small>${n ? `<button type="button" class="trail-near" data-hike="${esc(n.h.id)}">${n.d < 0.15 ? `At the start of ${esc(n.h.n)}` : `Nearest start: ${esc(n.h.n)} · ${dist}`}</button>` : ''}`;
+  },
+  /* the trace: a point every few metres, skipping poor fixes and impossible jumps; climb counted in steps of 4 m
+     so the noise of the height does not add up */
+  record(ll, acc, alt, ts) {
+    if (acc > 50) return;
+    let t = this.tr; if (!t) t = this.tr = { pts: [], km: 0, up: 0, base: null };
+    const pts = t.pts, last = pts[pts.length - 1], sec = Math.round(ts / 1000);
+    if (last) {
+      const d = havLL(last, ll), m = d * 1000;
+      if (m < Math.max(8, acc * 0.6)) return;
+      if (m / Math.max(1, sec - last[3]) > 50) return;
+      t.km += d;
+    }
+    if (pts.length >= 20000) return;
+    const a = alt != null ? Math.round(alt) : null;
+    if (a != null) { if (t.base == null) t.base = a; else if (a >= t.base + 4) { t.up += a - t.base; t.base = a; } else if (a <= t.base - 4) t.base = a; }
+    pts.push([Math.round(ll[0] * 1e5) / 1e5, Math.round(ll[1] * 1e5) / 1e5, a, sec]);
+    this.draw();
+    if (Date.now() - this.savedAt > 15e3) this.saveTrace();
+  },
+  draw() { const p = this.tr ? this.tr.pts : []; setSrc('mytrack', p.length > 1 ? { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: p.map(q => [q[0], q[1]]) }, properties: {} }] } : EMPTY); },
+  loadTrace() {
+    const fresh = t => t && Array.isArray(t.pts) && t.pts.length && Date.now() - t.pts[t.pts.length - 1][3] * 1000 < TRACE_GAP;
+    if (!fresh(this.tr)) {
+      const saved = LS.get('trace', null);
+      this.tr = fresh(saved) ? saved : null;
+      if (!this.tr) LS.del('trace');
+      else if (this.tr.km >= 0.05) { const d = new Date(this.tr.pts[0][3] * 1000); toast(`Continuing your walk from ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, 3500); }
+    }
+    this.draw();
+  },
+  saveTrace() { this.savedAt = Date.now(); if (this.tr && this.tr.pts.length) LS.set('trace', this.tr); },
+  clearTrace() { this.tr = null; LS.del('trace'); setSrc('mytrack', EMPTY); },
+  /* Stop: a walk worth keeping gets the choice; a short one just stops */
+  ask() {
+    const t = this.tr;
+    if (!t || t.km < 0.2 || t.pts.length < 3) return this.halt();
+    const min = (t.pts[t.pts.length - 1][3] - t.pts[0][3]) / 60;
+    Dlg.open({
+      title: 'Stop following?',
+      body: `<p style="margin:0">This walk: <b>${fmtKm(t.km)}</b>${t.up >= 5 ? `, ↑ <b>${fmtM(t.up)}</b>` : ''}${min >= 1 ? `, <b>${fmtDur(min)}</b>` : ''}.</p>
+        <p class="muted" style="margin:10px 0 0">Add it to the logbook as one of your hikes or as a new one. If you stop without adding it, it is kept on this phone for two hours: follow again to continue it.</p>`,
+      foot: `<button type="button" class="btn ghost" data-close>Keep following</button><button type="button" class="btn ghost" id="tsStop">Stop</button><button type="button" class="btn primary" id="tsLog">Add to logbook</button>`,
+      onOpen: f => {
+        f.querySelector('#tsStop').onclick = () => { $('#dlg').close(); this.halt(); };
+        f.querySelector('#tsLog').onclick = () => { $('#dlg').close(); this.halt(); this.toLog(); };
+      },
+      onSubmit: () => false
+    });
+  },
+  halt() {
     this.on = false;
     if (this.watch != null) { navigator.geolocation.clearWatch(this.watch); this.watch = null; }
     if (this.lock) { this.lock.release().catch(() => { }); this.lock = null; }
-    $('#trailHud').hidden = true; setSrc('me', EMPTY);
+    this.saveTrace();
+    $('#trailHud').hidden = true; $('#trailCenter').hidden = true; $('#btnLocate').setAttribute('aria-pressed', false);
+    setSrc('me', EMPTY); setSrc('mytrack', EMPTY);
+  },
+  stop() { this.halt(); },
+  /* the walk as a GPX file, handed to the import: it asks which hike it was (or makes a new one), then the
+     logbook entry opens with the distance, climb and time */
+  async toLog() {
+    const t = this.tr; if (!t || t.pts.length < 2) return toast('Nothing to add yet');
+    let c = t.pts.map(p => [p[0], p[1], p[2]]);
+    if (c.some(p => p[2] == null)) { toast('Getting the heights…'); try { c = await fillElevation(c); } catch (e) { } }
+    const iso = s => new Date(s * 1000).toISOString(), d0 = new Date(t.pts[0][3] * 1000);
+    const day = new Date(d0.getTime() - d0.getTimezoneOffset() * 6e4).toISOString().slice(0, 10), name = `Walk on ${fmtDate(day, { wd: true })}`;
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Cordée" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${esc(name)}</name><trkseg>`
+      + t.pts.map((p, i) => `<trkpt lat="${p[1]}" lon="${p[0]}">${c[i][2] != null ? `<ele>${Math.round(c[i][2])}</ele>` : ''}<time>${iso(p[3])}</time></trkpt>`).join('')
+      + '</trkseg></trk></gpx>';
+    this.clearTrace();
+    Gpx.import([new File([gpx], name + '.gpx', { type: 'application/gpx+xml' })]);
   }
 };
 
@@ -941,7 +1098,13 @@ function bindControls() {
   $('#btnYear').onclick = () => Fly.year();
   $('#btnReview').onclick = () => Review.open();
   $('#flyStop').onclick = () => Fly.stop();
-  $('#trailStop').onclick = () => Trail.stop();
+  $('#trailStop').onclick = () => Trail.ask();
+  $('#trailCenter').onclick = () => Trail.recenter();
+  /* the nearest start opens that hike without flying away; the sheet that opens is then kept clear of the dot */
+  $('#trailHud').addEventListener('click', e => { const b = e.target.closest('[data-hike]'); if (!b || !HBY[b.dataset.hike]) return; UI.openHike(b.dataset.hike, { noFly: true }); setTimeout(() => { if (Trail.on && Trail.follow) Trail.recenter(); }, 400); });
+  $('#btnLocate').onclick = () => { if (!Trail.on) Trail.startFree(); else if (!Trail.follow) Trail.recenter(); else Trail.ask(); };
+  document.addEventListener('visibilitychange', () => { if (!Trail.on) return; if (document.visibilityState === 'visible') Trail.keepAwake(); else Trail.saveTrace(); });
+  addEventListener('pagehide', () => { if (Trail.on) Trail.saveTrace(); });
   $('#mapMsgCancel').onclick = () => Pick.stop();
   $('#editUndo').onclick = () => Edit.undo(); $('#editCancel').onclick = () => Edit.stop(); $('#editSave').onclick = () => Edit.save();
   document.addEventListener('keydown', e => {

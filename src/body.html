@@ -176,6 +176,7 @@
     <button class="ctrl" id="btnWx" aria-label="Weather on map" aria-pressed="false"><svg><use href="#i-cloudsun"/></svg></button>
     <button class="ctrl" id="btnDraw" aria-label="Draw a new route" title="Draw a new route"><svg><use href="#i-draw"/></svg></button>
     <button class="ctrl" id="btnExplore" aria-label="Show all marked trails and huts here" aria-pressed="false"><svg><use href="#i-route"/></svg></button>
+    <button class="ctrl" id="btnLocate" aria-label="Follow me: show where you are" title="Follow me" aria-pressed="false"><svg><use href="#i-pin"/></svg></button>
     <button class="ctrl" id="btnHome" aria-label="Back to the whole region"><svg><use href="#i-home"/></svg></button>
   </div>
   <div class="base-menu" id="baseMenu" hidden>
@@ -191,8 +192,8 @@
   <div class="map-msg" id="mapMsg" hidden><span id="mapMsgText"></span><button class="btn ghost small" id="mapMsgCancel">Cancel</button></div>
   <div class="fly-hud" id="trailHud" hidden>
     <div class="fly-title" id="trailTitle"></div>
+    <div class="trail-btns"><button class="btn ghost small" id="trailCenter" hidden>Recenter</button><button class="btn ghost small" id="trailStop">Stop</button></div>
     <div class="fly-bar"><i id="trailProg"></i></div>
-    <button class="btn ghost small" id="trailStop">Stop</button>
   </div>
   <div class="fly-hud" id="flyHud" hidden>
     <div class="fly-title" id="flyTitle"></div>
