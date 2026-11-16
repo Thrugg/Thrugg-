@@ -1,4 +1,6 @@
 /* Seuil — every screen. Reads the state, draws HTML, handles taps through data-act and typing through data-f. */
+import { hpiFor } from './history.js';
+import { monteCarlo } from './engine.js';
 import { S, save, saveUi, reset, newLoc, examples, setInbox, exportBackup, importBackup } from './store.js';
 import { analyse, bridge, totals, HORIZON } from './engine.js';
 import { PACKS, PACK_ORDER, PACKS_ASOF, CURRENCIES, RULE_FIELDS, rulesFor } from './packs.js';
@@ -63,7 +65,9 @@ function outHtml(l, a) {
   const f = a.first, R = a.rules;
   const sens = a.sens.map(s => `<tr><th scope="row">${esc(t('g.' + s.k))}</th><td class="num">${esc(t('sens.cell', { d: num1(s.d), y: yrWord(s.lo) }))}</td><td class="num">${esc(t('sens.cellUp', { d: num1(s.d), y: yrWord(s.hi) }))}</td></tr>`).join('');
   const kv = (k, v, cls = '') => `<div class="kv ${cls}"><span>${esc(k)}</span><b class="num">${v}</b></div>`;
-  return bridgeHtml(l, a) + `
+  const mc = monteCarlo(l);
+  const mcHtml = `<section class="mc"><h2>${esc(t('mc.title'))}</h2><p class="big">${esc(t('mc.ahead', { p: Math.round(mc.pAhead * 100), n: mc.stay }))}</p><p class="note">${esc(mc.p50 > HORIZON ? t('mc.mostNever', { p: Math.round(mc.never * 100), n: HORIZON }) : t('mc.half', { y: mc.p50, lo: mc.p10, hi: mc.p90 > HORIZON ? t('mc.never') : mc.p90 }))} ${esc(t('mc.how', { n: mc.n }))}</p></section>`;
+  return mcHtml + bridgeHtml(l, a) + `
 <section><h2>${esc(t('sens.title'))}</h2><p class="note">${esc(t('sens.sub'))}</p>
 <table class="tbl"><thead><tr><th></th><th>${esc(t('sens.down'))}</th><th>${esc(t('sens.up'))}</th></tr></thead><tbody>${sens}</tbody></table></section>
 <section><h2>${esc(t('cash.title'))}</h2>
@@ -79,6 +83,22 @@ ${kv(t('cash.interest'), money(f.interest, l.cur))}${kv(t('cash.principal'), mon
 const inp = (f, v, o = {}) => `<label class="fld${o.wide ? ' wide' : ''}"><span>${esc(o.label || t('f.' + f))}</span><span class="box"><input data-f="${f}" type="${o.type || 'number'}" ${o.type === 'text' ? 'maxlength="40"' : `inputmode="decimal" min="${o.min ?? 0}" step="${o.step || 'any'}"`} value="${esc(v ?? '')}" placeholder="${esc(o.ph || '')}">${o.unit ? `<i>${esc(o.unit)}</i>` : ''}</span>${o.hint ? `<small>${esc(o.hint)}</small>` : ''}</label>`;
 const slider = (f, v, min, max, step) => `<label class="sld"><span>${esc(t('g.' + f))}</span><output data-o="${f}" class="num">${pct(Number(v), 2)}</output><input data-f="${f}" type="range" min="${min}" max="${max}" step="${step}" value="${v}"></label>`;
 
+/* SE-3: price and rent levels researched by Claude for this place */
+let askBusy = false;
+function researchHtml(l) {
+  const r = l.research && l.research.data;
+  const card = r ? `<div class="research"><p><b>${esc(t('ask.found', { p: r.place || l.name || '' }))}</b> ${r.price_m2 ? esc(t('ask.price', { v: money(r.price_m2, l.cur) })) : ''} ${r.rent_m2 ? esc(t('ask.rent', { v: new Intl.NumberFormat(loc(), { maximumFractionDigits: 1 }).format(r.rent_m2) + ' ' + l.cur })) : ''}</p><p class="note">${esc([r.period, t('ask.conf.' + (r.confidence || 'low')), r.note].filter(Boolean).join(' · '))}</p>${(r.sources || []).length ? `<p class="note">${r.sources.slice(0, 4).map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>`).join(' · ')}</p>` : ''}${r.price_m2 && r.rent_m2 ? `<div class="row"><button class="btn sm" data-act="ask-use">${esc(t('ask.use'))}</button></div>` : ''}</div>` : '';
+  return `<div class="row"><button class="btn sm" data-act="ask-place" ${askBusy ? 'disabled' : ''}>${esc(askBusy ? t('ask.wait') : t('ask.btn'))}</button></div>${card}`;
+}
+/* SE-4: the last ten years of house prices next to the price-growth guess */
+function historyHtml(l) {
+  const h = hpiFor(l.pack, () => { if (S.ui.tab === 'seuil') render(); });
+  const g = l.research && l.research.data && typeof l.research.data.growth_10y_pct === 'number' ? l.research.data.growth_10y_pct : null;
+  const bits = [];
+  if (h) bits.push(t('hist.hpi', { c: t('pack.' + l.pack), v: num1(h.pct), a: h.from, b: h.to }));
+  if (g !== null) bits.push(t('hist.claude', { v: num1(g) }));
+  return bits.length ? `<p class="note hist">${esc(bits.join(' '))}</p>` : '';
+}
 function formHtml(l) {
   const p = PACKS[l.pack] || PACKS.XX, T = totals(l), R = rulesFor(l), per = l.mode === 'sqm';
   const packs = PACK_ORDER.map(k => `<option value="${k}"${k === l.pack ? ' selected' : ''}>${esc(t('pack.' + k))}</option>`).join('');
@@ -97,11 +117,11 @@ function formHtml(l) {
 <label class="fld"><span>${esc(t('f.pack'))}</span><span class="box"><select data-f="pack">${packs}</select></span></label>${regions}${curSel}
 <div class="fld wide"><span>${esc(t('f.mode'))}</span><div class="seg" role="group"><button data-act="mode" data-m="total" aria-pressed="${!per}">${esc(t('f.modeTotal'))}</button><button data-act="mode" data-m="sqm" aria-pressed="${per}">${esc(t('f.modeSqm'))}</button></div></div>
 ${inp('sqm', l.sqm, { unit: 'm²', step: 1 })}${inp('price', l.price || '', { unit: u, step: per ? 50 : 1000 })}${inp('rent', l.rent || '', { unit: u, step: per ? 0.5 : 10, hint: t('f.rentHint') })}</div>
-<p class="note derived" id="derived">${derivedText(l, T)}</p>
+<p class="note derived" id="derived">${derivedText(l, T)}</p>${researchHtml(l)}
 <h2>${esc(t('form.money'))}</h2>
 <div class="grid">${inp('down', l.down || '', { unit: l.cur, step: 1000, hint: t('f.downHint') })}${inp('reno', l.reno || '', { unit: l.cur, step: 1000, hint: t('f.renoHint') })}
-${inp('rate', l.rate, { unit: '%', step: 0.05 })}${R.loan === 'annuity' ? inp('term', l.term, { unit: t('u.years'), step: 1, min: 1 }) : ''}${inp('stay', l.stay, { unit: t('u.years'), step: 1, min: 1, hint: t('f.stayHint') })}</div>
-<h2>${esc(t('form.guess'))}</h2><p class="note">${esc(t('form.guessSub'))}</p>
+${inp('rate', l.rate, { unit: '%', step: 0.05 })}${inp('fixYears', l.fixYears || '', { unit: t('u.years'), step: 1, min: 0, hint: t('f.fixHint') })}${Number(l.fixYears) > 0 ? inp('rate2', l.rate2 ?? '', { unit: '%', step: 0.05, ph: l.rate, hint: t('f.rate2Hint') }) : ''}${R.loan === 'annuity' ? inp('term', l.term, { unit: t('u.years'), step: 1, min: 1 }) : ''}${inp('stay', l.stay, { unit: t('u.years'), step: 1, min: 1, hint: t('f.stayHint') })}</div>
+<h2>${esc(t('form.guess'))}</h2><p class="note">${esc(t('form.guessSub'))}</p>${historyHtml(l)}
 <div class="slds">${slider('gPrice', l.gPrice, -2, 8, 0.25)}${slider('gRent', l.gRent, -2, 8, 0.25)}${slider('ret', l.ret, 0, 10, 0.25)}</div>
 <details class="more"${S.ui.open.rules ? ' open' : ''} data-open="rules"><summary>${esc(t('form.rules'))}${nOv ? ` <em>${esc(t('form.changed', { n: nOv }))}</em>` : ''}</summary>
 <p class="note">${esc(t('form.rulesSub', { p: t('pack.' + l.pack) }))}</p><div class="grid">${rules}</div>
@@ -209,6 +229,16 @@ function act(el, ev) {
   else if (a === 'close') closeSheet();
   else if (a === 'loc-del') { const l = cur(); if (!l) return; sheet(`<h2>${esc(t('del.h', { n: l.name || t('loc.unnamed') }))}</h2><p class="note">${esc(t('del.sub'))}</p><div class="row end"><button class="btn sm" data-act="close">${esc(t('common.cancel'))}</button><button class="btn sm danger" data-act="loc-del-yes">${esc(t('del.yes'))}</button></div>`); }
   else if (a === 'loc-del-yes') { const id = S.ui.loc; S.locs = S.locs.filter(l => l.id !== id); S.cmp = S.cmp.filter(x => x !== id); S.ui.loc = S.locs[0] ? S.locs[0].id : null; save(); closeSheet(); render(); }
+  else if (a === 'ask-place') {
+    const l = cur(); if (!l || askBusy) return;
+    if (!window.Ask) { toast(t('ask.off')); return; }
+    askBusy = true; render();
+    window.Ask.ready().then(ok => ok ? window.Ask.run('place_prices', { place: l.name || '', country: t('pack.' + l.pack), currency: l.cur, size: Number(l.sqm) || 70, kind: 'flat' }) : Promise.reject(Object.assign(new Error(t('ask.off')), { code: 'off' })))
+      .then(data => { edit(x => { x.research = { d: new Date().toISOString().slice(0, 10), data }; }); })
+      .catch(e => toast(e.message || t('ask.off')))
+      .finally(() => { askBusy = false; render(); });
+  }
+  else if (a === 'ask-use') { const l = cur(); const r = l && l.research && l.research.data; if (!r) return; edit(x => { x.mode = 'sqm'; x.price = Math.round(r.price_m2); x.rent = Math.round(r.rent_m2 * 10) / 10; }); render(); toast(t('ask.used')); }
   else if (a === 'mode') { edit(l => { const T = totals(l), to = el.dataset.m; if (to === l.mode) return; const q = Math.max(1, Number(l.sqm) || 1); if (to === 'sqm') { l.price = Math.round(T.price / q * 100) / 100; l.rent = Math.round(T.rent / q * 100) / 100; } else { l.price = Math.round(T.price); l.rent = Math.round(T.rent); } l.mode = to; }); render(); }
   else if (a === 'ov-reset') { edit(l => { l.ov = {}; }); render(); }
   else if (a === 'cmp') { const id = el.dataset.id; if (S.cmp.includes(id)) S.cmp = S.cmp.filter(x => x !== id); else if (S.cmp.length >= 4) { toast(t('cmp.max')); return; } else S.cmp.push(id); save(); render(); }
@@ -235,7 +265,8 @@ export function init() {
       const f = el.dataset.f, l = cur(); if (!l) return;
       if (f === 'pack') { edit(x => { const p = PACKS[el.value] || PACKS.XX; x.pack = el.value; x.region = p.region || null; x.cur = p.cur; x.rate = p.rate; x.term = p.term; x.ov = {}; }); render(); return; }
       if (f === 'region' || f === 'cur') { edit(x => { x[f] = el.value; }); render(); return; }
-      edit(x => { x[f] = f === 'name' ? el.value : el.value === '' ? 0 : Number(el.value); });
+      if (f === 'fixYears' && done) { edit(x => { x.fixYears = el.value === '' ? 0 : Number(el.value); }); render(); return; }
+      edit(x => { x[f] = f === 'name' ? el.value : el.value === '' ? (f === 'rate2' ? '' : 0) : Number(el.value); });
       if (el.type === 'range') { const o = document.querySelector(`[data-o="${f}"]`); if (o) o.textContent = pct(Number(el.value), 2); }
       if (f === 'name' && done) render(); else refresh();
     } else if (el.dataset.ov) {

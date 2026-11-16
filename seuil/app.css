@@ -157,3 +157,8 @@ details.more .grid { margin: 10px 0 12px; }
 #notice { display: flex; gap: 12px; align-items: center; justify-content: center; padding: calc(8px + env(safe-area-inset-top)) 16px 8px; background: var(--ink); color: var(--bg); font-size: 14px; }
 #notice .btn { background: var(--bg); color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* simulation and research (Nov 2026) */
+.mc .big { font-size: 18px; font-weight: 600; margin: 6px 0; }
+.research { border-left: 3px solid currentColor; padding: 4px 0 4px 12px; margin: 10px 0; }
+.note.hist { margin-top: 4px; }

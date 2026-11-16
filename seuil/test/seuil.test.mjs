@@ -104,3 +104,26 @@ test('English and French have the same keys, and every key used on screen exists
   setLang('fr'); assert.equal(t('form.changed', { n: 1 }), '1 modifié'); assert.equal(t('form.changed', { n: 3 }), '3 modifiés'); setLang('en');
   const bars = bridge(analyse(base('DE')).at); assert.ok(bars.length >= 5 && bars.every(b => k.en.includes('br.' + b.k)));
 });
+
+/* ---------- renewal, simulation, house-price history (Nov 2026) ---------- */
+import { monteCarlo } from '../js/engine.js';
+import { hpiGrowth } from '../js/history.js';
+test('a dearer renewal lowers the later advantage of buying, a cheaper one raises it', () => {
+  const loc = { pack: 'DE', region: 'BY', price: 400000, rent: 1650, sqm: 80, down: 100000, rate: 3.5, term: 30, gPrice: 2, gRent: 2.5, ret: 5, stay: 10 };
+  const adv = (x, y) => simulate({ ...loc, ...x }).rows[y].adv;
+  assert.equal(adv({ fixYears: 10, rate2: 6 }, 10), adv({}, 10), 'same until the renewal');
+  assert.ok(adv({ fixYears: 10, rate2: 6 }, 20) < adv({}, 20)); assert.ok(adv({ fixYears: 10, rate2: 2 }, 20) > adv({}, 20));
+  assert.ok(Math.abs(adv({ fixYears: 10, rate2: '' }, 20) - adv({}, 20)) < 0.01, 'empty renewal rate = same rate');
+});
+test('simulation is repeatable and its shares are proper', () => {
+  const loc = { pack: 'DE', region: 'BY', price: 400000, rent: 1650, sqm: 80, down: 100000, rate: 3.5, term: 30, gPrice: 2, gRent: 2.5, ret: 5, stay: 10 };
+  const a = monteCarlo(loc), b = monteCarlo(loc);
+  assert.deepEqual(a, b); assert.ok(a.pAhead > 0 && a.pAhead < 1); assert.ok(a.p10 <= a.p50 && a.p50 <= a.p90);
+});
+test('Eurostat JSON-stat: ten-year growth per country', () => {
+  const js = { id: ['freq', 'unit', 'purchase', 'geo', 'time'], size: [1, 1, 1, 2, 11], dimension: { geo: { category: { index: { DE: 0, FR: 1 } } }, time: { category: { index: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [String(2014 + i), i])) } } }, value: {} };
+  for (let i = 0; i < 11; i++) { js.value[i] = 100 * Math.pow(1.05, i); js.value[11 + i] = 100 * Math.pow(1.02, i); }
+  const g = hpiGrowth(js);
+  assert.deepEqual(g.DE, { from: '2014', to: '2024', pct: 5 }); assert.equal(g.FR.pct, 2);
+  assert.deepEqual(hpiGrowth(null), {});
+});

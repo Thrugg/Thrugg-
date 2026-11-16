@@ -29,6 +29,9 @@ export function simulate(loc, shift = {}) {
   const down = Math.min(P, Math.max(0, num(loc.down)));
   const reno = Math.max(0, num(loc.reno));
   const rate = Math.max(0, num(loc.rate) + num(shift.rate));
+  /* SE-1: the rate is fixed for fixYears, then renewed at rate2 (both optional; empty = one rate for the whole loan) */
+  const fixM = num(loc.fixYears) > 0 ? Math.round(num(loc.fixYears) * 12) : 0;
+  const rate2 = fixM ? Math.max(0, (loc.rate2 === '' || loc.rate2 == null ? num(loc.rate) : num(loc.rate2)) + num(shift.rate2 ?? shift.rate)) : rate;
   const termM = Math.max(1, Math.round(num(loc.term, 25))) * 12;
   const gP = (num(loc.gPrice, 2) + num(shift.gPrice)) / 100, gR = (num(loc.gRent, 2) + num(shift.gRent)) / 100;
   const ret = (num(loc.ret, 5) + num(shift.ret)) / 100;
@@ -38,7 +41,7 @@ export function simulate(loc, shift = {}) {
   const upfront = down + fees + reno;
 
   /* loan: full annuity, or (Switzerland) straight-line down to a share of the price, interest only after */
-  const pay = R.loan === 'annuity' ? annuity(loan0, rate, termM) : 0;
+  let pay = R.loan === 'annuity' ? annuity(loan0, rate, termM) : 0;
   const floor = R.loan === 'target' ? Math.min(loan0, P * R.loanTo / 100) : 0;
   const stepM = R.loan === 'target' && R.loanYears > 0 ? (loan0 - floor) / (R.loanYears * 12) : 0;
 
@@ -65,7 +68,9 @@ export function simulate(loc, shift = {}) {
   for (let m = 1; m <= HORIZON * 12; m++) {
     if (m > 1 && (m - 1) % 12 === 0) rent *= 1 + gR;
     V *= mP; pfR *= mI; pfO *= mI;
-    const interest = loan * rate / 1200;
+    const rNow = fixM && m > fixM ? rate2 : rate;
+    if (fixM && m === fixM + 1 && R.loan === 'annuity' && m <= termM) pay = annuity(loan, rate2, termM - fixM);   // renewal: same end date, new rate
+    const interest = loan * rNow / 1200;
     let principal = 0;
     if (R.loan === 'annuity') principal = m <= termM ? Math.min(loan, Math.max(0, pay - interest)) : 0;
     else principal = Math.min(Math.max(0, loan - floor), stepM);
@@ -115,6 +120,27 @@ export function analyse(loc) {
     ratio: base.rent0 > 0 ? base.price / (base.rent0 * 12) : null,
     ok: base.price > 0 && base.rent0 > 0
   };
+}
+
+/* SE-2: ranges by simulation. The four guesses (and the renewal rate) are drawn together many times: price growth
+   and rent growth move together (correlation 0.6), the return and the rates on their own. Seeded, so the same inputs
+   always give the same answer. Returns the share of draws in which buying is ahead at the planned stay, and the
+   10th / 50th / 90th percentile of the threshold year (HORIZON + 1 = never). */
+export function monteCarlo(loc, n = 400, seed = 7) {
+  let x = seed >>> 0 || 1;
+  const rnd = () => { x ^= x << 13; x >>>= 0; x ^= x >> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+  const gauss = () => { let u = 0, v = 0; while (u === 0) u = rnd(); while (v === 0) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const stay = Math.min(HORIZON, Math.max(1, Math.round(num(loc.stay, 7))));
+  const bes = [], ahead = [];
+  for (let i = 0; i < n; i++) {
+    const z1 = gauss(), z2 = 0.6 * z1 + 0.8 * gauss();
+    const sh = { gPrice: 1.2 * z1, gRent: 1 * z2, ret: 2 * gauss(), rate: 0, rate2: num(loc.fixYears) > 0 ? 1.2 * gauss() : 0 };
+    const r = simulate(loc, sh).rows, be = breakEven(r);
+    bes.push(be === null ? HORIZON + 1 : be); ahead.push(r[stay].adv >= 0 ? 1 : 0);
+  }
+  bes.sort((a, b) => a - b);
+  const q = p => bes[Math.min(n - 1, Math.floor(p * n))];
+  return { n, stay, pAhead: ahead.reduce((a, b) => a + b, 0) / n, p10: q(0.1), p50: q(0.5), p90: q(0.9), never: bes.filter(v => v > HORIZON).length / n };
 }
 
 /* Bridge rows in display order, zero rows dropped. Their sum is the advantage of buying at that year. */

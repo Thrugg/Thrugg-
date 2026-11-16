@@ -64,7 +64,13 @@ const EN = {
   'sync.none': 'Sync is not set up on this site.', 'sync.off': 'Not signed in. Your places are saved on this device only.', 'sync.on': 'Signed in as {e}. Your places are saved to your account and follow you to your other devices.', 'sync.signin': 'Sign in to sync', 'sync.manage': 'Account', 'sync.private': 'Your figures stay in this browser and in your own account. They are never part of the public code of this site.',
   'ideas.sub': 'Something missing or annoying while you use the app? Note it in your “Apps ideas inbox” file; the weekly review reads it. Paste the link to that file once and every app on this device will offer it.', 'ideas.link': 'Link to the file', 'ideas.open': 'Open the inbox',
   'data.export': 'Export a backup', 'data.import': 'Import a backup', 'data.imported': 'Backup imported', 'data.importFail': 'That file is not a Seuil backup', 'data.reset': 'Delete everything',
-  'reset.h': 'Delete all places?', 'reset.sub': 'This empties Seuil on this device and, once it syncs, in your account. The examples come back.', 'reset.yes': 'Delete everything'
+  'reset.h': 'Delete all places?', 'reset.sub': 'This empties Seuil on this device and, once it syncs, in your account. The examples come back.', 'reset.yes': 'Delete everything',
+  'f.fixYears': 'Rate fixed for', 'f.fixHint': 'Optional. In Germany usually 10 or 15 years; the loan is then renewed at the rate of the day.', 'f.rate2': 'Rate after that', 'f.rate2Hint': 'Your guess for the renewal. Empty = the same rate.',
+  'mc.title': 'In 400 possible futures', 'mc.ahead': 'Buying is ahead after your {n} years in {p} % of them.', 'mc.half': 'Half of them cross by year {y}; one in ten by year {lo}, nine in ten by {hi}.', 'mc.mostNever': 'In most of them buying never catches up within {n} years ({p} % never do).', 'mc.never': 'never',
+  'mc.how': 'Each future draws price growth, rent growth (moving together), the return and the renewal rate around your guesses.',
+  'ask.btn': 'Ask Claude for price and rent here', 'ask.wait': 'Claude is researching…', 'ask.found': 'Claude found for {p}:', 'ask.price': '{v} per m² to buy,', 'ask.rent': '{v} per m² a month to rent.', 'ask.conf.high': 'sources agree', 'ask.conf.medium': 'sources roughly agree', 'ask.conf.low': 'few or uneven sources',
+  'ask.use': 'Use these figures (per m²)', 'ask.used': 'Price and rent set per m²', 'ask.off': 'Ask Claude needs the one-time setup in the README and a signed-in account.',
+  'hist.hpi': '{c}: house prices grew {v} % a year from {a} to {b} (Eurostat house price index).', 'hist.claude': 'For this place Claude found about {v} % a year over ten years.'
 };
 const FR = {
   'tab.seuil': 'Seuil', 'tab.compare': 'Comparer', 'tab.rules': 'Règles', 'tab.settings': 'Réglages',
@@ -131,7 +137,13 @@ const FR = {
   'sync.none': 'La synchronisation n’est pas configurée sur ce site.', 'sync.off': 'Non connecté. Vos lieux sont enregistrés sur cet appareil seulement.', 'sync.on': 'Connecté en tant que {e}. Vos lieux sont enregistrés dans votre compte et vous suivent sur vos autres appareils.', 'sync.signin': 'Se connecter pour synchroniser', 'sync.manage': 'Compte', 'sync.private': 'Vos chiffres restent dans ce navigateur et dans votre propre compte. Ils ne figurent jamais dans le code public de ce site.',
   'ideas.sub': 'Quelque chose manque ou agace à l’usage ? Notez-le dans votre fichier « Apps ideas inbox » ; la revue hebdomadaire le lit. Collez une fois le lien vers ce fichier et toutes les apps de cet appareil le proposeront.', 'ideas.link': 'Lien vers le fichier', 'ideas.open': 'Ouvrir la boîte à idées',
   'data.export': 'Exporter une sauvegarde', 'data.import': 'Importer une sauvegarde', 'data.imported': 'Sauvegarde importée', 'data.importFail': 'Ce fichier n’est pas une sauvegarde Seuil', 'data.reset': 'Tout supprimer',
-  'reset.h': 'Supprimer tous les lieux ?', 'reset.sub': 'Seuil est vidé sur cet appareil et, après synchronisation, dans votre compte. Les exemples reviennent.', 'reset.yes': 'Tout supprimer'
+  'reset.h': 'Supprimer tous les lieux ?', 'reset.sub': 'Seuil est vidé sur cet appareil et, après synchronisation, dans votre compte. Les exemples reviennent.', 'reset.yes': 'Tout supprimer',
+  'f.fixYears': 'Taux fixé pendant', 'f.fixHint': 'Facultatif. En Allemagne souvent 10 ou 15 ans ; le prêt est ensuite renégocié au taux du jour.', 'f.rate2': 'Taux ensuite', 'f.rate2Hint': 'Votre hypothèse pour la renégociation. Vide = le même taux.',
+  'mc.title': 'Sur 400 avenirs possibles', 'mc.ahead': 'L’achat est devant après vos {n} ans dans {p} % d’entre eux.', 'mc.half': 'La moitié basculent avant l’année {y} ; un sur dix avant l’année {lo}, neuf sur dix avant {hi}.', 'mc.mostNever': 'Dans la plupart, l’achat ne rattrape jamais la location en {n} ans ({p} % jamais).', 'mc.never': 'jamais',
+  'mc.how': 'Chaque avenir tire la hausse des prix, celle des loyers (liées), le rendement et le taux de renégociation autour de vos hypothèses.',
+  'ask.btn': 'Demander à Claude le prix et le loyer ici', 'ask.wait': 'Claude cherche…', 'ask.found': 'Claude a trouvé pour {p} :', 'ask.price': '{v} le m² à l’achat,', 'ask.rent': '{v} le m² par mois en location.', 'ask.conf.high': 'sources concordantes', 'ask.conf.medium': 'sources à peu près concordantes', 'ask.conf.low': 'sources rares ou inégales',
+  'ask.use': 'Utiliser ces chiffres (au m²)', 'ask.used': 'Prix et loyer réglés au m²', 'ask.off': 'Demander à Claude nécessite la mise en place décrite dans le README et un compte connecté.',
+  'hist.hpi': '{c} : les prix des logements ont augmenté de {v} % par an de {a} à {b} (indice Eurostat des prix des logements).', 'hist.claude': 'Pour ce lieu, Claude a trouvé environ {v} % par an sur dix ans.'
 };
 const DICT = { en: EN, fr: FR };
 let cur = 'en';
