@@ -38,6 +38,7 @@ const DEF = () => {
     sprays: 6,
     bottles: ex.bottles, wears: ex.wears, queue: ex.queue,
     ritual: {},                                            // 'YYYY-MM' → { set, done }
+    ai: {},                                                // Claude's last portrait and next picks
     inbox: '',
     ui: { tab: 'today', occ: null, band: null, sort: 'grade' }   // stays on the device
   };

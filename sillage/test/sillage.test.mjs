@@ -116,3 +116,52 @@ test('English and French have the same keys, and every key used on screen exists
   for (const l of ['en', 'fr']) { setLang(l); const p = t('ask.prompt', { fam: FAMILIES.join(', ') }); assert.ok(p.includes('[{"house":"…"') && p.includes('"base":["…"]}') && p.includes('citrus, aromatic') && !p.includes('{fam}'), 'the question to Claude keeps its JSON shape in ' + l); }
   setLang('fr'); assert.equal(t('card.wears', { n: 1 }), '1 port'); assert.equal(t('ward.h1n', { n: 5 }), '5 flacons'); setLang('en');
 });
+
+/* ---------- matching, profile, next picks, year (Nov 2026) ---------- */
+import { LIBRARY } from '../js/library.js';
+import { ACCORDS, accordMap, accordsOfNote, compare, similarTo, profile, nextPicks, wearYear, enrich } from '../js/match.js';
+
+test('library rows are complete and unique, and every family is known', () => {
+  assert.ok(LIBRARY.length >= 100);
+  const seen = new Set();
+  for (const f of LIBRARY) {
+    const k = (f.house + ' ' + f.name).toLowerCase(); assert.ok(!seen.has(k), k); seen.add(k);
+    assert.ok(FAMILIES.includes(f.family), k + ' ' + f.family);
+    assert.ok(f.year > 1900 && f.year < 2030, k); assert.ok(f.notes.base.length >= 1 && f.notes.heart.length >= 1, k);
+  }
+});
+test('notes feed accords; a fragrance accord map peaks at 1', () => {
+  assert.deepEqual(accordsOfNote('Bergamot'), ['citrus']);
+  assert.ok(accordsOfNote('vetiver').includes('woody')); assert.ok(accordsOfNote('vanilla').includes('gourmand'));
+  assert.ok(accordsOfNote('violet leaf').includes('green') && !accordsOfNote('violet leaf').includes('floral'));
+  const m = accordMap(LIBRARY.find(f => f.name === "Terre d'Hermès"));
+  assert.equal(Math.max(...ACCORDS.map(a => m[a])), 1); assert.ok(m.woody > m.gourmand);
+});
+test('similar fragrances share notes, skip what is owned, and give reasons', () => {
+  const terre = { id: 'x', house: 'Hermès', name: "Terre d'Hermès", family: 'woody', notes: { top: 'orange, grapefruit', heart: 'pepper, flint', base: 'vetiver, cedar' } };
+  const s = similarTo(terre, { owned: [{ house: 'Dior', name: 'Dior Homme' }] });
+  assert.equal(s.length, 5);
+  assert.ok(!s.some(x => x.f.name === "Terre d'Hermès" || x.f.name === 'Dior Homme'));
+  assert.ok(s.every(x => x.score > 0.5)); assert.ok(s[0].shared.length >= 1);
+  const c = compare(enrich(terre), LIBRARY.find(f => f.name === 'Tobacco Vanille'));
+  assert.ok(c.score < s[4].score); assert.equal(c.shade, 'warmer');
+  assert.deepEqual(similarTo({ house: '', name: 'Unknown', notes: {} }), []);
+  assert.ok(enrich({ house: 'Dior', name: 'Sauvage', notes: {} }).notes.base.includes('ambroxan'), 'typed name borrows the library pyramid');
+});
+test('profile weighs grades and wears, finds gaps and untried notes', () => {
+  const pr = profile(B, W);
+  assert.equal(pr.n, 3); assert.ok(pr.top.length >= 2);
+  assert.ok(pr.untried.includes('iris')); assert.ok(['dry', 'balanced', 'sweet'].includes(pr.sweetness));
+  const onlyWarm = profile([B[1]], []); assert.equal(onlyWarm.gaps.length, 0, 'no gap judgement from one bottle');
+});
+test('next picks come in three lanes and never repeat or include owned scents', () => {
+  const np = nextPicks(B, W);
+  const all = [...np.safe, ...np.gap, ...np.wild].map(x => x.f.house + x.f.name);
+  assert.ok(np.safe.length === 2); assert.equal(new Set(all).size, all.length);
+  assert.ok(!all.some(n => /Sauvage$|Tobacco Vanille|Acqua di Giò$/.test(n)));
+  assert.ok(np.wild.every(x => x.newNote));
+});
+test('wear year counts by month with the signature bottle', () => {
+  const y = wearYear(B, W, 2026);
+  assert.equal(y.total, 4); assert.equal(y.months[10].n, 2); assert.equal(y.months[9].top.b.id, 'b'); assert.equal(y.seasons.autumn, 3);
+});

@@ -1,13 +1,15 @@
 /* Sillage — every screen. Reads the state, draws HTML, handles taps through data-act. */
 import { S, save, saveUi, reset, uid, blankBottle, examples, hasExamples, dropExamples, setInbox, exportBackup, importBackup, WX_KEY } from './store.js';
-import { FAMILIES, SEASONS, OCCASIONS, CONCS, SHAPES, BANDS, iso, bandOf, seasonOf, parseNotes, wearIndex, bottleStats, wardrobeStats, suggest, taste, exportData, parseSuggestions, sameScent } from './engine.js';
+import { FAMILIES, SEASONS, OCCASIONS, CONCS, SHAPES, BANDS, JUICE, iso, bandOf, seasonOf, parseNotes, wearIndex, bottleStats, wardrobeStats, suggest, taste, exportData, parseSuggestions, sameScent } from './engine.js';
 import { bottle, pyramid } from './draw.js';
 import { t, setLang, lang } from './i18n.js';
+import { similarTo, profile, nextPicks, wearYear, ACCORDS } from './match.js';
+import { LIBRARY } from './library.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const TABS = ['today', 'wardrobe', 'queue', 'settings'], CURS = ['EUR', 'CHF', 'GBP', 'USD', 'DKK', 'PLN'];
-const ui = { session: undefined, draft: null, wx: null, wxTried: false, askText: '' };
+const ui = { session: undefined, draft: null, wx: null, wxTried: false, askText: '', aiSim: {}, busy: null, cands: new Map() };
 const loc = () => lang() === 'fr' ? 'fr-FR' : 'en-GB';
 const nf = {};
 const money = (v, d = 0) => { const k = loc() + S.cur + d; nf[k] = nf[k] || new Intl.NumberFormat(loc(), { style: 'currency', currency: S.cur, maximumFractionDigits: d, minimumFractionDigits: d }); return nf[k].format(v || 0); };
@@ -20,6 +22,67 @@ function sheet(html) { const d = $('#sheet'); d.innerHTML = html; if (!d.open) d
 const closeSheet = () => { const d = $('#sheet'); if (d.open) d.close(); ui.draft = null; };
 const exBanner = () => hasExamples() ? `<p class="banner">${esc(t('ex.banner'))} <button class="link" data-act="ex-off">${esc(t('ex.off'))}</button></p>` : '';
 const tiers = b => [['top', 'n.top'], ['heart', 'n.heart'], ['base', 'n.base']].map(([k, l]) => ({ label: t(l), notes: parseNotes(b.notes && b.notes[k]) }));
+
+/* ---------- matching, profile and Claude (SI-1 to SI-4) ---------- */
+const fname = f => String(f.name || '').toLowerCase().startsWith(String(f.house || '').toLowerCase()) ? f.name : f.name;
+const listed = f => S.queue.some(q => sameScent(q, f)) || S.bottles.some(b => sameScent(b, f));
+const dropped = () => S.queue.filter(q => q.verdict === 'drop');
+const simWhy = x => [x.shared.length ? t('sim.shares', { a: x.shared.join(', ') }) : '', x.shade ? t('sim.' + x.shade) : '', x.extra.length ? t('sim.adds', { a: x.extra.join(', ') }) : ''].filter(Boolean).join(' · ');
+/* a candidate shown on screen, kept by id so its button can add it to the list */
+const cand = (f, why, src) => { const id = 'c' + ui.cands.size; ui.cands.set(id, { house: f.house, name: f.name, family: f.family || '', notes: f.notes || null, why, src }); return id; };
+function candRow(f, why, src, meta) {
+  const id = cand(f, why, src), on = listed(f);
+  return `<div class="sim"><span class="simt"><small class="house">${esc(f.house)}${meta ? ' · ' + esc(meta) : ''}</small><b class="fname">${esc(fname(f))}</b>${why ? `<small>${esc(why)}</small>` : ''}</span>${on ? `<small class="onlist">${esc(t('sim.listed'))}</small>` : `<button class="btn sm" data-act="q-cand" data-c="${id}">${esc(t('sim.add'))}</button>`}</div>`;
+}
+const metaOf = f => [f.year, f.price ? t('pb.' + f.price) : ''].filter(Boolean).join(' · ');
+async function askClaude(task, input) {
+  if (!window.Ask || !(await window.Ask.ready())) { toast(t('ai.off')); return null; }
+  try { return await window.Ask.run(task, input); } catch (e) { toast(e.message || t('ai.off')); return null; }
+}
+const wardrobeForAI = () => { const ix = wearIndex(S.wears); return S.bottles.filter(b => !b.ex || S.bottles.every(x => x.ex)).map(b => ({ ...b, notes: { top: parseNotes(b.notes && b.notes.top), heart: parseNotes(b.notes && b.notes.heart), base: parseNotes(b.notes && b.notes.base) }, wears: (ix[b.id] || { n: 0 }).n })); };
+const excludeForAI = () => S.queue.map(q => `${q.house} ${q.name}`.trim());
+function simSection(b) {
+  const sims = similarTo(b, { owned: S.bottles, exclude: dropped() });
+  const ai = ui.aiSim[b.id];
+  const aiRows = ai ? `<h3 class="aih">${esc(t('ai.from'))}</h3>${(ai.items || []).map(x => candRow(x, [t('kind.' + x.kind), x.why].filter(Boolean).join(' · '), 'claude', x.price_band ? t('pb.' + x.price_band) : '')).join('')}` : '';
+  return `<section class="sims"><h3>${esc(t('sim.h'))}</h3>${sims.length ? `<p class="note">${esc(t('sim.sub', { n: LIBRARY.length }))}</p>${sims.map(x => candRow(x.f, simWhy(x), 'library', metaOf(x.f))).join('')}` : `<p class="note">${esc(t('sim.none'))}</p>`}
+<div class="row"><button class="btn sm" data-act="ai-sim" data-id="${b.id}" ${ui.busy ? 'disabled' : ''}>${esc(ui.busy === 'sim' + b.id ? t('ai.wait') : t('ai.more'))}</button></div>${aiRows}</section>`;
+}
+function profileCard() {
+  const pr = profile(S.bottles, S.wears);
+  if (pr.n < 2) return `<section class="nose"><h2>${esc(t('prof.h'))}</h2><p class="note">${esc(t('prof.need'))}</p></section>`;
+  const accs = ACCORDS.filter(a => pr.accords[a] >= 0.15).sort((a, b) => pr.accords[b] - pr.accords[a]).slice(0, 6);
+  const arch = t('prof.arch', { a: pr.top.slice(0, 2).map(a => t('acc.' + a)).join(lang() === 'fr' ? ' et ' : ' and '), b: pr.top.slice(2, 4).map(a => t('acc.' + a)).join(lang() === 'fr' ? ' et ' : ' and ') || '…' });
+  const style = [t('prof.' + pr.sweetness), t('prof.' + pr.freshness), pr.strength ? t('prof.' + (pr.strength === 'mixed' ? 'mixedc' : pr.strength)) : '', pr.mostOcc ? t('prof.occ', { o: t('occ.' + pr.mostOcc).toLowerCase() }) : ''].filter(Boolean).join(' · ');
+  const gap = g => g.k === 'season' ? t('gap.season', { s: t('season.' + g.v).toLowerCase() }) : g.k === 'occ' ? t('gap.occ', { o: t('occ.' + g.v).toLowerCase() }) : t('gap.family', { f: t('fam.' + g.v).toLowerCase() });
+  const ai = S.ai && S.ai.portrait;
+  return `<section class="nose prof"><h2>${esc(t('prof.h'))}</h2><p class="note">${esc(t('prof.sub', { n: pr.n }))}</p>
+<p class="arch">${esc(arch.charAt(0).toUpperCase() + arch.slice(1))}</p><p class="sub">${esc(style)}</p>
+<div class="accs">${accs.map(a => `<div class="acc"><span>${esc(t('acc.' + a))}</span><i style="--w:${Math.round(pr.accords[a] * 100)}%"></i></div>`).join('')}</div>
+<p class="sub"><b>${esc(t('prof.seasons'))}:</b> ${SEASONS.map(x => `${esc(t('season.' + x))} ${pr.seasons[x]}`).join(' · ')}</p>
+<p class="sub"><b>${esc(t('prof.gaps'))}:</b> ${pr.gaps.length ? esc(pr.gaps.map(gap).join(' · ')) : esc(t('prof.noGap'))}</p>
+${pr.untried.length ? `<p class="sub">${esc(t('prof.untried', { a: pr.untried.join(', ') }))}</p>` : ''}${pr.favourites.length ? `<p class="sub">${esc(t('prof.favs', { a: pr.favourites.map(full).join(', ') }))}</p>` : ''}
+${ai ? `<div class="portrait"><h3>${esc(t('prof.portrait'))}: ${esc(ai.archetype || '')}</h3><p>${esc(ai.portrait || '')}</p>${ai.loves && ai.loves.length ? `<p class="sub"><b>${esc(t('prof.loves'))}:</b> ${esc(ai.loves.join(' · '))}</p>` : ''}${ai.gaps && ai.gaps.length ? `<p class="sub"><b>${esc(t('prof.gaps'))}:</b> ${esc(ai.gaps.map(g => g.gap).join(' · '))}</p>` : ''}${ai.try_notes && ai.try_notes.length ? `<p class="sub"><b>${esc(t('prof.try'))}:</b> ${esc(ai.try_notes.join(', '))}</p>` : ''}</div>` : ''}
+<div class="row"><button class="btn sm" data-act="ai-prof" ${ui.busy ? 'disabled' : ''}>${esc(ui.busy === 'prof' ? t('ai.wait') : ai ? t('prof.aiAgain') : t('prof.ai'))}</button></div></section>`;
+}
+function nextCard() {
+  const np = nextPicks(S.bottles, S.wears, { exclude: S.queue });
+  if (!np.pr.n) return `<section class="card next"><h3>${esc(t('next.h'))}</h3><p class="note">${esc(t('next.empty'))}</p></section>`;
+  const reason = x => x.lane === 'gap' && x.fills ? (x.fills.k === 'season' ? t('next.fills.season', { s: t('season.' + x.fills.v).toLowerCase() }) : x.fills.k === 'family' ? t('next.fills.family', { f: t('fam.' + x.fills.v).toLowerCase() }) : t('next.fills.occ', { o: t('occ.' + x.fills.v).toLowerCase() })) : x.lane === 'wild' && x.newNote ? t('next.new', { n: x.newNote }) : x.near ? t('next.near', { b: full(x.near) }) : '';
+  const lane = (k, arr) => arr.length ? `<h4 class="lane">${esc(t('lane.' + k))}</h4>${arr.map(x => candRow(x.f, [reason(x), x.c ? simWhy(x.c) : ''].filter(Boolean).join(' · '), 'library', metaOf(x.f))).join('')}` : '';
+  const ai = S.ai && S.ai.next;
+  const aiRows = ai ? `<h3 class="aih">${esc(t('ai.from'))}</h3>${['safe', 'gap', 'wild'].map(k => { const arr = (ai.picks || []).filter(p => p.lane === k); return arr.length ? `<h4 class="lane">${esc(t('lane.' + k))}</h4>${arr.map(p => candRow(p, [p.why, p.price, p.sample ? (p.sample.easy ? t('next.sample', { w: p.sample.where }) : t('next.sampleHard')) : ''].filter(Boolean).join(' · '), 'claude', p.price_band ? t('pb.' + p.price_band) : '')).join('')}` : ''; }).join('')}${(ai.sources || []).length ? `<p class="note">${ai.sources.slice(0, 4).map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>`).join(' · ')}</p>` : ''}` : '';
+  return `<section class="card next"><h3>${esc(t('next.h'))}</h3><p class="note">${esc(t('next.sub'))}</p>${lane('safe', np.safe)}${lane('gap', np.gap)}${lane('wild', np.wild)}
+<p class="note">${esc(t('next.aiSub'))}</p><div class="row"><button class="btn sm" data-act="ai-next" ${ui.busy ? 'disabled' : ''}>${esc(ui.busy === 'next' ? t('ai.wait') : t('next.ai'))}</button></div>${aiRows}</section>`;
+}
+function yearCard() {
+  const y = new Date().getFullYear(), yr = wearYear(S.bottles, S.wears, y);
+  if (!yr.total) return `<section class="year"><h2>${esc(t('year.h'))}</h2><p class="note">${esc(t('year.none', { y }))}</p></section>`;
+  const mx = Math.max(...yr.months.map(m => m.n), 1);
+  return `<section class="year"><h2>${esc(t('year.h'))}</h2><p class="note">${esc(t('year.sub', { n: yr.total, y }))} · ${SEASONS.map(x => `${esc(t('season.' + x))} ${yr.seasons[x]}`).join(' · ')}</p>
+<div class="months">${yr.months.map(m => `<div class="mon"><i style="--h:${Math.round(m.n / mx * 100)}%;--c:${m.top && m.top.b ? (JUICE[m.top.b.family] || '#999') : 'transparent'}"></i><span>${esc(new Date(y, m.m, 15).toLocaleDateString(loc(), { month: 'narrow' }))}</span></div>`).join('')}</div>
+<div class="lately">${yr.months.filter(m => m.top && m.top.b).map(m => `<div class="lrow"><span>${esc(new Date(y, m.m, 15).toLocaleDateString(loc(), { month: 'long' }))}</span><b>${esc(full(m.top.b))} · ${m.top.n}</b></div>`).join('')}</div></section>`;
+}
 
 /* ---------- weather (Open-Meteo, no key) ---------- */
 const wxKey = () => `${Number(S.place.lat).toFixed(2)},${Number(S.place.lon).toFixed(2)}`;
@@ -74,10 +137,10 @@ function renderWardrobe() {
   const nose = tt.graded >= 2 && tt.liked.length ? `<section class="nose"><h2>${esc(t('nose.h'))}</h2><p class="note">${esc(t('nose.sub', { n: tt.graded }))}</p><div class="notes">${tt.liked.map((x, i) => `<i class="${i < 3 ? 'hi' : ''}">${esc(x.k)}</i>`).join('')}</div>${tt.families.length ? `<p class="sub fam">${esc(t('nose.fam', { a: tt.families.slice(0, 2).map(x => t('fam.' + x.k).toLowerCase()).join(lang() === 'fr' ? ' et ' : ' and ') }))}${tt.avoided.length ? ' ' + esc(t('nose.less', { a: tt.avoided.map(x => x.k).join(', ') })) : ''}</p>` : ''}</section>` : '';
   const callout = ws.most && ws.least && ws.most.b !== ws.least.b ? `<p class="callout">${esc(t('ward.most', { a: full(ws.most.b), n: ws.most.n }))} ${esc(ws.least.n === 0 ? t('ward.never', { b: full(ws.least.b) }) : t('ward.least', { b: full(ws.least.b), n: ws.least.n }))}</p>` : '';
   return exBanner() + `<section class="lead"><p class="kicker">${esc(t('ward.k'))}</p><h1>${esc(t('ward.h1n', { n: S.bottles.length }))}</h1></section>
-<section class="tiles">${tile(t('st.value'), money(ws.value))}${tile(t('st.wears'), ws.wears)}${tile(t('st.recent'), ws.recent)}${tile(t('st.perWear'), ws.perWear !== null ? money(ws.perWear, 2) : '–')}</section>${callout}${nose}
+<section class="tiles">${tile(t('st.value'), money(ws.value))}${tile(t('st.wears'), ws.wears)}${tile(t('st.recent'), ws.recent)}${tile(t('st.perWear'), ws.perWear !== null ? money(ws.perWear, 2) : '–')}</section>${callout}${profileCard()}
 <section><div class="listhead"><h2>${esc(t('ward.bottles'))}</h2><label class="sort"><span>${esc(t('sort.by'))}</span><select data-f="sort">${['grade', 'worn', 'cost', 'name'].map(k => `<option value="${k}"${by === k ? ' selected' : ''}>${esc(t('sort.' + k))}</option>`).join('')}</select></label></div>
 ${list.map(b => { const st = bottleStats(b, ix, S.sprays); return `<div class="bcard"><button class="bmain" data-act="open" data-id="${b.id}">${bottle(b.shape, st.level, b.family, 46)}<span class="bt"><small class="house">${esc(b.house)}</small><b class="fname">${esc(b.name || t('bottle.unnamed'))}</b><small>${esc([b.conc, b.size ? b.size + ' ml' : '', b.family ? t('fam.' + b.family) : ''].filter(Boolean).join(' · '))}</small><small class="figs">${esc(t('card.wears', { n: st.wears }))}${st.costPerWear !== null ? ' · ' + esc(t('card.cpw', { v: money(st.costPerWear, 2) })) : ''}${st.mlLeft !== null && st.wears ? ' · ' + esc(t('card.left', { n: Math.round(st.mlLeft) })) : ''}</small></span><span class="grade${Number(b.grade) >= 8 ? ' hi' : ''}">${gradeText(b.grade)}</span></button><button class="btn sm wearbtn" data-act="wear" data-id="${b.id}" aria-label="${esc(t('today.wearAria', { n: full(b) }))}">${esc(t('today.wearShort'))}</button></div>`; }).join('')}
-<div class="row actions"><button class="btn pri" data-act="add">${esc(t('bottle.add'))}</button></div></section>`;
+<div class="row actions"><button class="btn pri" data-act="add">${esc(t('bottle.add'))}</button></div></section>${yearCard()}`;
 }
 function openBottle(id) {
   const b = S.bottles.find(x => x.id === id); if (!b) return;
@@ -85,6 +148,7 @@ function openBottle(id) {
   const kv = (k, v) => `<div class="kv"><span>${esc(k)}</span><b>${v}</b></div>`;
   sheet(`<div class="bhead"><div>${bottle(b.shape, st.level, b.family, 84)}</div><div><p class="house">${esc(b.house)}</p><h2 class="fname">${esc(b.name || t('bottle.unnamed'))}</h2><p class="sub">${esc([b.conc, b.size ? b.size + ' ml' : '', b.family ? t('fam.' + b.family) : ''].filter(Boolean).join(' · '))}</p><p class="gline"><span class="grade big${Number(b.grade) >= 8 ? ' hi' : ''}">${gradeText(b.grade)}</span><small>${esc(t('f.gradeOf'))}</small></p></div></div>
 ${pyramid(tiers(b))}
+${simSection(b)}
 <div class="kvs">${kv(t('card.wearsK'), st.wears)}${st.last ? kv(t('card.last'), esc(dayText(st.last))) : ''}${b.price ? kv(t('f.price'), money(b.price)) : ''}${st.costPerWear !== null ? kv(t('card.cpwK'), money(st.costPerWear, 2)) : ''}${st.mlLeft !== null ? kv(t('card.leftK'), esc(t('card.leftV', { n: Math.round(st.mlLeft), w: st.wearsLeft }))) : ''}</div>
 ${(b.seasons && b.seasons.length) || (b.occ && b.occ.length) ? `<p class="tags">${(b.seasons || []).map(s => `<i>${esc(t('season.' + s))}</i>`).join('')}${(b.occ || []).map(o => `<i>${esc(t('occ.' + o))}</i>`).join('')}</p>` : ''}
 ${b.note ? `<p class="sub pre">${esc(b.note)}</p>` : ''}
@@ -125,7 +189,7 @@ function renderQueue() {
   const sec = (k, arr) => arr.length ? `<section><h2>${esc(t(k, { n: arr.length }))}</h2>${arr.map(qItem).join('')}</section>` : '';
   return exBanner() + `<section class="lead"><p class="kicker">${esc(t('q.k'))}</p><h1>${esc(t('q.h1', { n: wish.length }))}</h1><p class="sub">${esc(t('q.sub'))}</p><div class="row"><button class="btn pri" data-act="q-add">${esc(t('q.add'))}</button></div></section>
 <section class="card ritual"><h3>${esc(t('rit.h', { m: new Date(m + '-15').toLocaleDateString(loc(), { month: 'long' }) }))}</h3><p class="note">${esc(t('rit.sub'))}</p><div class="ritrow"><span class="box"><input data-rit type="text" maxlength="80" value="${esc(rit.set || '')}" placeholder="${esc(t('rit.ph'))}" aria-label="${esc(t('rit.ph'))}"></span><label class="chk"><input type="checkbox" data-ritdone ${rit.done ? 'checked' : ''}> <span>${esc(t('rit.done'))}</span></label></div></section>
-<section class="card ask"><h3>${esc(t('ask.h'))}</h3><p class="sub">${esc(t('ask.sub'))}</p><ol><li>${esc(t('ask.1'))}<div class="row"><button class="btn sm" data-act="ask-copy">${esc(t('ask.copy'))}</button></div></li><li>${esc(t('ask.2'))}</li><li>${esc(t('ask.3'))}<textarea data-ask rows="3" placeholder="${esc(t('ask.ph'))}" aria-label="${esc(t('ask.ph'))}">${esc(ui.askText)}</textarea><div class="row"><button class="btn sm" data-act="ask-add">${esc(t('ask.add'))}</button></div></li></ol><p class="note">${esc(t('ask.note'))}</p></section>
+${nextCard()}<details class="more askalt"><summary>${esc(t('ask.alt'))}</summary><section class="card ask"><h3>${esc(t('ask.h'))}</h3><p class="sub">${esc(t('ask.sub'))}</p><ol><li>${esc(t('ask.1'))}<div class="row"><button class="btn sm" data-act="ask-copy">${esc(t('ask.copy'))}</button></div></li><li>${esc(t('ask.2'))}</li><li>${esc(t('ask.3'))}<textarea data-ask rows="3" placeholder="${esc(t('ask.ph'))}" aria-label="${esc(t('ask.ph'))}">${esc(ui.askText)}</textarea><div class="row"><button class="btn sm" data-act="ask-add">${esc(t('ask.add'))}</button></div></li></ol><p class="note">${esc(t('ask.note'))}</p></section></details>
 ${sec('q.wish', wish)}${sec('q.triedH', tried)}${dropped.length ? `<section><details class="more"><summary>${esc(t('q.dropped', { n: dropped.length }))}</summary>${dropped.map(qItem).join('')}</details></section>` : ''}`;
 }
 function askPrompt() { return t('ask.prompt', { fam: FAMILIES.join(', ') }) + '\n\n' + JSON.stringify(exportData(S, today()), null, 1); }
@@ -192,6 +256,27 @@ function act(el) {
   else if (a === 'q-set') { const q = S.queue.find(x => x.id === id); if (!q) return; const s = el.dataset.s; delete q.ex; if (s === 'drop') { q.verdict = 'drop'; q.state = 'sampled'; } else { q.verdict = null; q.state = s; if (s === 'sampled') q.tried = today(); } save(); render(); }
   else if (a === 'q-del') { S.queue = S.queue.filter(x => x.id !== id); save(); render(); }
   else if (a === 'q-buy') { const q = S.queue.find(x => x.id === id); if (!q) return; const b = blankBottle(); b.house = q.house; b.name = q.name; b.family = q.family || ''; if (q.notes) b.notes = { top: parseNotes(q.notes.top).join(', '), heart: parseNotes(q.notes.heart).join(', '), base: parseNotes(q.notes.base).join(', ') }; b.fromQ = q.id; startEdit(b); }
+  else if (a === 'q-cand') {
+    const c = ui.cands.get(el.dataset.c); if (!c || listed(c)) return;
+    S.queue.push({ id: uid(), house: c.house, name: c.name, why: c.why || '', family: FAMILIES.includes(c.family) ? c.family : '', notes: c.notes, src: c.src === 'claude' ? 'claude' : 'library', state: 'wish', verdict: null, note: '' });
+    save(); toast(t('sim.added')); el.replaceWith(Object.assign(document.createElement('small'), { className: 'onlist', textContent: t('sim.listed') }));
+    if (!$('#sheet').open) render();
+  }
+  else if (a === 'ai-sim' || a === 'ai-prof' || a === 'ai-next') {
+    if (ui.busy) return;
+    const b = a === 'ai-sim' ? S.bottles.find(x => x.id === id) : null;
+    ui.busy = a === 'ai-sim' ? 'sim' + id : a === 'ai-prof' ? 'prof' : 'next';
+    if (b) openBottle(b.id); else render();
+    const pr = profile(S.bottles, S.wears), wardrobe = wardrobeForAI();
+    const req = a === 'ai-sim' ? askClaude('fragrance_similar', { fragrance: wardrobe.find(x => x.id === id), wardrobe, exclude: excludeForAI() })
+      : a === 'ai-prof' ? askClaude('fragrance_profile', { bottles: wardrobe, accords: pr.accords })
+      : askClaude('fragrance_next', { bottles: wardrobe, profile: { accords: pr.accords, gaps: pr.gaps, untried: pr.untried, archetype: S.ai && S.ai.portrait ? S.ai.portrait.archetype : '' }, exclude: excludeForAI(), currency: S.cur, country: 'Germany' });
+    req.then(data => {
+      ui.busy = null;
+      if (data) { if (a === 'ai-sim') ui.aiSim[id] = data; else { S.ai = { ...(S.ai || {}), [a === 'ai-prof' ? 'portrait' : 'next']: { ...data, d: today() } }; save(); } }
+      if (b && $('#sheet').open) openBottle(b.id); else render();
+    });
+  }
   else if (a === 'ask-copy') copy(askPrompt());
   else if (a === 'ask-add') {
     let list; try { list = parseSuggestions(ui.askText); } catch (e) { toast(t('ask.bad')); return; }

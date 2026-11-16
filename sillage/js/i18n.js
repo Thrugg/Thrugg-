@@ -40,7 +40,24 @@ const EN = {
   'ideas.sub': 'Something missing or annoying while you use the app? Note it in your “Apps ideas inbox” file; the weekly review reads it. Paste the link to that file once and every app on this device will offer it.', 'ideas.link': 'Link to the file', 'ideas.open': 'Open the inbox',
   'data.export': 'Export a backup', 'data.import': 'Import a backup', 'data.imported': 'Backup imported', 'data.importFail': 'That file is not a Sillage backup', 'data.reset': 'Delete everything',
   'reset.h': 'Delete the whole wardrobe?', 'reset.sub': 'This empties Sillage on this device and, once it syncs, in your account. The examples come back.', 'reset.yes': 'Delete everything',
-  'credits': 'Forecast and town lookup: Open-Meteo.'
+  'credits': 'Forecast and town lookup: Open-Meteo.',
+  'sim.h': 'Similar fragrances', 'sim.sub': 'From the library in the app ({n} fragrances), matched on notes and accords.', 'sim.none': 'Add a few notes to this bottle to see similar fragrances.',
+  'sim.shares': 'Shares {a}', 'sim.fresher': 'fresher', 'sim.warmer': 'warmer', 'sim.sweeter': 'sweeter', 'sim.adds': 'adds {a}',
+  'sim.add': 'Add to my list', 'sim.added': 'Added to your sampling list', 'sim.listed': 'On your list',
+  'ai.more': 'Ask Claude for more', 'ai.wait': 'Asking Claude…', 'ai.from': 'From Claude', 'ai.off': 'Ask Claude needs the one-time setup in the README and a signed-in account.',
+  'kind.close': 'close match', 'kind.cheaper': 'cheaper alternative', 'kind.flanker': 'same line', 'kind.twist': 'a twist',
+  'pb.budget': 'budget', 'pb.mid': 'mid-price', 'pb.premium': 'premium', 'pb.niche': 'niche',
+  'acc.citrus': 'citrus', 'acc.aromatic': 'aromatic', 'acc.green': 'green', 'acc.aquatic': 'aquatic', 'acc.floral': 'floral', 'acc.fruity': 'fruity', 'acc.spicy': 'spicy', 'acc.woody': 'woody', 'acc.amber': 'amber', 'acc.leather': 'leather', 'acc.gourmand': 'gourmand', 'acc.musky': 'musky', 'acc.powdery': 'powdery', 'acc.smoky': 'smoky',
+  'prof.h': 'Your scent profile', 'prof.sub': 'From your {n} bottles, weighted by your grade and by how often you wear each one.', 'prof.arch': '{a}, with {b}',
+  'prof.dry': 'dry rather than sweet', 'prof.balanced': 'between dry and sweet', 'prof.sweet': 'on the sweet side', 'prof.fresh': 'mostly fresh', 'prof.mixed': 'fresh and warm in turns', 'prof.warm': 'mostly warm',
+  'prof.strong': 'worn strong (EDP and above)', 'prof.light': 'kept light', 'prof.mixedc': 'light and strong alike', 'prof.occ': 'most of all for {o}',
+  'prof.seasons': 'Seasons covered', 'prof.gaps': 'Gaps', 'gap.season': 'Nothing for {s}', 'gap.occ': 'Nothing tagged for {o}', 'gap.family': 'No {f} scent', 'prof.noGap': 'No obvious gap.',
+  'prof.untried': 'Notes you have not tried yet: {a}', 'prof.favs': 'Worn more than its grade says: {a}',
+  'prof.ai': 'Write my portrait with Claude', 'prof.aiAgain': 'Write it again', 'prof.portrait': 'Claude’s portrait', 'prof.loves': 'You love', 'prof.try': 'Worth trying', 'prof.need': 'Grade or add notes to two bottles or more to see your profile.',
+  'next.h': 'What to buy next', 'next.sub': 'Picked from the library for your profile. Sample before you buy.', 'lane.safe': 'Safe bet', 'lane.gap': 'Fills a gap', 'lane.wild': 'Wildcard',
+  'next.near': 'Close to your {b}', 'next.fills.season': 'For {s}', 'next.fills.family': 'Your first {f} scent', 'next.fills.occ': 'For {o}', 'next.new': 'Brings {n}, a note you have not tried',
+  'next.ai': 'Ask Claude: current prices and samples', 'next.aiSub': 'Claude checks on the web that each one is on sale, its price, and where to find a sample.', 'next.sample': 'Sample: {w}', 'next.sampleHard': 'Samples are hard to find', 'next.empty': 'Add and grade a few bottles first.',
+  'year.h': 'Your year', 'year.sub': '[{n} wear|{n} wears] in {y}', 'year.none': 'No wear logged in {y} yet.', 'year.sig': 'Signature', 'ask.alt': 'Without Ask Claude: the copy-and-paste way'
 };
 const FR = {
   'tab.today': 'Aujourd’hui', 'tab.wardrobe': 'Garde-robe', 'tab.queue': 'À sentir', 'tab.settings': 'Réglages',
@@ -83,7 +100,24 @@ const FR = {
   'ideas.sub': 'Quelque chose manque ou agace à l’usage ? Notez-le dans votre fichier « Apps ideas inbox » ; la revue hebdomadaire le lit. Collez une fois le lien vers ce fichier et toutes les apps de cet appareil le proposeront.', 'ideas.link': 'Lien vers le fichier', 'ideas.open': 'Ouvrir la boîte à idées',
   'data.export': 'Exporter une sauvegarde', 'data.import': 'Importer une sauvegarde', 'data.imported': 'Sauvegarde importée', 'data.importFail': 'Ce fichier n’est pas une sauvegarde Sillage', 'data.reset': 'Tout supprimer',
   'reset.h': 'Supprimer toute la garde-robe ?', 'reset.sub': 'Sillage est vidé sur cet appareil et, après synchronisation, dans votre compte. Les exemples reviennent.', 'reset.yes': 'Tout supprimer',
-  'credits': 'Météo et recherche de ville : Open-Meteo.'
+  'credits': 'Météo et recherche de ville : Open-Meteo.',
+  'sim.h': 'Parfums proches', 'sim.sub': 'Tirés de la bibliothèque de l’app ({n} parfums), rapprochés par notes et accords.', 'sim.none': 'Ajoutez quelques notes à ce flacon pour voir des parfums proches.',
+  'sim.shares': 'Partage {a}', 'sim.fresher': 'plus frais', 'sim.warmer': 'plus chaud', 'sim.sweeter': 'plus sucré', 'sim.adds': 'ajoute {a}',
+  'sim.add': 'Ajouter à ma liste', 'sim.added': 'Ajouté à votre file d’essais', 'sim.listed': 'Sur votre liste',
+  'ai.more': 'Demander à Claude', 'ai.wait': 'Claude réfléchit…', 'ai.from': 'Par Claude', 'ai.off': 'Demander à Claude nécessite la mise en place décrite dans le README et un compte connecté.',
+  'kind.close': 'très proche', 'kind.cheaper': 'alternative moins chère', 'kind.flanker': 'même ligne', 'kind.twist': 'une variation',
+  'pb.budget': 'petit prix', 'pb.mid': 'prix moyen', 'pb.premium': 'haut de gamme', 'pb.niche': 'niche',
+  'acc.citrus': 'hespéridé', 'acc.aromatic': 'aromatique', 'acc.green': 'vert', 'acc.aquatic': 'aquatique', 'acc.floral': 'floral', 'acc.fruity': 'fruité', 'acc.spicy': 'épicé', 'acc.woody': 'boisé', 'acc.amber': 'ambré', 'acc.leather': 'cuir', 'acc.gourmand': 'gourmand', 'acc.musky': 'musqué', 'acc.powdery': 'poudré', 'acc.smoky': 'fumé',
+  'prof.h': 'Votre profil olfactif', 'prof.sub': 'D’après vos {n} flacons, pondérés par votre note et par la fréquence à laquelle vous les portez.', 'prof.arch': '{a}, avec {b}',
+  'prof.dry': 'plutôt sec que sucré', 'prof.balanced': 'entre sec et sucré', 'prof.sweet': 'plutôt sucré', 'prof.fresh': 'surtout frais', 'prof.mixed': 'frais et chaud tour à tour', 'prof.warm': 'surtout chaud',
+  'prof.strong': 'porté intense (EDP et plus)', 'prof.light': 'porté léger', 'prof.mixedc': 'léger comme intense', 'prof.occ': 'surtout pour {o}',
+  'prof.seasons': 'Saisons couvertes', 'prof.gaps': 'Manques', 'gap.season': 'Rien pour {s}', 'gap.occ': 'Rien d’étiqueté pour {o}', 'gap.family': 'Aucun parfum {f}', 'prof.noGap': 'Pas de manque évident.',
+  'prof.untried': 'Notes jamais essayées : {a}', 'prof.favs': 'Plus porté que sa note ne le dit : {a}',
+  'prof.ai': 'Faire écrire mon portrait par Claude', 'prof.aiAgain': 'Le réécrire', 'prof.portrait': 'Le portrait par Claude', 'prof.loves': 'Vous aimez', 'prof.try': 'À essayer', 'prof.need': 'Notez ou complétez au moins deux flacons pour voir votre profil.',
+  'next.h': 'Quoi acheter ensuite', 'next.sub': 'Choisis dans la bibliothèque pour votre profil. Essayez avant d’acheter.', 'lane.safe': 'Valeur sûre', 'lane.gap': 'Comble un manque', 'lane.wild': 'Joker',
+  'next.near': 'Proche de votre {b}', 'next.fills.season': 'Pour {s}', 'next.fills.family': 'Votre premier parfum {f}', 'next.fills.occ': 'Pour {o}', 'next.new': 'Apporte {n}, une note que vous n’avez pas essayée',
+  'next.ai': 'Demander à Claude : prix et échantillons actuels', 'next.aiSub': 'Claude vérifie sur le web que chacun est en vente, son prix, et où trouver un échantillon.', 'next.sample': 'Échantillon : {w}', 'next.sampleHard': 'Échantillons difficiles à trouver', 'next.empty': 'Ajoutez et notez d’abord quelques flacons.',
+  'year.h': 'Votre année', 'year.sub': '[{n} port|{n} ports] en {y}', 'year.none': 'Aucun port noté en {y} pour l’instant.', 'year.sig': 'Signature', 'ask.alt': 'Sans Demander à Claude : par copier-coller'
 };
 const DICT = { en: EN, fr: FR };
 let cur = 'en';
