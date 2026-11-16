@@ -42,7 +42,14 @@ const EN = {
   'ideas.sub': 'Something missing or annoying while you use the app? Note it in your “Apps ideas inbox” file; the weekly review reads it. Paste the link to that file once and every app on this device will offer it.', 'ideas.link': 'Link to the file', 'ideas.open': 'Open the inbox',
   'data.export': 'Export a backup', 'data.import': 'Import a backup', 'data.imported': 'Backup imported', 'data.importFail': 'That file is not a Grand Tour backup', 'data.reset': 'Delete everything',
   'reset.h': 'Delete the whole atlas?', 'reset.sub': 'This empties Grand Tour on this device and, once it syncs, in your account. The examples come back.', 'reset.yes': 'Delete everything',
-  'credits': 'Place lookup: OpenStreetMap Nominatim. Drive times: OSRM, without traffic. Map: OpenFreeMap.'
+  'credits': 'Place lookup: OpenStreetMap Nominatim. Drive times: OSRM, without traffic. Map: OpenFreeMap.',
+  'card.hikes': '[{n} hike|{n} hikes] nearby',
+  'idea.h': 'Hotel ideas from Claude', 'idea.sub': 'Five-star hotels within about five hours that match what matters to you (the weights on the Grades tab), with this season’s rate. Checked on the web.', 'idea.btn': 'Ask Claude for hotel ideas', 'idea.wait': 'Claude is looking…', 'idea.drive': 'about {h} h away', 'idea.rate': '{v} a night ({s})', 'idea.listed': 'On your list', 'idea.add': 'Add to my wish list', 'idea.added': 'Added to your wish list', 'idea.off': 'Ask Claude needs the one-time setup in the README and a signed-in account.',
+  'wk.h': 'Weekend ideas: a hotel and a hike', 'wk.line': '[{n} hike|{n} hikes] within 30 minutes, {d} dog-friendly · closest: {a}',
+  'stay.another': 'Add another stay', 'stay.earlier': '[Earlier stay|Earlier stays] ({n})',
+  'near.h': 'Hikes nearby ({n})', 'near.dog': 'dog-friendly', 'near.min': 'about {m} min', 'near.open': 'Open Cordée',
+  'par.h': 'Your own par', 'par.def': 'The par is a convention: {p} for grades I to V.', 'par.own': 'Fitted to your stays: {p} for grades I to V.', 'par.fit': 'From your {n} scored stays, a line through your own scores gives {p}.', 'par.use': 'Use my own par', 'par.need': 'With about ten scored stays over at least three grades, the par can be fitted to your own scores.', 'par.reset': 'Back to the conventional par',
+  'cand.h': 'Candidates worth a look', 'cand.sub': 'Five-star hotels within about six hours, with their season rate, re-checked twice a year (last {d}).'
 };
 const FR = {
   'tab.atlas': 'Atlas', 'tab.carnet': 'Séjours', 'tab.ladder': 'Grades', 'tab.settings': 'Réglages',
@@ -87,7 +94,14 @@ const FR = {
   'ideas.sub': 'Quelque chose manque ou agace à l’usage ? Notez-le dans votre fichier « Apps ideas inbox » ; la revue hebdomadaire le lit. Collez une fois le lien vers ce fichier et toutes les apps de cet appareil le proposeront.', 'ideas.link': 'Lien vers le fichier', 'ideas.open': 'Ouvrir la boîte à idées',
   'data.export': 'Exporter une sauvegarde', 'data.import': 'Importer une sauvegarde', 'data.imported': 'Sauvegarde importée', 'data.importFail': 'Ce fichier n’est pas une sauvegarde Grand Tour', 'data.reset': 'Tout supprimer',
   'reset.h': 'Supprimer tout l’atlas ?', 'reset.sub': 'Grand Tour est vidé sur cet appareil et, après synchronisation, dans votre compte. Les exemples reviennent.', 'reset.yes': 'Tout supprimer',
-  'credits': 'Recherche de lieux : OpenStreetMap Nominatim. Temps de route : OSRM, sans trafic. Carte : OpenFreeMap.'
+  'credits': 'Recherche de lieux : OpenStreetMap Nominatim. Temps de route : OSRM, sans trafic. Carte : OpenFreeMap.',
+  'card.hikes': '[{n} randonnée|{n} randonnées] à proximité',
+  'idea.h': 'Idées d’hôtels par Claude', 'idea.sub': 'Des cinq-étoiles à environ cinq heures qui correspondent à ce qui compte pour vous (les poids de l’onglet Grades), avec le tarif de la saison. Vérifié sur le web.', 'idea.btn': 'Demander des idées à Claude', 'idea.wait': 'Claude cherche…', 'idea.drive': 'à environ {h} h', 'idea.rate': '{v} la nuit ({s})', 'idea.listed': 'Sur votre liste', 'idea.add': 'Ajouter à mes envies', 'idea.added': 'Ajouté à vos envies', 'idea.off': 'Demander à Claude nécessite la mise en place décrite dans le README et un compte connecté.',
+  'wk.h': 'Idées de week-end : un hôtel et une randonnée', 'wk.line': '[{n} randonnée|{n} randonnées] à moins de 30 minutes, {d} avec chien · la plus proche : {a}',
+  'stay.another': 'Ajouter un autre séjour', 'stay.earlier': '[Séjour précédent|Séjours précédents] ({n})',
+  'near.h': 'Randonnées à proximité ({n})', 'near.dog': 'chien bienvenu', 'near.min': 'environ {m} min', 'near.open': 'Ouvrir Cordée',
+  'par.h': 'Votre propre par', 'par.def': 'Le par est une convention : {p} pour les grades I à V.', 'par.own': 'Ajusté à vos séjours : {p} pour les grades I à V.', 'par.fit': 'D’après vos {n} séjours notés, une droite à travers vos propres notes donne {p}.', 'par.use': 'Utiliser mon propre par', 'par.need': 'Avec une dizaine de séjours notés sur au moins trois grades, le par peut être ajusté à vos notes.', 'par.reset': 'Revenir au par conventionnel',
+  'cand.h': 'Des candidats à regarder', 'cand.sub': 'Des cinq-étoiles à environ six heures, avec leur tarif de saison, revérifiés deux fois par an (dernière fois {d}).'
 };
 const DICT = { en: EN, fr: FR };
 let cur = 'en';

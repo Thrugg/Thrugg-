@@ -36,6 +36,14 @@ Names and bands are his to change on the Grades tab. A hotel takes its own grade
 - Value for the grade = experience minus the par of the grade. The par (60, then +8 per grade) is a convention; once he has about ten stays it could be fitted to his own scores.
 - A stay scoring 80 or more is "memorable". Cost per memorable night = everything spent on stays ÷ nights of the memorable stays.
 
+## Several stays, own par, hikes nearby, ideas (Nov 2026)
+
+- **Several stays** (`staysOf`, `newStay`): a hotel's own stay fields hold the latest stay; "Add another stay" moves it into `h.past` and opens the form for the new one. Stats count every stay (`visits`), nights and money included. Value for the grade and the ranking still read the latest stay.
+- **Own par** (`fitPar`): least-squares line through (grade, experience) of every scored stay, earlier ones included; needs 10 stays over 3 grades and a rising line. "Use my own par" saves it in `S.par`; `usePar` applies it before every render.
+- **Hikes nearby** (`hikesNear`): Cordée's catalogue (`../data/hikes.json`), hike starts within a rough 30-minute drive (straight line × 1.3 at 85 km/h), with the dog rule. Weekend ideas list the hotels with the most nearby hikes, wish-list hotels first.
+- **Hotel ideas from Claude** (task `hotel_suggest` of the "ask" function): five hotels within about five hours matching the criterion weights, with season rate; "Add to my wish list" creates the hotel with its pin, rate and facilities.
+- **Candidates** (`js/candidates.js`): a public list filled and re-checked by the scheduled task "Grand Tour refresh" (2 April and 2 October), which also re-checks the calibration hotels below.
+
 ## The compass and the map
 
 - The compass is the default view and works offline: home in the middle, each hotel at its true bearing, further out the longer the drive (square-root scale, rings every two hours).
@@ -49,7 +57,7 @@ State is one browser key, `grandtour.v1`, mirrored through `../cloud.js` under t
 
 ## Left for later (from the brief)
 
-Several stays per hotel; a seasonal refresh adding candidates and re-checking the bands; an "Ask for a hotel" request button; driving-weekend pairing; a chapter in the Book of the Year; fitting the par to his own stays.
+A chapter in the year in review across the apps.
 
 ## After a change
 

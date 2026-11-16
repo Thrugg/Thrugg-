@@ -107,3 +107,31 @@ test('English and French have the same keys, and every key used on screen exists
   setLang('fr'); assert.equal(t('atlas.h1', { a: 1, b: 3 }), '1 séjour, 3 envies'); assert.equal(t('stay.nights', { n: 2 }), '2 nuits'); setLang('en');
   assert.equal(t('atlas.k', { n: 1 }), '1 five-star hotel');
 });
+
+/* ---------- several stays, own par, hikes nearby (Nov 2026) ---------- */
+import { staysOf, newStay, fitPar, hikesNear, usePar, PAR as PARX, PAR_DEFAULT } from '../js/engine.js';
+test('several stays: the latest moves to the past, stats count every stay', () => {
+  const h = { id: 'h', name: 'X', status: 'stayed', ref: 300, from: '2026-03-01', nights: 2, paid: 300, x: { room: 5, service: 4 } };
+  const h2 = { ...newStay(h), from: '2026-10-01', nights: 3, paid: 320, x: { room: 3 } };
+  assert.equal(h2.past.length, 1); assert.equal(staysOf(h2).length, 2); assert.equal(staysOf(h2)[0].from, '2026-03-01');
+  const st = stats([h2], DEFAULT_BANDS, {});
+  assert.equal(st.nights, 5); assert.equal(st.visits, 2); assert.equal(st.stays, 1);
+  assert.deepEqual(staysOf({ status: 'wish' }), []);
+});
+test('own par: fitted from ten stays over three grades, rising, or not at all', () => {
+  const mk = (ref, e) => ({ status: 'stayed', ref, x: { room: e / 20 } });
+  const hs = [];
+  for (let i = 0; i < 4; i++) { hs.push(mk(200, 60)); hs.push(mk(600, 80)); }
+  hs.push(mk(1700, 100), mk(1700, 100));
+  const f = fitPar(hs, DEFAULT_BANDS, {});
+  assert.ok(f && f.par[0] < f.par[2] && f.par[2] < f.par[4], JSON.stringify(f));
+  assert.equal(fitPar(hs.slice(0, 5), DEFAULT_BANDS, {}), null);
+  usePar([50, 60, 70, 80, 90]); assert.equal(PARX[2], 70); usePar(null); assert.deepEqual([...PARX], PAR_DEFAULT);
+});
+test('hikes near a hotel, closest first, with the dog rule', () => {
+  const hotel = { lat: 47.5, lon: 11.0 };
+  const hikes = [{ n: 'Near', p: [[47.52, 11.02]], d: { r: 'free', t: 'ok' } }, { n: 'Far', p: [[48.5, 12]] }, { n: 'Banned', p: [[47.51, 10.99]], d: { r: 'banned' } }];
+  const n = hikesNear(hotel, hikes, 30);
+  assert.deepEqual(n.map(x => x.h.n), ['Banned', 'Near']); assert.equal(n[1].dog, true); assert.equal(n[0].dog, false);
+  assert.deepEqual(hikesNear({ lat: null, lon: null }, hikes), []);
+});

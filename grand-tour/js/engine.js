@@ -9,7 +9,9 @@ export const DEFAULT_NAMES = ['Maison', 'Grand Hôtel', 'Palace', 'Sanctuaire', 
 export const DEFAULT_BANDS = [250, 450, 800, 1500];          // upper limit of grades I to IV, per night
 export const CRITERIA = ['pool', 'spa', 'parking', 'gym', 'room', 'service', 'food', 'dog'];
 export const FACILITIES = ['pool', 'sauna', 'parking', 'gym', 'dog'];
-export const PAR = [60, 68, 76, 84, 92];                       // the experience each grade should deliver, out of 100
+export const PAR_DEFAULT = [60, 68, 76, 84, 92];
+export const PAR = [...PAR_DEFAULT];                           // the experience each grade should deliver, out of 100 (GT-3: may be fitted to the person's own stays)
+export function usePar(p) { const v = Array.isArray(p) && p.length === 5 && p.every(x => Number(x) > 0) ? p.map(Number) : PAR_DEFAULT; PAR.splice(0, 5, ...v); }
 export const MEMORABLE = 80;                                   // a stay scoring this or more counts as memorable
 
 /* grade 1…5 from a nightly rate; null without a rate */
@@ -72,16 +74,49 @@ export function applyFilters(hotels, f, ctx) {
   });
 }
 
-/* the log in figures */
+/* GT-1: every stay of a hotel, earliest first. The hotel's own stay fields hold the latest stay; earlier ones are in h.past. */
+export const STAY_FIELDS = ['from', 'nights', 'who', 'paid', 'x', 'note', 'room'];
+export function staysOf(h) {
+  if (h.status !== 'stayed') return [];
+  const cur = { from: h.from, nights: h.nights, who: h.who, paid: h.paid, x: h.x || {}, note: h.note, room: h.room, latest: true };
+  return [...(Array.isArray(h.past) ? h.past : []), cur].sort((a, b) => String(a.from || '').localeCompare(String(b.from || '')));
+}
+/* move the latest stay into the past and leave the fields empty for a new one */
+export function newStay(h) {
+  const past = Array.isArray(h.past) ? [...h.past] : [];
+  if (h.status === 'stayed' && (h.from || num(h.nights) > 0 || num(h.paid) > 0 || Object.keys(h.x || {}).length)) past.push({ from: h.from || '', nights: num(h.nights), who: h.who || '', paid: num(h.paid), x: { ...(h.x || {}) }, room: h.room || '', note: '' });
+  return { ...h, past, status: 'stayed', from: '', nights: 0, who: '', paid: 0, x: {}, room: '' };
+}
+/* GT-3: the par fitted to the person's own stays: a straight line through (grade, experience) of every scored stay.
+   Needs 10 stays over at least 3 grades and a line that rises; otherwise null. */
+export function fitPar(hotels, bands, weights) {
+  const pts = [];
+  for (const h of hotels) { const g = gradeOf(h, bands); if (!g) continue; for (const st of staysOf(h)) { const e = experience(st, weights); if (e !== null) pts.push([g - 1, e]); } }
+  if (pts.length < 10 || new Set(pts.map(p => p[0])).size < 3) return null;
+  const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+  const sxy = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0), sxx = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0);
+  const b = sxx ? sxy / sxx : 0; if (b <= 0) return null;
+  const a0 = my - b * mx;
+  return { par: [0, 1, 2, 3, 4].map(g => Math.round(Math.min(100, Math.max(30, a0 + b * g)))), n };
+}
+/* GT-2: hikes from Cordée's catalogue whose start is within maxMin of a hotel (rough drive time) */
+export function hikesNear(h, hikes, maxMin = 30) {
+  if (!hasPin(h) || !Array.isArray(hikes)) return [];
+  const at = { lat: Number(h.lat), lon: Number(h.lon) };
+  return hikes.filter(x => Array.isArray(x.p) && x.p[0]).map(x => ({ h: x, min: driveGuess(km(at, { lat: x.p[0][0], lon: x.p[0][1] })), dog: !!(x.d && x.d.r !== 'banned' && x.d.t !== 'no') }))
+    .filter(x => x.min <= maxMin).sort((a, b) => a.min - b.min);
+}
+
+/* the log in figures: every stay counts, earlier ones included */
 export function stats(hotels, bands, weights) {
   const st = hotels.filter(h => h.status === 'stayed');
-  let nights = 0, spent = 0, memNights = 0, memStays = 0, rated = 0;
-  for (const h of st) {
-    const n = Math.max(0, num(h.nights)), p = Math.max(0, num(h.paid)), e = experience(h, weights);
-    nights += n; spent += n * p;
+  let nights = 0, spent = 0, memNights = 0, memStays = 0, rated = 0, visits = 0;
+  for (const h of st) for (const s of staysOf(h)) {
+    const n = Math.max(0, num(s.nights)), p = Math.max(0, num(s.paid)), e = experience(s, weights);
+    nights += n; spent += n * p; visits++;
     if (e !== null) { rated++; if (e >= MEMORABLE) { memNights += n; memStays++; } }
   }
-  return { stays: st.length, wishes: hotels.length - st.length, nights, spent, perNight: nights > 0 ? spent / nights : null, memNights, memStays, rated, perMemorable: memNights > 0 ? spent / memNights : null };
+  return { visits, stays: st.length, wishes: hotels.length - st.length, nights, spent, perNight: nights > 0 ? spent / nights : null, memNights, memStays, rated, perMemorable: memNights > 0 ? spent / memNights : null };
 }
 /* stays ranked by value for the grade, best first */
 export function ranking(hotels, bands, weights) {

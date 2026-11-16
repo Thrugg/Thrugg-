@@ -1,4 +1,6 @@
 /* Grand Tour — every screen. Reads the state, draws HTML, handles taps through data-act. */
+import { CANDIDATES, CANDIDATES_ASOF } from './candidates.js';
+import { staysOf, newStay, fitPar, hikesNear, usePar, PAR_DEFAULT } from './engine.js';
 import { S, save, saveUi, reset, blank, examples, setInbox, exportBackup, importBackup } from './store.js';
 import { NUMERALS, DEFAULT_NAMES, DEFAULT_BANDS, CRITERIA, FACILITIES, PAR, MEMORABLE, gradeOf, gradeSource, gradeFromRate, experience, scoredCount, valueOf, km, driveOf, hasPin, applyFilters, stats, ranking, cleanBands, fmtDrive } from './engine.js';
 import { compass, valueChart, realMap } from './atlas.js';
@@ -32,12 +34,34 @@ function sorted(list) {
   return [...list].sort((a, b) => key(a) - key(b) || a.name.localeCompare(b.name));
 }
 const pins = list => list.filter(hasPin).map(h => ({ id: h.id, name: h.name, lat: Number(h.lat), lon: Number(h.lon), min: (driveOf(h, S.home) || { min: 0 }).min, grade: gradeOf(h, S.bands), stayed: h.status === 'stayed' }));
+/* GT-2: Cordée's catalogue, read once (same site) */
+let HIKES = null;
+function loadHikes() { if (HIKES) return; HIKES = []; fetch('../data/hikes.json').then(r => r.ok ? r.json() : []).then(j => { HIKES = Array.isArray(j) ? j : []; if (S.ui.tab === 'atlas' && !$('#sheet').open) render(); }).catch(() => { }); }
+const nearOf = h => HIKES && HIKES.length ? hikesNear(h, HIKES, 30) : [];
+/* GT-4: hotel ideas from Claude, kept for the session */
+let ideas = null, ideasBusy = false;
+function ideasHtml() {
+  const rows = ideas ? (ideas.hotels || []).map((x, i) => { const on = S.hotels.some(h => h.name.toLowerCase() === String(x.name).toLowerCase()); return `<div class="idea"><span><b class="hname">${esc(x.name)}</b><small>${esc([x.town, x.country].filter(Boolean).join(', '))}${x.drive_h ? ' · ' + esc(t('idea.drive', { h: x.drive_h })) : ''}${x.rate ? ' · ' + esc(t('idea.rate', { v: money(x.rate), s: x.season || '' })) : ''}</small><small>${esc(x.why || '')}</small></span>${on ? `<small class="onlist">${esc(t('idea.listed'))}</small>` : `<button class="btn sm" data-act="idea-add" data-i="${i}">${esc(t('idea.add'))}</button>`}</div>`; }).join('') : '';
+  return `<section class="card ideas"><h3>${esc(t('idea.h'))}</h3><p class="note">${esc(t('idea.sub'))}</p><div class="row"><button class="btn sm" data-act="ideas" ${ideasBusy ? 'disabled' : ''}>${esc(ideasBusy ? t('idea.wait') : t('idea.btn'))}</button></div>${rows}</section>`;
+}
+function candHtml() {
+  const list = CANDIDATES.filter(c => !S.hotels.some(h => h.name.toLowerCase() === c.name.toLowerCase())).slice(0, 6);
+  if (!list.length) return '';
+  return `<section class="card ideas"><h3>${esc(t('cand.h'))}</h3><p class="note">${esc(t('cand.sub', { d: CANDIDATES_ASOF || '' }))}</p>${list.map(c => `<div class="idea"><span><b class="hname">${esc(c.name)}</b><small>${esc(c.place)}${c.ref ? ' · ' + esc(t('idea.rate', { v: money(c.ref), s: c.season || '' })) : ''}</small>${c.why ? `<small>${esc(c.why)}</small>` : ''}</span><button class="btn sm" data-act="cand-add" data-n="${esc(c.name)}">${esc(t('idea.add'))}</button></div>`).join('')}</section>`;
+}
+function weekendHtml() {
+  if (!HIKES || !HIKES.length) return '';
+  const top = S.hotels.map(h => ({ h, near: nearOf(h) })).filter(x => x.near.length >= 2).sort((a, b) => (a.h.status === 'wish' ? 0 : 1) - (b.h.status === 'wish' ? 0 : 1) || b.near.length - a.near.length).slice(0, 3);
+  if (!top.length) return '';
+  return `<section class="card weekend"><h3>${esc(t('wk.h'))}</h3>${top.map(x => `<button class="wkrow" data-act="open" data-id="${x.h.id}"><b>${esc(x.h.name)}</b><small>${esc(t('wk.line', { n: x.near.length, d: x.near.filter(y => y.dog).length, a: x.near[0].h.n }))}</small></button>`).join('')}</section>`;
+}
 function cardHtml(h) {
   const g = gradeOf(h, S.bands), e = experience(h, S.weights), v = valueOf(h, S.bands, S.weights), bits = [];
   if (g) bits.push(esc(gname(g)));
   bits.push(esc(h.status === 'stayed' ? (h.from ? t('card.stayedOn', { m: monthOf(h.from) }) : t('card.stayed')) : t('card.wish')));
   if (e !== null) bits.push(esc(t('card.exp', { n: Math.round(e) })));
   if (v !== null) bits.push(`<span class="${v >= 0 ? 'up' : 'down'}">${esc(t('card.value', { v: sg(v) }))}</span>`);
+  const nh = nearOf(h); if (nh.length) bits.push(esc(t('card.hikes', { n: nh.length })));
   const has = FACILITIES.filter(k => h.has && h.has[k]).map(k => `<i>${esc(t('has.' + k))}</i>`).join('');
   return `<button class="hcard" data-act="open" data-id="${h.id}">${plate(g)}<span class="hmain"><b class="hname">${esc(h.name || t('hotel.unnamed'))}</b><span class="hplace">${esc([h.place, driveText(h)].filter(Boolean).join(' · '))}</span><span class="hmeta">${bits.join(' · ')}</span>${has ? `<span class="tags">${has}</span>` : ''}</span></button>`;
 }
@@ -60,7 +84,7 @@ function renderAtlas() {
 <div class="seg" role="group" aria-label="${esc(t('view.aria'))}"><button data-act="view" data-v="compass" aria-pressed="${S.ui.view !== 'map'}">${esc(t('view.compass'))}</button><button data-act="view" data-v="map" aria-pressed="${S.ui.view === 'map'}">${esc(t('view.map'))}</button></div></section>
 <div id="stage">${stageHtml(list)}</div>${filtersHtml()}
 <section class="list"><p class="count">${esc(t('list.count', { n: list.length, of: S.hotels.length }))}</p>${list.length ? list.map(cardHtml).join('') : `<p class="sub">${esc(t('list.none'))}</p>`}</section>
-<div class="row actions"><button class="btn pri" data-act="add">${esc(t('hotel.add'))}</button></div>`;
+<div class="row actions"><button class="btn pri" data-act="add">${esc(t('hotel.add'))}</button></div>${weekendHtml()}${candHtml()}${ideasHtml()}`;
 }
 function mountMap() {
   if (ui.map) { try { ui.map.remove(); } catch (e) { } ui.map = null; }
@@ -83,10 +107,19 @@ ${e !== null ? `<p class="verdict ${v >= 0 ? 'up' : 'down'}">${esc(t(v >= 0 ? 'v
   }
   sheet(`<div class="hhead">${plate(g, true)}<div><h2 class="hname">${esc(h.name || t('hotel.unnamed'))}</h2><p class="sub">${esc(h.place || '')}</p></div></div>
 <p class="note">${esc(why)}</p>${driveText(h) ? `<p class="note">${esc(driveText(h))}</p>` : hasPin(h) ? '' : `<p class="note">${esc(t('pin.none'))}</p>`}
-${has ? `<p class="tags">${has}</p>` : ''}${stay}${h.note ? `<h3>${esc(t('f.note'))}</h3><p class="sub pre">${esc(h.note)}</p>` : ''}
-<div class="row end"><button class="btn sm" data-act="close">${esc(t('common.close'))}</button>${h.status === 'wish' ? `<button class="btn sm" data-act="edit" data-id="${h.id}" data-stayed="1">${esc(t('hotel.stayedNow'))}</button>` : ''}<button class="btn sm pri" data-act="edit" data-id="${h.id}">${esc(t('common.edit'))}</button></div>`);
+${has ? `<p class="tags">${has}</p>` : ''}${stay}${pastHtml(h)}${nearHtml(h)}${h.note ? `<h3>${esc(t('f.note'))}</h3><p class="sub pre">${esc(h.note)}</p>` : ''}
+<div class="row end"><button class="btn sm" data-act="close">${esc(t('common.close'))}</button>${h.status === 'stayed' ? `<button class="btn sm" data-act="stay-new" data-id="${h.id}">${esc(t('stay.another'))}</button>` : ''}${h.status === 'wish' ? `<button class="btn sm" data-act="edit" data-id="${h.id}" data-stayed="1">${esc(t('hotel.stayedNow'))}</button>` : ''}<button class="btn sm pri" data-act="edit" data-id="${h.id}">${esc(t('common.edit'))}</button></div>`);
 }
 
+function pastHtml(h) {
+  const past = (h.past || []).slice().sort((a, b) => String(b.from || '').localeCompare(String(a.from || '')));
+  if (!past.length) return '';
+  return `<h3>${esc(t('stay.earlier', { n: past.length }))}</h3><div class="lately">${past.map(p => { const e = experience(p, S.weights); return `<div class="lrow"><span>${esc(p.from ? new Date(p.from + 'T12:00').toLocaleDateString(loc(), { month: 'short', year: 'numeric' }) : '–')}</span><b>${esc([p.nights ? t('stay.nights', { n: p.nights }) : '', p.paid ? t('stay.paid', { v: money(p.paid) }) : '', e !== null ? t('card.exp', { n: Math.round(e) }) : ''].filter(Boolean).join(' · '))}</b></div>`; }).join('')}</div>`;
+}
+function nearHtml(h) {
+  const n = nearOf(h); if (!n.length) return '';
+  return `<h3>${esc(t('near.h', { n: n.length }))}</h3><div class="lately">${n.slice(0, 5).map(x => `<div class="lrow"><span>${esc(x.h.n)}${x.dog ? ' · ' + esc(t('near.dog')) : ''}</span><b>${esc(t('near.min', { m: x.min }))}</b></div>`).join('')}</div><p class="note"><a href="../">${esc(t('near.open'))}</a></p>`;
+}
 function editSheet() {
   const d = ui.draft, isNew = !S.hotels.find(x => x.id === d.id), stayed = d.status === 'stayed';
   const inp = (k, o = {}) => `<label class="fld${o.wide ? ' wide' : ''}"><span>${esc(t('f.' + k))}</span><span class="box"><input data-d="${k}" type="${o.type || 'text'}" ${o.type === 'number' ? `inputmode="decimal" min="0" step="${o.step || 1}"` : o.type === 'date' ? '' : 'maxlength="80"'} value="${esc(d[k] || (o.type === 'number' ? '' : ''))}" placeholder="${esc(o.ph || '')}">${o.unit ? `<i>${esc(o.unit)}</i>` : ''}</span>${o.hint ? `<small>${esc(o.hint)}</small>` : ''}</label>`;
@@ -152,9 +185,13 @@ function renderLadder() {
   const ungraded = S.hotels.filter(h => !gradeOf(h, S.bands));
   return `<section class="lead"><p class="kicker">${esc(t('ladder.k'))}</p><h1>${esc(t('ladder.h1'))}</h1><p class="sub">${esc(t('ladder.sub'))}</p></section>
 <section class="grades">${rows}</section>${ungraded.length ? `<p class="note">${esc(t('ladder.ungraded', { n: ungraded.length }))}</p>` : ''}
-<div class="row actions"><button class="btn" data-act="bands">${esc(t('ladder.edit'))}</button></div>
+<div class="row actions"><button class="btn" data-act="bands">${esc(t('ladder.edit'))}</button></div>${parHtml()}
 <section><h2>${esc(t('w.h'))}</h2><p class="note">${esc(t('w.sub'))}</p><div class="weights">${CRITERIA.map(k => `<label><span>${esc(t('x.' + k))}</span><select data-w="${k}">${[0, 1, 2, 3].map(n => `<option value="${n}"${(S.weights[k] === undefined ? 1 : Number(S.weights[k])) === n ? ' selected' : ''}>${esc(t('w.' + n))}</option>`).join('')}</select></label>`).join('')}</div></section>
 <section><h2>${esc(t('cal.h'))}</h2><p class="note">${esc(t('cal.1'))}</p><p class="note">${esc(t('cal.2'))}</p><p class="note">${esc(t('cal.3'))}</p></section>`;
+}
+function parHtml() {
+  const fit = fitPar(S.hotels, S.bands, S.weights), own = Array.isArray(S.par);
+  return `<section class="parfit"><h2>${esc(t('par.h'))}</h2><p class="note">${esc(own ? t('par.own', { p: S.par.join(' · ') }) : t('par.def', { p: PAR_DEFAULT.join(' · ') }))}</p>${fit ? `<p class="note">${esc(t('par.fit', { n: fit.n, p: fit.par.join(' · ') }))}</p><div class="row"><button class="btn sm" data-act="par-use" data-p="${fit.par.join(',')}">${esc(t('par.use'))}</button></div>` : `<p class="note">${esc(t('par.need'))}</p>`}${own ? `<div class="row"><button class="link" data-act="par-reset">${esc(t('par.reset'))}</button></div>` : ''}</section>`;
 }
 function bandsSheet() {
   sheet(`<h2>${esc(t('bands.h'))}</h2><p class="note">${esc(t('bands.sub'))}</p><form data-form="bands" class="bandform" novalidate>${[1, 2, 3, 4, 5].map(g => `<div class="brow"><b class="rn">${NUMERALS[g - 1]}</b><input name="n${g}" type="text" maxlength="24" value="${esc(S.names[g - 1])}" aria-label="${esc(t('bands.name', { n: NUMERALS[g - 1] }))}">${g < 5 ? `<span class="box"><input name="b${g}" type="number" inputmode="decimal" min="0" step="any" value="${S.bands[g - 1]}" aria-label="${esc(t('bands.limit', { n: NUMERALS[g - 1] }))}"><i>${S.cur}</i></span>` : `<span class="note">${esc(t('bands.above'))}</span>`}</div>`).join('')}
@@ -177,6 +214,7 @@ function renderSettings() {
 
 /* ---------- shell ---------- */
 export function render() {
+  usePar(S.par); loadHikes();
   document.documentElement.lang = lang();
   const tab = TABS.includes(S.ui.tab) ? S.ui.tab : 'atlas';
   $('#tabs').innerHTML = TABS.map(k => `<button data-act="tab" data-tab="${k}" ${k === tab ? 'aria-current="page"' : ''}>${esc(t('tab.' + k))}</button>`).join('');
@@ -216,6 +254,23 @@ function act(el) {
     save(); closeSheet(); render();
   }
   else if (a === 'del' && d) { if (el.dataset.sure) { S.hotels = S.hotels.filter(x => x.id !== d.id); save(); closeSheet(); render(); } else { el.dataset.sure = '1'; el.textContent = t('edit.delSure'); } }
+  else if (a === 'stay-new') { const i = S.hotels.findIndex(x => x.id === el.dataset.id); if (i < 0) return; S.hotels[i] = newStay(S.hotels[i]); save(); startEdit(S.hotels[i], true); }
+  else if (a === 'par-use') { S.par = el.dataset.p.split(',').map(Number); save(); render(); }
+  else if (a === 'par-reset') { delete S.par; save(); render(); }
+  else if (a === 'ideas') {
+    if (ideasBusy) return; if (!window.Ask) { toast(t('idea.off')); return; }
+    ideasBusy = true; render();
+    window.Ask.ready().then(ok => ok ? window.Ask.run('hotel_suggest', { home: S.home, maxDrive: 5, weights: Object.fromEntries(CRITERIA.map(k => [k, S.weights[k] === undefined ? 1 : Number(S.weights[k])])), bands: S.bands.map((b, i) => `${NUMERALS[i]} < ${b}`), exclude: S.hotels.map(h => h.name) }) : Promise.reject(new Error(t('idea.off'))))
+      .then(d => { ideas = d; }).catch(e => toast(e.message || t('idea.off'))).finally(() => { ideasBusy = false; render(); });
+  }
+  else if (a === 'cand-add') { const c = CANDIDATES.find(x => x.name === el.dataset.n); if (!c) return; S.hotels.push({ ...blank(), name: c.name, place: c.place, lat: c.lat ?? null, lon: c.lon ?? null, ref: c.ref || 0, has: { ...(c.has || {}) }, note: c.why || '' }); save(); render(); toast(t('idea.added')); }
+  else if (a === 'idea-add') {
+    const x = ideas && ideas.hotels && ideas.hotels[Number(el.dataset.i)]; if (!x) return;
+    const map = { pool: 'pool', spa: 'sauna', parking: 'parking', gym: 'gym', dog: 'dog' }, has = {};
+    for (const k of x.strong || []) if (map[k]) has[map[k]] = true; if (x.dogs === 'welcome' || x.dogs === 'some rooms') has.dog = true;
+    S.hotels.push({ ...blank(), name: x.name, place: [x.town, x.country].filter(Boolean).join(', '), lat: x.lat ?? null, lon: x.lon ?? null, ref: Math.round(x.rate || 0), has, note: x.why || '' });
+    save(); render(); toast(t('idea.added'));
+  }
   else if (a === 'bands') bandsSheet();
   else if (a === 'bands-reset') { S.names = [...DEFAULT_NAMES]; S.bands = [...DEFAULT_BANDS]; save(); closeSheet(); render(); }
   else if (a === 'home-find') { const q = S.home.name; if (!q) return; fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q)).then(r => r.json()).then(j => { if (j && j[0]) { S.home.lat = Math.round(Number(j[0].lat) * 1e4) / 1e4; S.home.lon = Math.round(Number(j[0].lon) * 1e4) / 1e4; S.hotels.forEach(h => { h.drive = 0; }); save(); render(); toast(t('home.found')); } else toast(t('pin.notFound')); }).catch(() => toast(t('pin.offline'))); }

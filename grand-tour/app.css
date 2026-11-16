@@ -170,3 +170,12 @@ details.more { margin-top: 8px; } details.more summary { cursor: pointer; font-s
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .fld .seg { justify-self: start; margin-top: 0; }
 .box input[type=date] { font-size: 15px; padding-right: 6px; }
+
+/* weekend ideas, hotel ideas, earlier stays (Nov 2026) */
+.weekend, .ideas { margin: 16px 0; }
+.wkrow, .idea { display: grid; gap: 2px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line, #ddd); padding: 10px 0; color: inherit; font: inherit; cursor: pointer; }
+.idea { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; cursor: default; }
+.idea > span { display: grid; gap: 2px; min-width: 0; }
+.wkrow small, .idea small { opacity: .75; font-size: 13px; }
+.onlist { font-size: 12.5px; white-space: nowrap; }
+.parfit { margin-top: 18px; }
