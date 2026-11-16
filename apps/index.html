@@ -107,6 +107,18 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
     if (check) s += ' · ' + check + ' to check for ' + (String(p.name || '').trim() || 'your partner');
     line('../tandem/', s);
   }).catch(() => { });
+  /* Révélateur: photos live in its own IndexedDB; only opened when it already exists, so this page never creates it */
+  if (indexedDB && indexedDB.databases) indexedDB.databases().then(list => {
+    if (!list.some(d => d.name === 'revelateur')) return;
+    const r = indexedDB.open('revelateur');
+    r.onsuccess = () => {
+      const db = r.result; if (!db.objectStoreNames.contains('photos')) return db.close();
+      let n = 0, ed = 0, ex = 0; const week = Date.now() - 7 * 864e5;
+      const c = db.transaction('photos').objectStore('photos').openCursor();
+      c.onsuccess = () => { const cur = c.result; if (cur) { n++; const v = cur.value; if (v.edited) ed++; if (v.exported && v.exported > week) ex++; cur.continue(); return; }
+        db.close(); if (n) line('../revelateur/', n + ' photo' + (n === 1 ? '' : 's') + ' · ' + ed + ' edited' + (ex ? ' · ' + ex + ' exported this week' : '')); };
+    };
+  }).catch(() => { });
 })();
 </script>
 </body>

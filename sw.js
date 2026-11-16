@@ -4,7 +4,7 @@
    home still draws on the trail. Weather: the last forecast you loaded is shown when there is no signal.
    Sign-in, sync, routing and place search always go to the network. */
 const V = 'cordee-2026.11.15b', TILES = 'cordee-tiles-1', TILE_MAX = 2500;
-const CORE = ['./', 'index.html', 'data/hikes.json', 'cloud.js', 'manifest.webmanifest', 'icon-192.png'];
+const CORE = ['./', 'index.html', 'data/hikes.json', 'cloud.js', 'manifest.webmanifest', 'icon-192.png', 'fonts/fonts.css'];
 const LIBS = ['unpkg.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 /* Only the two sources whose terms plainly allow keeping copies: the OpenFreeMap base map (the default "Cordée" style)
    and the open terrain tiles. Satellite, OpenTopoMap, swisstopo and the trails overlay need signal. */

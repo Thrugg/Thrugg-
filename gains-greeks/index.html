@@ -4,9 +4,7 @@
 <script src="../cloud.js"></script><script>Cloud.mirror("gains-greeks", "gg.v1", {ignore:["ui"]});if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </head><body>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Libre+Caslon+Display&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
 /* Layout: sticky ledger header + scrollable module rail; each module is a two-pane desk (inputs | results) that stacks under 940px. */
 :root{
@@ -289,6 +287,8 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
 
 <script>
 /*ENGINE-START*/
+/* German Basiszins for the Vorabpauschale: set by the BMF each January (RULES.md, step 4). */
+const DE_BASISZINS={year:2026,rate:.032};
 const FX={EUR:1,USD:1.16,GBP:0.86045,CHF:0.9445,DKK:7.4755,NOK:10.84,SEK:11.29,PLN:4.3718,CZK:24.4,HUF:390,AUD:1.78,CAD:1.62,JPY:175,KRW:1650,NZD:1.98,ISK:142,ILS:3.9,MXN:21.5,CLP:1100,COP:4600,CRC:590,TRY:48};
 const pct=x=>(Math.round(x*100000)/1000).toLocaleString('de-DE',{maximumFractionDigits:3})+' %';
 const dur=d=>d>=365?(Math.round(d/365*10)/10)+(d>=730?' years':' year'):Math.round(d/30.4)+' months';
@@ -358,7 +358,7 @@ DE:{n:'Germany',cur:'EUR',conf:'V',eu:1,pri:1,src:'https://www.bundesfinanzminis
   if(sCF)c.note('info',`Share losses of ${Math.round(sCF).toLocaleString('de-DE')} € carry forward and can only offset future share gains (§20(6) S.4 EStG).`);
   if(gCF)c.note('info',`General losses of ${Math.round(gCF).toLocaleString('de-DE')} € carry forward against any capital income.`);
   if(allowRem-a>1)c.note('tip',`${Math.round(allowRem-a).toLocaleString('de-DE')} € of your Sparerpauschbetrag is unused. Realise that much gain before 31 Dec and buy back; Germany has no wash-sale rule.`);
-  if(!isSh&&I.cap>0&&I.veh!=='bondFund'){const vp=I.cap*.032*.7,t=vp*(1-tfsR)*(.25*1.055);c.note(I.broker==='ibkr'?'ibkr':'info',`Vorabpauschale 2026 on ${Math.round(I.cap).toLocaleString('de-DE')} € of accumulating funds: about ${Math.round(vp).toLocaleString('de-DE')} € deemed income, ≈ ${Math.round(t).toLocaleString('de-DE')} € tax, deemed received 4 Jan 2027 (Basiszins 3,20 %). It is a prepayment credited on sale.${I.broker==='ibkr'?' IBKR does not compute it; declare it in KAP-INV.':''}`);}
+  if(!isSh&&I.cap>0&&I.veh!=='bondFund'){const vp=I.cap*DE_BASISZINS.rate*.7,t=vp*(1-tfsR)*(.25*1.055);c.note(I.broker==='ibkr'?'ibkr':'info',`Vorabpauschale ${DE_BASISZINS.year} on ${Math.round(I.cap).toLocaleString('de-DE')} € of accumulating funds: about ${Math.round(vp).toLocaleString('de-DE')} € deemed income, ≈ ${Math.round(t).toLocaleString('de-DE')} € tax, deemed received 4 Jan 2027 (Basiszins 3,20 %). It is a prepayment credited on sale.${I.broker==='ibkr'?' IBKR does not compute it; declare it in KAP-INV.':''}`);}
   if(I.margin)c.note('warn','Margin interest is not deductible in Germany. Leverage costs come fully out of after-tax return.');
  }},
 CH:{n:'Switzerland',cur:'CHF',conf:'V',pri:1,src:'https://www.estv2.admin.ch/dvs/kreisschreiben/dbst-ks-2012-1-036-d-de.pdf',srcN:'ESTV Kreisschreiben Nr. 36 · cantonal tax law (ZH)',
@@ -772,7 +772,7 @@ function yearEnd(I,r){
   else if(sPot<0)items.push(['info',`Share pot: ${E(sPot)} of share losses. They offset share gains only. Realising up to that much gain on shares this year is tax-free; otherwise the loss carries forward.`]);
   if(gPot>0)items.push(['info',`General pot (funds, options, dividends): ${E(gPot)} taxable before the allowance. Losses on funds or options realised this year reduce it; share losses do not.`]);
   else if(gPot<0)items.push(['info',`General pot: ${E(gPot)} of losses, which carry forward against any capital income.`]);
-  if(!isSh&&I.cap>0&&I.veh!=='bondFund'){const t=I.cap*.032*.7*(1-tfs)*.26375;items.push(['warn',`January cash: about ${E(t)} for the Vorabpauschale on accumulating funds, deemed received in early January.${I.broker==='ibkr'?' IBKR does not deduct it; you declare it yourself.':' A German broker debits it from your cash account, so keep that much uninvested.'}`]);}
+  if(!isSh&&I.cap>0&&I.veh!=='bondFund'){const t=I.cap*DE_BASISZINS.rate*.7*(1-tfs)*.26375;items.push(['warn',`January cash: about ${E(t)} for the Vorabpauschale on accumulating funds, deemed received in early January.${I.broker==='ibkr'?' IBKR does not deduct it; you declare it yourself.':' A German broker debits it from your cash account, so keep that much uninvested.'}`]);}
   if(I.opt)items.push(['warn','Short options still open on 31 Dec: the premium is taxed in the year you received it, even though the position is not closed.']);
   if(I.broker==='ibkr'&&due>1)items.push(['info',`Nothing is withheld at IBKR: set aside about ${E(due)} for the ${y} assessment.`]);
   items.push(['info','Place year-end sales a few trading days before the last session, so that they also settle in December.']);

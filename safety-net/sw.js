@@ -1,6 +1,6 @@
 /* Offline support: the network is tried first, and the last good copy is used when there is no signal. */
-const V = 'safetynet-2026.11.14a';
-const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', '../cloud.js'];
+const V = 'safetynet-2026.11.16a';
+const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', '../cloud.js', 'fonts/fonts.css'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('safetynet-') && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

@@ -1,0 +1,36 @@
+# Runs every app's checks on each push and pull request, so a broken change shows as a red mark on GitHub
+# within minutes instead of when an app is opened. Changes nothing in the repository.
+name: Checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Shared checks (sync, finance engines, live prices, route tracing)
+        run: node --test tests/*.mjs
+      - name: App checks
+        run: |
+          for d in nocturne seuil ladder grand-tour sillage tandem bridgelab revelateur; do
+            echo "::group::$d"; node --test $d/test/*.mjs; echo "::endgroup::"
+          done
+      - name: Forge checks
+        run: |
+          npm install --no-save --no-package-lock --prefix /tmp/fflate fflate@0.8.2
+          node forge/test/calc.test.mjs
+          node forge/test/coach.test.mjs
+          node forge/test/renpho.test.mjs
+          node forge/test/health.test.mjs /tmp/fflate/node_modules/fflate/umd/index.js
+      - name: Ask helper checks
+        run: if [ -d supabase/functions/ask ]; then node --test supabase/functions/ask/*.test.mjs; fi
+      - name: Cordée catalogue
+        run: python3 tools/build.py --check
