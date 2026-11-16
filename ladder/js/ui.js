@@ -1,5 +1,5 @@
 /* The Funds Ladder — every screen. Reads the state, draws HTML, handles taps through data-act. */
-import { S, save, saveUi, reset, uid, examples, readSafety, setInbox, exportBackup, importBackup } from './store.js';
+import { S, save, saveUi, reset, uid, examples, readSafety, readMove, readGG, setInbox, exportBackup, importBackup } from './store.js';
 import { targetOf, needOf, fillOf, isFull, split, project, nextRung, carMaths } from './engine.js';
 import { t, setLang, lang } from './i18n.js';
 
@@ -22,10 +22,15 @@ const nameOf = r => r.name || t('kind.' + (KINDS.includes(r.kind) ? r.kind : 'cu
 const partLabel = (r, p, i) => p.label || (r.kind === 'move' && i < 3 ? t('move.p' + i) : t('part.n', { n: i + 1 }));
 /* the emergency-fund rung can take its figures from Safety Net Score on this device */
 function eff(r) {
-  if (r.kind === 'safety' && r.link) { const sn = readSafety(); if (sn && (!sn.cur || sn.cur === S.cur)) return { ...r, parts: null, saved: sn.saved, target: sn.target || r.target, linked: true, levels: !!sn.target }; }
+  if (r.kind === 'safety' && r.link) { const sn = readSafety(); if (sn && (!sn.cur || sn.cur === S.cur)) return { ...r, parts: null, saved: sn.saved, target: sn.target || r.target, linked: true, levels: !!sn.target, from: 'sn' }; }
+  /* the move buffer's target from Safety Net's move planner; what is set aside stays yours */
+  if (r.kind === 'move' && r.link) { const mv = readMove(); if (mv && mv.cur === S.cur) return { ...r, parts: null, target: mv.target, linkedT: true, from: 'sn' }; }
+  /* the ETF rung's balance from Gains & Greeks; the target stays yours, and this month's money is not added here */
+  if (r.kind === 'etf' && r.link) { const g = readGG(); if (g && g.cur === S.cur) return { ...r, saved: g.saved, linked: true, from: 'gg' }; }
   return r;
 }
 const effRungs = () => S.rungs.map(eff);
+const projectAll = R => project(R, S.monthly, S.rule, undefined, { infl: S.infl });
 
 /* ---------- the ladder ---------- */
 function rungHtml(r, i, P, nxt) {
@@ -39,12 +44,12 @@ function rungHtml(r, i, P, nxt) {
   }
   if (r.due && !full) bits.push(p.late === null || p.late <= 0 ? esc(t('rung.due', { m: month(r.due) })) : `<span class="warn">${esc(p.late === Infinity ? t('rung.dueMiss', { m: month(r.due) }) : t('rung.dueLate', { m: month(r.due), n: p.late }))}</span>`);
   return `<button class="rung${full ? ' full' : ''}${nxt && nxt.id === r.id ? ' cur' : ''}${r.paused ? ' paused' : ''}" data-act="rung" data-id="${r.id}" aria-label="${esc(nameOf(r))}">
-<span class="rtop"><b><i class="n">${i + 1}</i>${esc(nameOf(r))}${r.linked ? ` <em>${esc(t('rung.linked'))}</em>` : ''}</b><span class="num">${money(Math.max(0, Number(r.saved) || 0))} <small>/ ${tgt > 0 ? money(tgt) : '—'}</small></span></span>
+<span class="rtop"><b><i class="n">${i + 1}</i>${esc(nameOf(r))}${r.linked || r.linkedT ? ` <em>${esc(t(r.from === 'gg' ? 'rung.linkedGG' : 'rung.linked'))}</em>` : ''}${Number(r.ret) > 0 ? ` <em>${esc(t('rung.ret', { r: r.ret }))}</em>` : ''}</b><span class="num">${money(Math.max(0, Number(r.saved) || 0))} <small>/ ${tgt > 0 ? money(tgt) : '—'}</small></span></span>
 <span class="bar" role="img" aria-label="${Math.round(fillOf(r) * 100)} %"><i style="width:${(fillOf(r) * 100).toFixed(1)}%"></i></span>
 <span class="rmeta">${bits.join(' · ')}</span></button>`;
 }
 function renderLadder() {
-  const R = effRungs(), P = project(R, S.monthly, S.rule), nxt = nextRung(R);
+  const R = effRungs(), P = projectAll(R), nxt = nextRung(R);
   const ex = S.rungs.some(r => r.ex) ? `<p class="banner">${esc(t('ex.banner'))} <button class="link" data-act="ex-off">${esc(t('ex.off'))}</button></p>` : '';
   let head;
   if (!S.rungs.length) head = `<p class="kicker">${esc(t('next.k'))}</p><h1>${esc(t('next.none'))}</h1><p class="sub">${esc(t('next.noneSub'))}</p>`;
@@ -68,15 +73,19 @@ function rungSheet(id) {
   const i = S.rungs.indexOf(r), e = eff(r), hasParts = r.parts && r.parts.length;
   const sn = r.kind === 'safety' ? readSafety() : null;
   const linkBox = r.kind === 'safety' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.use'))}</span></label><p class="note">${esc(!r.link ? t('link.off') : !sn ? t('link.none') : e.linked ? (e.levels ? t('link.on', { s: money(e.saved), t: money(e.target) }) : t('link.onNoLevel', { s: money(e.saved) })) : t('link.cur'))} <a href="../safety-net/">${esc(t('link.open'))}</a></p></div>` : '';
+  const mv = r.kind === 'move' ? readMove() : null, gg = r.kind === 'etf' ? readGG() : null;
+  const linkBox2 = r.kind === 'move' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.useMove'))}</span></label><p class="note">${esc(!r.link ? t('link.offMove') : !mv ? t('link.noneMove') : mv.cur !== S.cur ? t('link.cur') : t('link.onMove', { t: money(mv.target), g: money(mv.good) }))} <a href="../safety-net/">${esc(t('link.open'))}</a></p></div>`
+    : r.kind === 'etf' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.useGG'))}</span></label><p class="note">${esc(!r.link ? t('link.offGG') : !gg ? t('link.noneGG') : gg.cur !== S.cur ? t('link.cur') : t('link.onGG', { s: money(gg.saved) }))} <a href="../gains-greeks/">${esc(t('link.openGG'))}</a></p></div>` : '';
   const parts = hasParts ? `<div class="parts">${r.parts.map((p, k) => `<div class="prow"><input type="text" maxlength="40" data-pf="label" data-k="${k}" value="${esc(p.label || '')}" placeholder="${esc(partLabel(r, p, k))}" aria-label="${esc(t('part.label'))}"><input type="number" inputmode="decimal" min="0" step="50" data-pf="amt" data-k="${k}" value="${p.amt || ''}" aria-label="${esc(t('part.amt'))}"><button class="x" data-act="part-del" data-k="${k}" aria-label="${esc(t('part.del'))}">×</button></div>`).join('')}<p class="note">${esc(t('part.sum', { v: money(targetOf(r)) }))}</p></div>` : '';
   sheet(`<h2>${esc(t('edit.h', { n: i + 1 }))}</h2>
 <div class="grid"><label class="fld wide"><span>${esc(t('f.name'))}</span><span class="box"><input type="text" maxlength="40" data-rf="name" value="${esc(r.name || '')}" placeholder="${esc(t('kind.' + (KINDS.includes(r.kind) ? r.kind : 'custom')))}"></span></label>
-${linkBox}
-${e.linked ? '' : `${hasParts ? `<div class="fld wide"><span>${esc(t('f.parts'))}</span>${parts}<div class="row"><button class="btn sm" data-act="part-add">${esc(t('part.add'))}</button></div></div>` : `<label class="fld"><span>${esc(t('f.target'))}</span><span class="box"><input type="number" inputmode="decimal" min="0" step="100" data-rf="target" value="${r.target || ''}"><i>${S.cur}</i></span></label>`}
-<label class="fld"><span>${esc(t('f.saved'))}</span><span class="box"><input type="number" inputmode="decimal" min="0" step="50" data-rf="saved" value="${r.saved || ''}"><i>${S.cur}</i></span></label>`}
+${linkBox}${linkBox2}
+${e.linked && e.from === 'sn' ? '' : `${e.linkedT ? '' : hasParts ? `<div class="fld wide"><span>${esc(t('f.parts'))}</span>${parts}<div class="row"><button class="btn sm" data-act="part-add">${esc(t('part.add'))}</button></div></div>` : `<label class="fld"><span>${esc(t('f.target'))}</span><span class="box"><input type="number" inputmode="decimal" min="0" step="100" data-rf="target" value="${r.target || ''}"><i>${S.cur}</i></span></label>`}
+${e.linked ? '' : `<label class="fld"><span>${esc(t('f.saved'))}</span><span class="box"><input type="number" inputmode="decimal" min="0" step="50" data-rf="saved" value="${r.saved || ''}"><i>${S.cur}</i></span></label>`}`}
+<label class="fld"><span>${esc(t('f.ret'))}</span><span class="box"><input type="number" inputmode="decimal" min="0" max="20" step="0.5" data-rf="ret" value="${r.ret || ''}" placeholder="0"><i>%</i></span><small>${esc(t('f.retHint'))}</small></label>
 <label class="fld"><span>${esc(t('f.due'))}</span><span class="box"><input type="month" data-rf="due" value="${esc(r.due || '')}"></span><small>${esc(t('f.dueHint'))}</small></label>
 <label class="fld"><span>${esc(t('f.pct'))}</span><span class="box"><input type="number" inputmode="decimal" min="0" max="100" step="5" data-rf="pct" value="${r.pct ?? ''}"><i>%</i></span><small>${esc(t('f.pctHint'))}</small></label></div>
-${!e.linked && !hasParts ? `<div class="row"><button class="link" data-act="part-add">${esc(t('part.start'))}</button></div>` : ''}
+${!e.linked && !e.linkedT && !hasParts ? `<div class="row"><button class="link" data-act="part-add">${esc(t('part.start'))}</button></div>` : ''}
 <div class="row tools"><button class="btn sm" data-act="rung-up" ${i >= S.rungs.length - 1 ? 'disabled' : ''}>↑ ${esc(t('edit.up'))}</button><button class="btn sm" data-act="rung-down" ${i <= 0 ? 'disabled' : ''}>↓ ${esc(t('edit.down'))}</button><button class="btn sm" data-act="rung-pause">${esc(t(r.paused ? 'edit.resume' : 'edit.pause'))}</button></div>
 <div class="row end"><button class="link danger" data-act="rung-del">${esc(t('edit.del'))}</button><button class="btn sm pri" data-act="close">${esc(t('common.done'))}</button></div>`);
 }
@@ -127,6 +136,7 @@ function renderSettings() {
   return `<section><h1>${esc(t('set.h1'))}</h1></section>
 <section><h2>${esc(t('set.lang'))}</h2><div class="seg" role="group"><button data-act="lang" data-l="en" aria-pressed="${lang() === 'en'}">English</button><button data-act="lang" data-l="fr" aria-pressed="${lang() === 'fr'}">Français</button></div></section>
 <section><h2>${esc(t('set.cur'))}</h2><label class="fld"><span class="box"><select data-f="cur" aria-label="${esc(t('set.cur'))}">${CURS.map(c => `<option${c === S.cur ? ' selected' : ''}>${c}</option>`).join('')}</select></span></label></section>
+<section><h2>${esc(t('set.infl'))}</h2><p class="note">${esc(t('infl.sub'))}</p><label class="fld"><span class="box"><input type="number" inputmode="decimal" min="0" max="10" step="0.5" data-f="infl" value="${S.infl || ''}" placeholder="0" aria-label="${esc(t('set.infl'))}"><i>%</i></span></label></section>
 <section><h2>${esc(t('set.sync'))}</h2><p class="note">${esc(!on ? t('sync.none') : email ? t('sync.on', { e: email }) : t('sync.off'))}</p>${on ? `<div class="row"><button class="btn sm" data-act="sync">${esc(email ? t('sync.manage') : t('sync.signin'))}</button></div>` : ''}<p class="note">${esc(t('sync.private'))}</p></section>
 <section><h2>${esc(t('set.ideas'))}</h2><p class="note">${esc(t('ideas.sub'))}</p><label class="fld wide"><span>${esc(t('ideas.link'))}</span><span class="box"><input type="url" data-inbox value="${esc(S.inbox || '')}" placeholder="https://docs.google.com/…"></span></label>${S.inbox ? `<div class="row"><a class="btn sm" href="${esc(S.inbox)}" target="_blank" rel="noopener">${esc(t('ideas.open'))}</a></div>` : ''}</section>
 <section><h2>${esc(t('set.data'))}</h2><div class="row"><button class="btn sm" data-act="export">${esc(t('data.export'))}</button><label class="btn sm">${esc(t('data.import'))}<input type="file" accept="application/json,.json" data-import hidden></label></div>
@@ -185,6 +195,7 @@ export function init() {
     const el = ev.target, r = editing();
     if (el.dataset.f === 'monthly') { S.monthly = Math.max(0, Number(el.value) || 0); save(); if (done) render(); }
     else if (el.dataset.f === 'cur' && done) { S.cur = el.value; save(); render(); }
+    else if (el.dataset.f === 'infl') { S.infl = Math.min(10, Math.max(0, Number(el.value) || 0)); save(); if (done) render(); }
     else if (el.dataset.rf && r) {
       const k = el.dataset.rf;
       if (k === 'link') { r.link = el.checked; touch(r); rungSheet(r.id); return; }

@@ -25,6 +25,7 @@ const DEF = () => ({
   lang: (navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en',
   cur: 'EUR',
   monthly: 1000,
+  infl: 0,                                    // inflation on targets, % a year (0 = off)
   rule: 'order',                              // 'order' = fill the rungs one after the other, 'pct' = by shares
   rungs: examples(),                          // bottom rung first
   log: [],                                    // [{ id, d: 'YYYY-MM-DD', amt, by: { rungId: amount }, names: { rungId: name } }]
@@ -64,6 +65,14 @@ export function readSafety() {
   } catch (e) { return null; }
 }
 
+/* The move-buffer rung can take its target from Safety Net Score's move planner (what the move needs on the day you leave). */
+export function readMove() {
+  try { const x = JSON.parse(localStorage.getItem(SAFETY_KEY)); const m = x && x.moveNeed; if (!m || !(m.through > 0)) return null; return { target: m.through, good: m.good, cur: m.cur, to: m.to, leave: m.leave }; } catch (e) { return null; }
+}
+/* The ETF rung can take what is invested from Gains & Greeks ("Capital invested" on its tax desk, in euros). */
+export function readGG() {
+  try { const x = JSON.parse(localStorage.getItem('gg.v1')); const c = x && x.p && Number(x.p.cap); return c > 0 ? { saved: c, cur: 'EUR' } : null; } catch (e) { return null; }
+}
 export function exportBackup() { return new Blob([JSON.stringify({ ladder: 1, exported: new Date().toISOString(), state: { ...S, ui: undefined } }, null, 1)], { type: 'application/json' }); }
 export function importBackup(text) {
   const x = JSON.parse(text);

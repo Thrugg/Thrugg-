@@ -41,21 +41,34 @@ export const monthsBetween = (a, b) => (Number(b.slice(0, 4)) - Number(a.slice(0
 export const thisMonth = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
 /* Month by month at the same amount and rule: when is each rung reached?
+   opts.infl: inflation in % a year, applied to every target (targets in today's money). A rung's own ret (% a year)
+   is the expected return on what is already in it (an ETF rung grows by itself, cash at the savings rate).
    Returns { id: { share, months, when, late, perMonthForDue } }: share = this month's part; months = null when the
    rung is paused or never reached within 50 years; late = months after its date (0 or less = on time). */
-export function project(rungs, monthly, rule, start = thisMonth()) {
-  const st = rungs.map(r => ({ id: r.id, need: needOf(r), paused: !!r.paused, pct: r.pct })), out = {};
-  const first = split(st.map(x => ({ ...x })), monthly, rule);
+export function project(rungs, monthly, rule, start = thisMonth(), opts = {}) {
+  const infl = Math.max(0, num(opts.infl)) / 1200;
+  const st = rungs.map(r => ({ id: r.id, target: targetOf(r), saved: Math.max(0, num(r.saved)), ret: Math.max(-50, Math.min(50, num(r.ret))) / 1200, paused: !!r.paused, pct: r.pct, done: false }));
+  const needs = () => st.map(x => ({ id: x.id, need: x.done ? 0 : r2(Math.max(0, x.target - x.saved)), paused: x.paused, pct: x.pct }));
+  const out = {};
+  const first = split(needs(), monthly, rule);
   for (const r of rungs) {
     const need = needOf(r), toDue = r.due ? monthsBetween(start, r.due) : null;
     out[r.id] = { share: first.by[r.id] || 0, months: need <= 0 && targetOf(r) > 0 ? 0 : null, when: need <= 0 && targetOf(r) > 0 ? start : null, late: null, perMonthForDue: r.due && need > 0 ? r2(need / Math.max(1, toDue)) : null };
   }
+  for (const x of st) if (out[x.id].months === 0) x.done = true;
   let n = 0;
-  while (n < 600 && monthly > 0 && st.some(x => !x.paused && x.need > 0)) {
+  while (n < 600 && st.some(x => !x.paused && !x.done && x.target > 0)) {
     n++;
-    const s = split(st.map(x => ({ ...x })), monthly, rule);
-    if (!Object.keys(s.by).length) break;
-    for (const x of st) if (s.by[x.id]) { x.need = r2(x.need - s.by[x.id]); if (x.need <= 0 && out[x.id].months === null) { out[x.id].months = n; out[x.id].when = addMonths(start, n); } }
+    for (const x of st) { if (x.done) continue; x.target *= 1 + infl; x.saved *= 1 + x.ret; }
+    const s = monthly > 0 ? split(needs(), monthly, rule) : { by: {} };
+    let moved = false;
+    for (const x of st) {
+      if (x.done || x.paused) continue;
+      if (s.by[x.id]) { x.saved += s.by[x.id]; moved = true; }
+      if (x.target > 0 && x.saved >= x.target - 0.005) { x.done = true; out[x.id].months = n; out[x.id].when = addMonths(start, n); moved = true; }
+      else if (x.ret > 0) moved = true;
+    }
+    if (!moved) break;
   }
   for (const r of rungs) { const o = out[r.id]; if (r.due && o.when) o.late = monthsBetween(r.due, o.when); else if (r.due && needOf(r) > 0) o.late = Infinity; }
   return { by: out, left: first.left, months: n };

@@ -20,6 +20,17 @@ The next financial targets after the emergency fund, as a ladder: what comes nex
 - "Put this month's amount on the ladder" applies the split to the saved amounts and records it in the Log. The last entry can be undone.
 - Paused rungs are skipped. Rungs can be moved sooner or later.
 
+## Growth and inflation (Nov 2026)
+
+- A rung can have an expected return (`ret`, % a year): each month of the projection what is already in it grows by ret/12 before this month's money is shared out. Use it for invested rungs (ETF) and cash at the savings rate.
+- `S.infl` (Settings, % a year, 0 = off) grows every target by infl/12 a month in the projection, so distant targets are in today's money. The "Put this month's amount" step is unchanged: it never adds growth to the saved figures.
+
+## Links with Safety Net Score and Gains & Greeks (Nov 2026)
+
+- Move buffer: with its link switched on, the target is "what the move needs on the day you leave" from Safety Net's move planner (`moveNeed.through` in `safetyNetScore.v1`, written once the planner is used). What is set aside stays typed here.
+- ETF core: with its link on, the saved figure is "Capital invested" from Gains & Greeks' tax desk (`gg.v1` → `p.cap`, euros). The target stays yours, and this month's money is not added to a linked balance.
+- Links apply only when the currencies match.
+
 ## Link with Safety Net Score
 
 The emergency-fund rung can read its figures from Safety Net Score on the same device: cash savings from the active profile, and the "Excellent" level as the target. Safety Net Score writes its four levels into its own saved state (`levels`) each time its score tab is drawn, so it must have been opened once since 14 Nov 2026. If the levels are missing, or the currencies differ, the amounts typed on the rung are used. The link is read-only: money allocated to that rung is logged here, and the person updates their savings in Safety Net Score.
@@ -34,7 +45,7 @@ State is one browser key, `ladder.v1`, mirrored through `../cloud.js` under the 
 
 ## Left for later (from the brief)
 
-Feed the 812 card from Prüfstand's used-price model; pull the dog rung from Doodle Window's cost ledger; link the move-buffer rung to Seuil and the move planner.
+Feed the 812 card from Prüfstand's used-price model; pull the dog rung from Doodle Window's cost ledger; a house-deposit rung from Seuil.
 
 ## After a change
 

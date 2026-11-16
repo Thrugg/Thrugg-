@@ -31,7 +31,12 @@ const EN = {
   'sync.none': 'Sync is not set up on this site.', 'sync.off': 'Not signed in. Your ladder is saved on this device only.', 'sync.on': 'Signed in as {e}. Your ladder is saved to your account and follows you to your other devices.', 'sync.signin': 'Sign in to sync', 'sync.manage': 'Account', 'sync.private': 'Your amounts stay in this browser and in your own account. They are never part of the public code of this site.',
   'ideas.sub': 'Something missing or annoying while you use the app? Note it in your “Apps ideas inbox” file; the weekly review reads it. Paste the link to that file once and every app on this device will offer it.', 'ideas.link': 'Link to the file', 'ideas.open': 'Open the inbox',
   'data.export': 'Export a backup', 'data.import': 'Import a backup', 'data.imported': 'Backup imported', 'data.importFail': 'That file is not a Funds Ladder backup', 'data.reset': 'Delete everything',
-  'reset.h': 'Delete the whole ladder?', 'reset.sub': 'This empties the ladder and its log on this device and, once it syncs, in your account. The examples come back.', 'reset.yes': 'Delete everything'
+  'reset.h': 'Delete the whole ladder?', 'reset.sub': 'This empties the ladder and its log on this device and, once it syncs, in your account. The examples come back.', 'reset.yes': 'Delete everything',
+  'rung.linkedGG': 'from Gains & Greeks', 'rung.ret': '+{r} % a year',
+  'link.useMove': 'Take the target from Safety Net Score’s move planner', 'link.offMove': 'Type the target yourself, or split it into parts.', 'link.noneMove': 'The move planner in Safety Net Score has no plan of yours on this device yet.', 'link.onMove': 'The move needs {t} on the day you leave ({g} to arrive with a Good safety net). What you set aside stays here.',
+  'link.useGG': 'Take what is invested from Gains & Greeks', 'link.offGG': 'Type what is already invested yourself.', 'link.noneGG': 'Gains & Greeks holds no capital invested on this device yet.', 'link.onGG': 'Capital invested: {s}, from its tax desk. Update it there; this month’s money is not added here.', 'link.openGG': 'Open Gains & Greeks',
+  'f.ret': 'Expected return', 'f.retHint': 'Optional, % a year on what is already in the rung: about 5–7 for an equity ETF, your savings rate for cash.',
+  'set.infl': 'Inflation on targets', 'infl.sub': 'Targets grow by this much a year in the projection, so far-off rungs stay honest in today’s money. 2 % is the euro-area aim; 0 turns it off.'
 };
 const FR = {
   'tab.ladder': 'Échelle', 'tab.car': 'Calcul 812', 'tab.log': 'Journal', 'tab.settings': 'Réglages',
@@ -65,7 +70,12 @@ const FR = {
   'sync.none': 'La synchronisation n’est pas configurée sur ce site.', 'sync.off': 'Non connecté. Votre échelle est enregistrée sur cet appareil seulement.', 'sync.on': 'Connecté en tant que {e}. Votre échelle est enregistrée dans votre compte et vous suit sur vos autres appareils.', 'sync.signin': 'Se connecter pour synchroniser', 'sync.manage': 'Compte', 'sync.private': 'Vos montants restent dans ce navigateur et dans votre propre compte. Ils ne figurent jamais dans le code public de ce site.',
   'ideas.sub': 'Quelque chose manque ou agace à l’usage ? Notez-le dans votre fichier « Apps ideas inbox » ; la revue hebdomadaire le lit. Collez une fois le lien vers ce fichier et toutes les apps de cet appareil le proposeront.', 'ideas.link': 'Lien vers le fichier', 'ideas.open': 'Ouvrir la boîte à idées',
   'data.export': 'Exporter une sauvegarde', 'data.import': 'Importer une sauvegarde', 'data.imported': 'Sauvegarde importée', 'data.importFail': 'Ce fichier n’est pas une sauvegarde de l’Échelle', 'data.reset': 'Tout supprimer',
-  'reset.h': 'Supprimer toute l’échelle ?', 'reset.sub': 'L’échelle et son journal sont vidés sur cet appareil et, après synchronisation, dans votre compte. Les exemples reviennent.', 'reset.yes': 'Tout supprimer'
+  'reset.h': 'Supprimer toute l’échelle ?', 'reset.sub': 'L’échelle et son journal sont vidés sur cet appareil et, après synchronisation, dans votre compte. Les exemples reviennent.', 'reset.yes': 'Tout supprimer',
+  'rung.linkedGG': 'depuis Gains & Greeks', 'rung.ret': '+{r} % par an',
+  'link.useMove': 'Reprendre l’objectif du planificateur de déménagement de Safety Net Score', 'link.offMove': 'Saisissez l’objectif vous-même, ou découpez-le.', 'link.noneMove': 'Le planificateur de déménagement de Safety Net Score ne contient pas encore votre projet sur cet appareil.', 'link.onMove': 'Le déménagement demande {t} le jour du départ ({g} pour arriver avec un filet « Bien »). Ce que vous mettez de côté reste ici.',
+  'link.useGG': 'Reprendre le capital investi de Gains & Greeks', 'link.offGG': 'Saisissez vous-même ce qui est déjà investi.', 'link.noneGG': 'Gains & Greeks ne contient pas encore de capital investi sur cet appareil.', 'link.onGG': 'Capital investi : {s}, depuis son bureau fiscal. Mettez-le à jour là-bas ; l’argent du mois n’est pas ajouté ici.', 'link.openGG': 'Ouvrir Gains & Greeks',
+  'f.ret': 'Rendement attendu', 'f.retHint': 'Facultatif, % par an sur ce qui est déjà dans le barreau : environ 5–7 pour un ETF actions, votre taux d’épargne pour du cash.',
+  'set.infl': 'Inflation sur les objectifs', 'infl.sub': 'Les objectifs augmentent d’autant chaque année dans la projection, pour rester honnêtes en euros d’aujourd’hui. 2 % est la cible de la zone euro ; 0 la désactive.'
 };
 const DICT = { en: EN, fr: FR };
 let cur = 'en';

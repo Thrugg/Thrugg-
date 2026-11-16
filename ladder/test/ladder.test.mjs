@@ -70,3 +70,13 @@ test('English and French have the same keys, and every key used on screen exists
   for (const key of used) assert.ok(k.en.includes(key), 'missing key: ' + key);
   setLang('fr'); assert.match(t('late.order', { n: 1, name: 'Chien', v: '5 €' }), /^Chien serait atteint/); assert.match(t('late.order', { n: 2, name: 'Chien', v: '5 €' }), /^2 barreaux/); setLang('en');
 });
+
+test('growth on a rung and inflation on targets move the dates the right way', () => {
+  const base = [{ id: 'a', target: 12000, saved: 6000 }];
+  const flat = project(base, 100, 'order', '2026-11').by.a.months;
+  const grown = project([{ ...base[0], ret: 6 }], 100, 'order', '2026-11').by.a.months;
+  const infl = project(base, 100, 'order', '2026-11', { infl: 2 }).by.a.months;
+  assert.equal(flat, 60); assert.ok(grown < flat, `growth ${grown} < ${flat}`); assert.ok(infl > flat, `inflation ${infl} > ${flat}`);
+  const onlyGrowth = project([{ id: 'b', target: 2000, saved: 1000, ret: 7 }], 0, 'order', '2026-11').by.b;
+  assert.ok(onlyGrowth.months > 100 && onlyGrowth.months < 130, 'no new money: about 10 years at 7 %');
+});
