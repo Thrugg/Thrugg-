@@ -45,6 +45,17 @@ Gains & Greeks can fill in the last price of a symbol on any device, the phone i
 
 After that, the **Fetch** button appears in the options lab whenever you are signed in, and the price fills in when you change the symbol. Prices come from Yahoo Finance (Stooq as a fallback for US symbols) and are delayed or last close. Until the function exists, the app shows the Yahoo and TradingView links as before.
 
+## Ask Claude (one-time setup, about 10 minutes)
+
+Sillage (similar fragrances, your scent profile, what to buy next), Seuil (price and rent for a place) and Grand Tour (hotel ideas) can ask Claude through a small function in your own Supabase project. Your Anthropic API key stays in Supabase and never reaches the browser; only signed-in accounts can call it, and each account gets at most 40 questions a day.
+
+1. Get an API key at console.anthropic.com (API keys → Create key). Usage is billed there: roughly 5 cents for a plain answer and 15–30 cents for one that searches the web.
+2. Supabase dashboard → **Edge Functions** → **Secrets** → add `ANTHROPIC_API_KEY` with the key. Optional: `ASK_ALLOWED` = your email (only that account may ask), `ASK_DAILY_LIMIT` = another daily cap.
+3. **Edge Functions** → **Deploy a new function** → **Via editor** → name it exactly `ask` → paste [`supabase/functions/ask/index.ts`](supabase/functions/ask/index.ts) → **Deploy**. Leave "Verify JWT" on.
+4. **SQL Editor** → New query → paste [`supabase/ask.sql`](supabase/ask.sql) → **Run** (the table behind the daily cap; without it there is no cap).
+
+The apps only send named tasks (the list is at the top of the function), never a free prompt. Until the function exists, the buttons explain what is missing.
+
 ## Tandem for two (one-time setup, about 3 minutes)
 
 Tandem works alone. To flag cards for each other, each learner signs in with their own account and one table is added to your Supabase project:
