@@ -16,6 +16,7 @@
 | Tandem | Ten minutes a day of Polish and German on one spaced-repetition engine, for two learners who check each other's language | https://thrugg.github.io/Thrugg-/tandem/ | Yes, sign in from its Settings |
 | BridgeLab | A price, volume and mix bridge with sliders on an invented portfolio, and the order-of-effects trap | https://thrugg.github.io/Thrugg-/bridgelab/ | Yes, sign in from its Settings |
 | Révélateur | A photo editor that analyses each photo on the phone, adjusts it for its type (portrait, landscape, food, night…) and the look it already has, then learns your taste | https://thrugg.github.io/Thrugg-/revelateur/ | Taste and presets, sign in from its Settings (photos stay on the device) |
+| Our year | Every app's year on one page: hikes, hotel stays, nights, wears, records, savings, practice and photos | https://thrugg.github.io/Thrugg-/year/ | Reads what the apps saved on the device |
 | Forkcast | Snap a meal, get the nutrition (opens in Claude) | https://claude.ai/artifact/5wenBM41wM6kANsCCpzwRN | In Claude |
 | Prüfstand | German car market analyst (opens in Claude) | https://claude.ai/artifact/EsViuZGJAHhRTYqBgBnQSu | In Claude |
 

@@ -1,4 +1,5 @@
 /* Révélateur — the screens: Library, Editor, Settings. */
+import { blankGeo, norm as normGeo, outDims, ASPECTS, cropAspect, cropScale, cropMove } from './geo.js';
 import { S, save, saveUi, resetTaste } from './store.js';
 import * as L from './library.js';
 import { SLIDERS, SL, BANDS, BAND_HUE, KEYS, neutral, tidy, fmtVal as fmtRaw, labelOf, histogram, tasteSummary, sampleFrom, addSample, compose, isNeutral } from './engine.js';
@@ -23,7 +24,7 @@ const ICON = {
 };
 const ico = (k, label = '') => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>${label ? `<span class="vh">${esc(label)}</span>` : ''}`;
 const BAND_COL = { red: '#e5484d', orange: '#f08c2e', yellow: '#f2d03b', green: '#46a758', aqua: '#3cc6c6', blue: '#3e7be6', purple: '#8e4ec6', magenta: '#d6409f' };
-const PANELS = [['auto', 'Auto'], ['light', 'Light'], ['color', 'Colour'], ['mix', 'Mix'], ['effects', 'Effects'], ['presets', 'Presets']];
+const PANELS = [['auto', 'Auto'], ['light', 'Light'], ['color', 'Colour'], ['mix', 'Mix'], ['effects', 'Effects'], ['crop', 'Crop'], ['presets', 'Presets']];
 
 const ui = { view: 'library', list: [], urls: new Map(), sel: null, busy: null, session: null, ed: null, clip: null, files: null };
 let R = null;
@@ -115,7 +116,7 @@ async function openEditor(id) {
   ui.ed = { r, tex, z: 1, cx: 0.5, cy: 0.5, before: false, lock: false, hist: null, history: [], future: [], snap, band: 'orange', exported: false, start: JSON.stringify(snap), dirty: false };
   go('editor');
 }
-const snapshot = r => ({ manual: { ...(r.manual || {}) }, amount: r.amount, scene: r.scene, sceneBy: r.sceneBy, auto: r.auto, autoWhy: r.autoWhy, look: r.look, offset: r.offset, tasteN: r.tasteN });
+const snapshot = r => ({ geo: r.geo ? JSON.parse(JSON.stringify(r.geo)) : null, manual: { ...(r.manual || {}) }, amount: r.amount, scene: r.scene, sceneBy: r.sceneBy, auto: r.auto, autoWhy: r.autoWhy, look: r.look, offset: r.offset, tasteN: r.tasteN });
 const restore = (r, s) => Object.assign(r, JSON.parse(JSON.stringify(s)));
 function commit() {
   const ed = ui.ed; if (!ed) return;
@@ -147,7 +148,7 @@ async function closeEditor() {
   const ed = ui.ed; if (!ed) return go('library');
   const r = ed.r, changed = JSON.stringify(snapshot(r)) !== ed.start;
   if (changed || ed.exported) {
-    try { r.thumb = await thumbFrom(R, ed.tex, editOf(r), r.st.air); } catch (e) { }
+    try { r.thumb = await thumbFrom(R, ed.tex, editOf(r), r.st.air, 480, r.geo); } catch (e) { }
     if (S.prefs.learn && (hasManual(r) || ed.exported)) { S.taste = addSample(S.taste, r.id, r.scene, sampleFrom(r.auto, editOf(r), r.amount)); save(); }
   }
   r.edit = editOf(r);
@@ -234,6 +235,13 @@ function panel() {
   } else if (tab === 'presets') {
     h = `<div class="presets">${S.presets.length ? S.presets.map(p => `<div class="pre"><button class="btn sm" data-act="preset" data-id="${p.id}">${esc(p.name)}</button><button class="ibtn sm" data-act="preset-del" data-id="${p.id}" aria-label="Delete ${esc(p.name)}">×</button></div>`).join('') : '<p class="muted">No presets yet. Save the current settings to reuse them on other photos.</p>'}
       <div class="row"><button class="btn sm pri" data-act="preset-save">Save these settings as a preset</button></div></div>`;
+  } else if (tab === 'crop') {
+    const g = normGeo(r.geo), ar = (r.geo && r.geo.ar) || 'orig', size = Math.round(((r.geo && r.geo.size) || 1) * 100), od = outDims(ed.tex.w, ed.tex.h, r.geo);
+    h = `<div class="cropp"><div class="row"><button class="btn sm" data-act="rot" data-d="-1">↺ Rotate left</button><button class="btn sm" data-act="rot" data-d="1">↻ Rotate right</button><button class="btn sm" data-act="geo-reset" ${!r.geo ? 'disabled' : ''}>Reset</button></div>
+      <div class="sl" style="--track:linear-gradient(90deg,#3a3a3a,#3a3a3a);--a:50%"><label for="s-angle">Straighten</label><span class="val">${(g.a > 0 ? '+' : '') + g.a.toFixed(1).replace('-', '−')}°</span><input id="s-angle" type="range" min="-15" max="15" step="0.1" value="${g.a}" data-geo="a"></div>
+      <div class="aspects" role="group" aria-label="Aspect">${ASPECTS.map(([k]) => `<button class="btn sm${k === ar ? ' pri' : ''}" data-act="aspect" data-k="${k}">${k === 'orig' ? 'Original' : k}</button>`).join('')}</div>
+      <div class="sl" style="--track:linear-gradient(90deg,#3a3a3a,#3a3a3a);--a:100%"><label for="s-csize">Crop size</label><span class="val">${size}%</span><input id="s-csize" type="range" min="30" max="100" step="1" value="${size}" data-geo="size"></div>
+      <p class="muted">Drag the photo to choose what the crop keeps. Output ${od.w} × ${od.h} px.</p></div>`;
   } else h = group(tab);
   $('#pbody').innerHTML = h;
 }
@@ -255,10 +263,19 @@ function onSlide(input, final) {
   draw();
 }
 
+function onGeo(input, final) {
+  const ed = ui.ed; if (!ed) return;
+  const r = ed.r, g = normGeo(r.geo), ar = (r.geo && r.geo.ar) || 'orig', ratio = (ASPECTS.find(x => x[0] === ar) || [0, null])[1];
+  if (input.dataset.geo === 'a') { const ng = { ...g, a: +input.value }; r.geo = { ...cropScale(ed.tex.w, ed.tex.h, cropAspect(ed.tex.w, ed.tex.h, ng, ratio), ratio, (r.geo && r.geo.size) || 1), ar, size: (r.geo && r.geo.size) || 1 }; input.parentElement.querySelector('.val').textContent = (ng.a > 0 ? '+' : '') + ng.a.toFixed(1).replace('-', '−') + '°'; }
+  else { const size = +input.value / 100; r.geo = { ...cropScale(ed.tex.w, ed.tex.h, g.crop.w === 1 && g.crop.h === 1 ? cropAspect(ed.tex.w, ed.tex.h, g, ratio) : g, ratio, size), ar, size }; input.parentElement.querySelector('.val').textContent = input.value + '%'; }
+  ed.z = 1; ed.cx = ed.cy = 0.5;
+  if (final) { commit(); panel(); }
+  draw();
+}
 /* drawing */
 let raf = 0, histT = null;
 function view(ed) {
-  const c = R.canvas, cw = c.width, ch = c.height, ia = ed.tex.w / ed.tex.h;
+  const od = outDims(ed.tex.w, ed.tex.h, ed.r.geo), c = R.canvas, cw = c.width, ch = c.height, ia = od.w / od.h;
   const dispW = Math.min(cw, ch * ia), dispH = dispW / ia;
   const sx = cw / (dispW * ed.z), sy = ch / (dispH * ed.z);
   return [ed.cx - sx / 2, ed.cy - sy / 2, sx, sy];
@@ -275,15 +292,15 @@ function draw() {
     const st = $('#stage'); if (!st) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 3), w = Math.max(1, Math.round(st.clientWidth * dpr)), h = Math.max(1, Math.round(st.clientHeight * dpr));
     if (R.canvas.width !== w || R.canvas.height !== h) { R.canvas.width = w; R.canvas.height = h; clampCenter(ed); }
-    R.render(editOf(ed.r), view(ed), { air: ed.r.st.air, before: ed.before || ed.lock });
+    R.render(editOf(ed.r), view(ed), { air: ed.r.st.air, before: ed.before || ed.lock, geo: ed.r.geo });
     const bb = $('#beforeBadge'); if (bb) bb.hidden = !(ed.before || ed.lock);
     clearTimeout(histT); histT = setTimeout(drawHist, 140);
   });
 }
 function drawHist() {
   const ed = ui.ed, c = $('#hist'); if (!ed || !c || c.hidden) return;
-  const s = 200 / Math.max(ed.tex.w, ed.tex.h), w = Math.max(1, Math.round(ed.tex.w * s)), h = Math.max(1, Math.round(ed.tex.h * s));
-  const px = R.pixels(ed.tex, ed.before || ed.lock ? neutral() : editOf(ed.r), w, h, { air: ed.r.st.air, dither: false, before: ed.before || ed.lock });
+  const od = outDims(ed.tex.w, ed.tex.h, ed.r.geo), s = 200 / Math.max(od.w, od.h), w = Math.max(1, Math.round(od.w * s)), h = Math.max(1, Math.round(od.h * s));
+  const px = R.pixels(ed.tex, ed.before || ed.lock ? neutral() : editOf(ed.r), w, h, { air: ed.r.st.air, dither: false, before: ed.before || ed.lock, geo: ed.r.geo });
   const H = histogram(px, 100), ctx = c.getContext('2d'), W = c.width, Ht = c.height;
   ctx.clearRect(0, 0, W, Ht); ctx.globalCompositeOperation = 'lighter';
   for (const [a, col] of [[H.r, 'rgba(230,70,70,.55)'], [H.g, 'rgba(70,200,90,.5)'], [H.b, 'rgba(80,120,240,.6)']]) {
@@ -321,6 +338,7 @@ function bindStage(el) {
     if (!pan) return;
     const dx = ev.clientX - pan.x, dy = ev.clientY - pan.y;
     if (Math.abs(dx) + Math.abs(dy) > 6) { moved = true; clearTimeout(hold); if (!held) setBefore(false); }
+    if (moved && !held && S.ui.panel === 'crop' && e.z <= 1.01 && e.r.geo) { const rect = el.getBoundingClientRect(), c = R.canvas, od = outDims(e.tex.w, e.tex.h, e.r.geo), dw = Math.min(c.width, c.height * od.w / od.h) * rect.width / c.width, dh = dw * od.h / od.w, g0 = pan.geo || (pan.geo = normGeo(e.r.geo)); e.r.geo = { ...e.r.geo, ...cropMove(g0, -dx / dw * g0.crop.w, -dy / dh * g0.crop.h), ar: e.r.geo.ar, size: e.r.geo.size }; draw(); return; }
     if (moved && e.z > 1 && !held) { const v = view(e), rect = el.getBoundingClientRect(); e.cx = pan.cx - dx / rect.width * v[2]; e.cy = pan.cy - dy / rect.height * v[3]; clampCenter(e); draw(); }
   });
   const up = ev => {
@@ -333,6 +351,7 @@ function bindStage(el) {
       const now = Date.now();
       if (now - last < 320) { zoomAt(e, e.z > 1.01 ? 1 : 2.5, ev.clientX, ev.clientY); last = 0; } else last = now;
     }
+    if (!pts.size && pan && pan.geo) commit();
     if (!pts.size) pan = null;
   };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
@@ -465,6 +484,9 @@ async function act(a, el) {
     case 'sel-export': return exportSelected();
     case 'panel': S.ui.panel = el.dataset.p; saveUi(); return panel();
     case 'band': ed.band = el.dataset.b; return panel();
+    case 'rot': { const g = normGeo(ed.r.geo), ar = (ed.r.geo && ed.r.geo.ar) || 'orig'; const ng = { ...g, q: (g.q + Number(el.dataset.d) + 4) % 4 }; const ratio = (ASPECTS.find(x => x[0] === ar) || [0, null])[1]; ed.r.geo = { ...cropScale(ed.tex.w, ed.tex.h, cropAspect(ed.tex.w, ed.tex.h, ng, ratio), ratio, (ed.r.geo && ed.r.geo.size) || 1), ar, size: (ed.r.geo && ed.r.geo.size) || 1 }; ed.z = 1; ed.cx = ed.cy = 0.5; commit(); panel(); return draw(); }
+    case 'aspect': { const k = el.dataset.k, ratio = (ASPECTS.find(x => x[0] === k) || [0, null])[1], g = normGeo(ed.r.geo); ed.r.geo = { ...cropAspect(ed.tex.w, ed.tex.h, g, ratio), ar: k, size: 1 }; ed.z = 1; ed.cx = ed.cy = 0.5; commit(); panel(); return draw(); }
+    case 'geo-reset': ed.r.geo = null; ed.z = 1; ed.cx = ed.cy = 0.5; commit(); panel(); return draw();
     case 'reset-k': { const k = el.dataset.k; if (!k || !ed) return; delete ed.r.manual[k]; commit(); panel(); return draw(); }
     case 'reset-mine': ed.r.manual = {}; commit(); panel(); return draw();
     case 'original': { const r = ed.r, base = compose(r.auto, r.amount ?? 1, r.offset); r.manual = {}; for (const k of KEYS) if (base[k]) r.manual[k] = -base[k]; commit(); panel(); return draw(); }
@@ -505,12 +527,14 @@ export async function init() {
   document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) act(b.dataset.act, b); });
   document.addEventListener('input', e => {
     const t = e.target;
-    if (t.matches('input[type=range][data-k], input[data-amount]')) onSlide(t, false);
+    if (t.matches('input[data-geo]')) onGeo(t, false);
+    else if (t.matches('input[type=range][data-k], input[data-amount]')) onSlide(t, false);
     else if (t.matches('input[type=range][data-pref]')) { const k = t.dataset.pref; S.prefs[k] = +t.value; save(); const lab = k === 'amount' ? $('#amtv') : $('#qv'); if (lab) lab.textContent = t.value + (k === 'amount' ? '%' : ''); }
   });
   document.addEventListener('change', e => {
     const t = e.target;
-    if (t.matches('input[type=range][data-k], input[data-amount]')) onSlide(t, true);
+    if (t.matches('input[data-geo]')) onGeo(t, true);
+    else if (t.matches('input[type=range][data-k], input[data-amount]')) onSlide(t, true);
     else if (t.matches('input[type=checkbox][data-pref]')) { S.prefs[t.dataset.pref] = t.checked; save(); if (t.dataset.pref === 'models' && t.checked) loadVision().catch(() => { }); render(); }
     else if (t.matches('input[data-add]')) { const f = t.files; if (f && f.length) addFiles(f); t.value = ''; }
   });

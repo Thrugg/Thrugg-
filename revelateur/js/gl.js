@@ -5,6 +5,7 @@
    Display: the canvas shows the photo fitted, zoomed and panned through uView (image coordinates).
    Export: the full-size photo is rendered in strips into a framebuffer and read back for the JPEG writer. */
 import { K, BAND_HUE, GAUSS, tidy, tonePrep } from './engine.js';
+import { matrix, outDims } from './geo.js';
 
 const f = n => { const s = String(n); return s.includes('.') || s.includes('e') ? s : s + '.0'; };
 const VS = `#version 300 es
@@ -29,6 +30,7 @@ precision highp float;
 in vec2 vUV; out vec4 o;
 uniform sampler2D uImg, uBlur;
 uniform vec4 uView; uniform float uFlip; uniform vec3 uBg; uniform float uBefore, uDither;
+uniform vec4 uGM, uGC;   // crop, straighten, rotate: output point → photo (geo.js)
 uniform vec3 uWB; uniform float uEx, uBp, uWp, uG, uFb, uAir;
 uniform float uDehaze, uHi, uSh, uClar, uVig, uVib, uSatA;
 uniform float uHue[8], uSatB[8], uLum[8];
@@ -59,9 +61,12 @@ void main(){
   float vy = uFlip > 0.5 ? 1.0 - vUV.y : vUV.y;
   vec2 uv = uView.xy + vec2(vUV.x, vy) * uView.zw;
   if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) { o = vec4(uBg, 1.0); return; }
-  vec3 e = texture(uImg, uv).rgb;
+  vec2 gp = uGC.xy + uv * uGC.zw - 0.5, suv = 0.5 + vec2(uGM.x * gp.x + uGM.y * gp.y, uGM.z * gp.x + uGM.w * gp.y);
+  if (suv.x < -0.001 || suv.y < -0.001 || suv.x > 1.001 || suv.y > 1.001) { o = vec4(uBg, 1.0); return; }
+  suv = clamp(suv, 0.0, 1.0);
+  vec3 e = texture(uImg, suv).rgb;
   if (uBefore > 0.5) { o = vec4(e, 1.0); return; }
-  vec2 bl = texture(uBlur, vec2(uv.x, 1.0 - uv.y)).rg;
+  vec2 bl = texture(uBlur, vec2(suv.x, 1.0 - suv.y)).rg;
   vec3 c = vec3(dec(e.r), dec(e.g), dec(e.b)) * uWB;
   float lb = dec(bl.r), A = uAir;
   if (uDehaze > 0.0) { float t = max(1.0 - uDehaze * ${f(K.dehaze)} * dec(bl.g) / A, ${f(K.tMin)}); c = max((c - A) / t + A, 0.0); lb = max((lb - A) / t + A, 0.0); }
@@ -171,6 +176,9 @@ export class Renderer {
     gl.uniform1fv(u.uHue, B.map(b => c(P['hue_' + b]))); gl.uniform1fv(u.uSatB, B.map(b => c(P['sat_' + b]))); gl.uniform1fv(u.uLum, B.map(b => c(P['lum_' + b])));
     gl.uniform1f(u.uBefore, opts.before ? 1 : 0); gl.uniform1f(u.uDither, opts.dither === false ? 0 : 1 / 255);
     gl.uniform3fv(u.uBg, this.bg);
+    const G = opts.geo && opts.img ? matrix(opts.img.w, opts.img.h, opts.geo) : null;
+    gl.uniform4f(u.uGM, G ? G.M[0] : 1, G ? G.M[1] : 0, G ? G.M[2] : 0, G ? G.M[3] : 1);
+    gl.uniform4f(u.uGC, G ? G.crop.x : 0, G ? G.crop.y : 0, G ? G.crop.w : 1, G ? G.crop.h : 1);
   }
   draw(img, P, view, flip, opts) {
     const gl = this.gl, m = this.progs.main;
@@ -179,7 +187,7 @@ export class Renderer {
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, img.blur.tex); gl.uniform1i(m.u.uBlur, 1);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform4f(m.u.uView, view[0], view[1], view[2], view[3]); gl.uniform1f(m.u.uFlip, flip ? 1 : 0);
-    this.uniforms(tidy(P), opts);
+    this.uniforms(tidy(P), { ...opts, img });
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
   /* Draw on the display canvas. view: [x0, y0, sx, sy] maps the canvas onto image coordinates (0..1). */
@@ -201,7 +209,7 @@ export class Renderer {
   }
   /* Full-size render in strips. onStrip(rgba, rows) is awaited between strips so the page stays responsive. */
   async strips(img, P, opts, onStrip) {
-    const gl = this.gl, W = img.w, H = img.h;
+    const gl = this.gl, od = outDims(img.w, img.h, opts.geo), W = od.w, H = od.h;
     if (W > this.maxView) throw new Error('Photo too wide for this device');
     let rows = Math.max(16, Math.min(512, Math.floor(4_000_000 / W / 16) * 16));
     const t = this.target(W, rows), buf = new Uint8Array(W * rows * 4);

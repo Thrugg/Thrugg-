@@ -11,11 +11,12 @@ A photo editor in the spirit of Lightroom: every photo is analysed on the device
 | `js/gl.js` | WebGL2 renderer. The shader is generated from `K` and does exactly what `process` does. Display (zoom and pan) and the full-size export in strips. |
 | `js/jpeg.js` | JPEG encoder (no canvas, so 24 and 48 MP photos export at full size on the iPhone), Exif copy (rotation reset, thumbnail dropped, place optional) and a Display P3 ICC profile. |
 | `js/vision.js` | MediaPipe face detector and image classifier, loaded from jsDelivr and Google's model storage, then cached by the service worker. |
+| `js/geo.js` | Crop, straighten and rotate (`geo` on each photo): the output size and the 2×2 matrix the shader uses to map each output pixel back to the photo. Straightening zooms in just enough that no empty corner shows. Pure functions. |
 | `js/photo.js` | Import (decode, measure, recognise, auto, preview), the settings of a photo, export. |
 | `js/library.js` | IndexedDB: originals, previews, measurements, edits. Stays on the device. |
 | `js/store.js` | Settings, presets and the learned taste in one localStorage key, synced by `cloud.js` (app key `revelateur`). |
 | `js/ui.js` | Library, Editor, Settings. |
-| `test/revelateur.test.mjs` | `node --test revelateur/test/*.mjs` — 17 checks on synthetic images. |
+| `test/revelateur.test.mjs` | `node --test revelateur/test/*.mjs` — 18 checks on synthetic images, crop and straighten included. |
 
 ## How a photo's settings are made
 
@@ -25,6 +26,7 @@ A photo editor in the spirit of Lightroom: every photo is analysed on the device
 - **strength**: the Auto strength slider (default in Settings).
 - **learned taste**: `tasteOffset(samples, scene)`. A sample is what you changed after the auto on one photo, saved when you leave a photo you edited or exported. The offset for a type is the recency-weighted mean of its samples (last 40 per type) × n/(n+2), plus a small share of the mean over all types. Samples are keyed by photo, so the iPhone and the Mac merge cleanly.
 - **your changes**: stored separately (`manual`), so changing the scene type or the strength keeps them.
+- **crop, straighten and rotate**: stored apart from the settings (`geo`), never learned into the taste. The measurements and the auto use the whole photo; the crop only changes what is shown and exported. Undo and Reset cover it.
 
 ## The rules worth tuning first
 

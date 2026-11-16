@@ -1,5 +1,6 @@
 /* Révélateur — what happens to a photo: import (decode, measure, recognise, auto-adjust, preview), the settings
    that follow from the auto, your own changes and your taste, and the full-size export. */
+import { outDims } from './geo.js';
 import { analyze, autoAdjust, compose, tasteOffset, neutral, tidy, KEYS, changedKeys } from './engine.js';
 import { classify, PROFILES } from './scenes.js';
 import { see } from './vision.js';
@@ -27,9 +28,9 @@ function pixelsOf(c, space) {
   const ctx = c.getContext('2d');
   try { return ctx.getImageData(0, 0, c.width, c.height, { colorSpace: space }).data; } catch (e) { return ctx.getImageData(0, 0, c.width, c.height).data; }
 }
-export async function thumbFrom(renderer, tex, P, air, maxSide = 480) {
-  const s = maxSide / Math.max(tex.w, tex.h), w = Math.max(1, Math.round(tex.w * Math.min(1, s))), h = Math.max(1, Math.round(tex.h * Math.min(1, s)));
-  const px = renderer.pixels(tex, P, w, h, { air });
+export async function thumbFrom(renderer, tex, P, air, maxSide = 480, geo = null) {
+  const od = outDims(tex.w, tex.h, geo), s = maxSide / Math.max(od.w, od.h), w = Math.max(1, Math.round(od.w * Math.min(1, s))), h = Math.max(1, Math.round(od.h * Math.min(1, s)));
+  const px = renderer.pixels(tex, P, w, h, { air, geo });
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   let ctx; try { ctx = c.getContext('2d', { colorSpace: renderer.space }); } catch (e) { ctx = null; } ctx = ctx || c.getContext('2d');
   let id; try { id = new ImageData(new Uint8ClampedArray(px.buffer), w, h, { colorSpace: renderer.space }); } catch (e) { id = new ImageData(new Uint8ClampedArray(px.buffer), w, h); }
@@ -111,9 +112,10 @@ export async function exportPhoto(r, renderer, prefs, preview, onProgress = () =
   try {
     let exif = null;
     if (prefs.keepInfo && /jpe?g/i.test(r.type || '') ) { try { exif = fixExif(exifOf(new Uint8Array(await r.file.arrayBuffer())), { dropGps: !prefs.keepPlace }); } catch (e) { exif = null; } }
-    const jw = new JpegWriter(tex.w, tex.h, prefs.quality || 92, { exif, icc: renderer.p3 ? iccProfile('display-p3') : null });
-    await renderer.strips(tex, editOf(r), { air: r.st.air }, async (buf, rows, y) => {
-      jw.addRows(buf, rows); onProgress(Math.min(1, (y + rows) / tex.h));
+    const od = outDims(tex.w, tex.h, r.geo);
+    const jw = new JpegWriter(od.w, od.h, prefs.quality || 92, { exif, icc: renderer.p3 ? iccProfile('display-p3') : null });
+    await renderer.strips(tex, editOf(r), { air: r.st.air, geo: r.geo }, async (buf, rows, y) => {
+      jw.addRows(buf, rows); onProgress(Math.min(1, (y + rows) / od.h));
       await new Promise(res => setTimeout(res, 0));
     });
     const bytes = jw.finish(), base = (r.name || 'photo').replace(/\.[^.]+$/, '');

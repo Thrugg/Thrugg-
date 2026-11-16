@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Our year</title>
+<meta name="description" content="The year across our apps: hikes, stays, scents, sleep, records, savings and photos.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Our year">
+<link rel="apple-touch-icon" href="../apps/icon-180.png">
+<link rel="icon" href="../apps/icon-192.png">
+<style>
+/* Same look as the apps page: one column of cards, one per app, each with the year's figures. */
+:root{--bg:#f2f4f3;--card:#fff;--ink:#14212a;--muted:#5d6b72;--line:#dbe2e4;--acc:#1f6f8b}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1417;--card:#172025;--ink:#e6eef0;--muted:#9aa8ae;--line:#26333a;--acc:#6fbcd8}}
+:root[data-theme=dark]{--bg:#0f1417;--card:#172025;--ink:#e6eef0;--muted:#9aa8ae;--line:#26333a;--acc:#6fbcd8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left))}
+main{max-width:600px;margin:0 auto}
+a{color:var(--acc)}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:30px;margin:8px 0 4px;letter-spacing:-.01em}
+.lead{color:var(--muted);margin:0 0 18px}
+select{font:inherit;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.cards{display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.card h2{font-size:16px;margin:0 0 8px;display:flex;justify-content:space-between;gap:8px}
+.card h2 a{font-size:13px;font-weight:500;text-decoration:none}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:10px}
+.figs div{display:grid}
+.figs b{font-size:22px;font-variant-numeric:tabular-nums}
+.figs span{font-size:12.5px;color:var(--muted)}
+.line{margin:10px 0 0;color:var(--muted);font-size:14px}
+.line b{color:var(--ink);font-weight:600}
+.empty{color:var(--muted);font-size:14px;margin:0}
+.note{font-size:13px;color:var(--muted);margin-top:22px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><h1>Our year</h1><label><span class="lead">Year </span><select id="yr" aria-label="Year"></select></label></div>
+  <p class="lead">Read from what the apps saved on this device. Nothing is sent anywhere.</p>
+  <div class="cards" id="cards"></div>
+  <p class="note"><a href="../apps/">All apps</a></p>
+</main>
+<script>
+(function () {
+  const get = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const nf = new Intl.NumberFormat('en-GB'), nf1 = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 });
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const money = (v, cur) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur || 'EUR', maximumFractionDigits: 0 }).format(Math.round(v)); } catch (e) { return Math.round(v) + ' ' + (cur || ''); } };
+  const dur = m => Math.floor(m / 60) + ' h ' + String(Math.round(m % 60)).padStart(2, '0');
+  const fig = (v, l) => `<div><b>${v}</b><span>${esc(l)}</span></div>`;
+  const card = (name, href, figs, line) => `<section class="card"><h2>${esc(name)}<a href="${href}">Open</a></h2>${figs.length ? `<div class="figs">${figs.join('')}</div>` : ''}${line ? `<p class="line">${line}</p>` : ''}</section>`;
+  const inY = (d, y) => typeof d === 'string' && d.slice(0, 4) === String(y);
+  let HIKES = {};
+  /* the years any app has data for */
+  function years() {
+    const ys = new Set([new Date().getFullYear()]);
+    const add = d => { if (typeof d === 'string' && /^\d{4}/.test(d)) ys.add(+d.slice(0, 4)); };
+    const it = get('cordee.items'); if (it) Object.values(it).forEach(i => i && i.k === 'log' && i.d && add(i.d.date));
+    const si = get('sillage.v1'); if (si && si.wears) si.wears.forEach(w => !w.ex && add(w.d));
+    const no = get('nocturne.v1'); if (no && no.nights && !no.demo) Object.keys(no.nights).forEach(add);
+    return [...ys].sort((a, b) => b - a);
+  }
+  function build(y) {
+    const out = [];
+    /* Cordée */
+    const items = get('cordee.items');
+    const logs = items ? Object.values(items).filter(i => i && !i.x && i.k === 'log' && i.d && inY(i.d.date, y)).map(i => i.d) : [];
+    if (logs.length) {
+      let km = 0, up = 0, top = null; const areas = new Set(), cs = new Set();
+      for (const l of logs) { const h = HIKES[l.hike] || {}; km += Number(l.km) || Number(h.km) || 0; up += Number(l.up) || Number(h.up) || 0; if (h.ar) areas.add(h.ar); if (h.c) cs.add(h.c); if (h.mx && (!top || h.mx > top.mx)) top = h; }
+      const best = logs.filter(l => l.rating >= 5).map(l => HIKES[l.hike]).filter(Boolean)[0];
+      out.push(card('Cordée', '../', [fig(logs.length, logs.length === 1 ? 'hike' : 'hikes'), fig(nf.format(Math.round(km)), 'kilometres'), fig(nf.format(Math.round(up)), 'metres up'), fig(areas.size, areas.size === 1 ? 'area' : 'areas')],
+        [top ? `Highest: <b>${esc(top.n)}</b> (${nf.format(top.mx)} m)` : '', best ? `A five-star day: <b>${esc(best.n)}</b>` : '', cs.size ? `${cs.size} countr${cs.size === 1 ? 'y' : 'ies'}` : ''].filter(Boolean).join(' · ')));
+    }
+    /* Grand Tour: every stay, earlier ones included */
+    const gt = get('grandtour.v1');
+    if (gt && Array.isArray(gt.hotels)) {
+      const stays = []; for (const h of gt.hotels.filter(x => !x.ex && x.status === 'stayed')) for (const s of [...(h.past || []), h]) if (inY(s.from, y)) stays.push({ h, s });
+      if (stays.length) {
+        const nights = stays.reduce((a, x) => a + (Number(x.s.nights) || 0), 0), spent = stays.reduce((a, x) => a + (Number(x.s.nights) || 0) * (Number(x.s.paid) || 0), 0);
+        const exp = x => { const v = Object.values(x.s.x || {}).map(Number).filter(n => n >= 1 && n <= 5); return v.length ? v.reduce((a, b) => a + b, 0) / v.length * 20 : null; };
+        const best = stays.filter(x => exp(x) !== null).sort((a, b) => exp(b) - exp(a))[0];
+        out.push(card('Grand Tour', '../grand-tour/', [fig(stays.length, stays.length === 1 ? 'stay' : 'stays'), fig(nights, 'nights'), fig(new Set(stays.map(x => x.h.id)).size, 'hotels'), spent ? fig(money(spent, gt.cur), 'spent') : ''].filter(Boolean),
+          best ? `Best stay: <b>${esc(best.h.name)}</b> (${Math.round(exp(best))} of 100)` : ''));
+      }
+    }
+    /* Sillage */
+    const si = get('sillage.v1');
+    if (si && Array.isArray(si.wears)) {
+      const ws = si.wears.filter(w => !w.ex && inY(w.d, y));
+      if (ws.length) {
+        const by = {}; ws.forEach(w => { by[w.b] = (by[w.b] || 0) + 1; });
+        const top = Object.entries(by).sort((a, b) => b[1] - a[1])[0], b = (si.bottles || []).find(x => x.id === top[0]);
+        out.push(card('Sillage', '../sillage/', [fig(ws.length, 'wears'), fig(Object.keys(by).length, 'bottles worn')], b ? `Signature of the year: <b>${esc([b.house, b.name].filter(Boolean).join(' '))}</b>, ${top[1]} times` : ''));
+      }
+    }
+    /* Nocturne */
+    const no = get('nocturne.v1');
+    if (no && no.nights && !no.demo) {
+      const ns = Object.entries(no.nights).filter(([d, n]) => inY(d, y) && n && n.a > 0);
+      if (ns.length) {
+        const avg = ns.reduce((a, [, n]) => a + n.a, 0) / ns.length, target = no.target || 510, met = ns.filter(([, n]) => n.a >= target - 15).length;
+        const months = {}; ns.forEach(([d, n]) => { const m = d.slice(5, 7); (months[m] = months[m] || []).push(n.a); });
+        const bestM = Object.entries(months).filter(([, v]) => v.length >= 7).map(([m, v]) => [m, v.reduce((a, b) => a + b, 0) / v.length]).sort((a, b) => b[1] - a[1])[0];
+        out.push(card('Nocturne', '../nocturne/', [fig(ns.length, 'nights'), fig(dur(avg), 'asleep on average'), fig(Math.round(met / ns.length * 100) + ' %', 'nights on target')],
+          bestM ? `Best month: <b>${new Date(y, +bestM[0] - 1, 15).toLocaleDateString('en-GB', { month: 'long' })}</b>, ${dur(bestM[1])} a night` : ''));
+      }
+    }
+    /* Forge */
+    const fo = get('forge.v1');
+    if (fo && fo.profile && fo.profile.onboarded) {
+      const prs = (fo.prs || []).filter(p => inY(p.d || p.date, y));
+      const ws = Object.entries(fo.logs || {}).filter(([d, l]) => inY(d, y) && l && Number(l.w) > 0).sort();
+      const figs = [];
+      if (prs.length) figs.push(fig(prs.length, prs.length === 1 ? 'record' : 'records'));
+      if (ws.length >= 2) { const dw = Number(ws[ws.length - 1][1].w) - Number(ws[0][1].w); figs.push(fig((dw > 0 ? '+' : dw < 0 ? '−' : '') + nf1.format(Math.abs(dw)) + ' kg', 'weight, first to last weigh-in')); figs.push(fig(ws.length, 'weigh-ins')); }
+      if (figs.length) out.push(card('Forge', '../forge/', figs, ''));
+    }
+    /* The Funds Ladder */
+    const la = get('ladder.v1');
+    if (la && Array.isArray(la.log)) {
+      const es = la.log.filter(e => inY(e.d, y));
+      if (es.length) out.push(card('The Funds Ladder', '../ladder/', [fig(money(es.reduce((a, e) => a + (Number(e.amt) || 0), 0), la.cur), 'put on the ladder'), fig(es.length, es.length === 1 ? 'month' : 'months')], ''));
+    }
+    /* Tandem */
+    const ta = get('tandem.v1');
+    if (ta && ta.days) {
+      let n = 0, ms = 0, days = 0;
+      for (const [d, devs] of Object.entries(ta.days)) { if (!inY(d, y)) continue; let any = false; for (const v of Object.values(devs || {})) { n += Number(v.n) || 0; ms += Number(v.ms) || 0; if (v.n) any = true; } if (any) days++; }
+      if (n) out.push(card('Tandem', '../tandem/', [fig(nf.format(n), 'reviews'), fig(days, 'days practised'), fig(Math.round(ms / 3600000) + ' h', 'practice')], ''));
+    }
+    return out;
+  }
+  /* Révélateur keeps photos in IndexedDB: counted only when its database already exists */
+  function photos(y) {
+    return new Promise(res => {
+      if (!indexedDB || !indexedDB.databases) return res('');
+      indexedDB.databases().then(list => {
+        if (!list.some(d => d.name === 'revelateur')) return res('');
+        const r = indexedDB.open('revelateur');
+        r.onerror = () => res('');
+        r.onsuccess = () => {
+          const db = r.result; if (!db.objectStoreNames.contains('photos')) { db.close(); return res(''); }
+          let n = 0, ed = 0, ex = 0; const sc = {};
+          const c = db.transaction('photos').objectStore('photos').openCursor();
+          c.onsuccess = () => { const cur = c.result; if (cur) { const v = cur.value; if (new Date(v.taken || v.added).getFullYear() === y) { n++; if (v.edited) ed++; if (v.exported) ex++; sc[v.scene] = (sc[v.scene] || 0) + 1; } cur.continue(); return; }
+            db.close(); const top = Object.entries(sc).sort((a, b) => b[1] - a[1])[0];
+            res(n ? card('Révélateur', '../revelateur/', [fig(n, 'photos'), fig(ed, 'edited'), fig(ex, 'exported')], top ? `Most often: <b>${esc(top[0])}</b> photos` : '') : ''); };
+        };
+      }).catch(() => res(''));
+    });
+  }
+  const sel = document.getElementById('yr'), box = document.getElementById('cards');
+  async function paint() {
+    const y = +sel.value, parts = build(y), ph = await photos(y);
+    if (ph) parts.push(ph);
+    box.innerHTML = parts.length ? parts.join('') : `<p class="empty">Nothing logged in ${y} on this device yet. Open an app, sign in to sync, and this page fills in.</p>`;
+  }
+  sel.innerHTML = years().map(y => `<option>${y}</option>`).join('');
+  sel.onchange = paint;
+  paint();
+  fetch('../data/hikes.json').then(r => r.ok ? r.json() : []).then(j => { for (const h of j) HIKES[h.id] = h; paint(); }).catch(() => { });
+})();
+</script>
+</body>
+</html>

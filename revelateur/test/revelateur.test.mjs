@@ -216,3 +216,17 @@ test('ICC: sRGB colorants match the published D50 values; the P3 profile is well
   assert.equal(dv.getUint32(0), b.length); assert.equal(String.fromCharCode(...b.slice(36, 40)), 'acsp'); assert.equal(dv.getUint32(128), 9);
   assert.equal(String.fromCharCode(...b.slice(12, 24)), 'mntrRGB XYZ ');
 });
+
+/* ---------- crop, straighten, rotate (Nov 2026) ---------- */
+import { mapPoint, outDims, cropAspect, cropScale, cropMove, norm as normGeo, isPlain } from '../js/geo.js';
+test('geometry: quarter turns, straighten without empty corners, crops at an aspect', () => {
+  const r = a => a.map(x => +x.toFixed(4));
+  assert.deepEqual(r(mapPoint(400, 200, { q: 1 }, 0, 0)), [0, 1], 'turned right: top-left shows the bottom-left');
+  assert.deepEqual(r(mapPoint(400, 200, { q: 2 }, 0, 0)), [1, 1]); assert.deepEqual(r(mapPoint(400, 200, { q: 3 }, 0, 0)), [1, 0]);
+  assert.deepEqual(outDims(400, 200, { q: 1 }), { w: 200, h: 400 });
+  for (const a of [-15, -3, 7, 15]) for (const [u, v] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { const [x, y] = mapPoint(400, 200, { a }, u, v); assert.ok(x >= -1e-9 && x <= 1 + 1e-9 && y >= -1e-9 && y <= 1 + 1e-9, `corner inside at ${a}°`); }
+  const sq = cropAspect(400, 200, {}, 1); assert.deepEqual(outDims(400, 200, sq), { w: 200, h: 200 });
+  const half = cropScale(400, 200, sq, 1, 0.5); assert.equal(outDims(400, 200, half).w, 100);
+  const moved = cropMove(half, 1, 1); assert.ok(moved.crop.x + moved.crop.w <= 1 && moved.crop.y + moved.crop.h <= 1, 'a crop never leaves the frame');
+  assert.ok(isPlain(null) && isPlain(normGeo({})) && !isPlain({ q: 1 }));
+});

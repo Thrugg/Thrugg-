@@ -135,3 +135,9 @@ dialog#sheet h2 { font-size: 18px; margin: 0 0 6px; }
 #toast { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 90px); transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 40; background: #f0f0f0; color: #111; padding: 9px 14px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px); transition: opacity .2s, transform .2s; }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } #toast, .prog span { transition: none; } }
+
+/* crop panel (Nov 2026) */
+.cropp .aspects { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.pbody { overflow-x: hidden; }
+.cropp { min-width: 0; padding-right: 2px; }
+.cropp .row .btn { flex: 0 1 auto; }
