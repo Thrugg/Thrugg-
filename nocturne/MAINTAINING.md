@@ -73,8 +73,15 @@ Always on the last 28 days. Findings are ranked: 2 = change first, 1 = keep an e
 - Target outside the range → a finding. Onset: median at or after midnight. Days off vs workdays: difference of median mid-sleep (nights ending Sat/Sun vs the rest; needs 3 and 2 nights), 30 and 60 min thresholds. Regularity against UK Biobank quartiles 74 / 81 / 86. Conversion under 85 %. Costliest tagged cause from the 28-day bridge (5 min a night or more).
 - Explainers (before midnight, testosterone, mood, recovery) quote: Nikbakhtian 2021 (88,026 adults; onset 22:00–22:59 lowest CVD incidence; HR 1.12 for 23:00–23:59, 1.25 after midnight, 1.24 before 22:00; in men only before 22:00 significant), Leproult & Van Cauter 2011 (10 men, 8 nights of 5 h, daytime testosterone −10 to −15 %), Schmid 2012 (first-half-only sleep lowered morning testosterone; 02:45–07:00 for two nights did not), Daghlas 2021 (OR 0.77 per hour earlier midpoint, 95 % CI 0.63–0.94, Mendelian randomisation), Walsh 2021. Each is worded as small study or association. Update the text in `i18n.js` (`ex.*`, `guide.*`, `adv.*`) and the `SOURCES` list together.
 
+## Other apps and the evening (Nov 2026, `js/links.js`)
+
+- **Training load from Forge**: a fourth choice in the guide. Moderate-equivalent minutes a week from Forge's workouts (light × 0.7, moderate × 1, vigorous × 1.4, very hard × 1.7): under 180 light, under 420 regular, above heavy.
+- **Dog or puppy night** is a cause like the others (`dog` in `CAUSES`).
+- **If-then for the evening** (Plan tab): one implementation intention for the costliest cause of the last 28 days, ticked each evening (`S.ifthen`), with the streak.
+- **Open the window tonight?** (Plan tab): Open-Meteo hourly temperature from 21:00 to 07:00 for Sillage's town, else Cordée's home, else Munich; above 20° warm night, 12–20° open, 5–12° tilt, below 5° air then close (aim: a bedroom at 16–19°). Cached for the day under `nocturne.wx`.
+
 ## Not done yet
 
 - Never run on a real iPhone or against a real Health export: the import is tested on invented archives (ordinary zip, streamed zip with data descriptors, French file name, 400 MB of XML). First real import: check the count of nights and one or two nights against the Health app.
-- v1.5 from the brief: if-then quests, "open the window tonight?" (Open-Meteo), link to Forge, puppy nights.
+- From the brief, still open: a link back to Forge for its recovery (Forge already reads the week's sleep).
 - Naps are not part of the bridge. Travel nights are shown on the export's clock.

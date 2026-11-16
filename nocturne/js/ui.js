@@ -1,4 +1,5 @@
 /* Nocturne — every screen. Reads the state, draws HTML, and handles taps through data-act attributes. */
+import { forgeLoad, ifThenStreak, windowAdvice, placeGuess } from './links.js';
 import { S, save, reset, syncChoice, setSyncChoice, exportBackup, importBackup } from './store.js';
 import * as E from './sleep.js';
 import { readHealthFile, mergeNights, sinceDate } from './health.js';
@@ -62,6 +63,7 @@ function bridgeRows(b) {
     return { ...base, label: r.k === 'untagged' ? t('row.untagged') : t('cause.' + r.k), sub: t('n.nights', { n: r.nights.length }), nights: list + `<p class="note" style="margin:6px 0 0">${esc(t('row.share', { n: b.n }))}</p>` };
   });
 }
+const readJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
 function renderBridge() {
   const end = E.lastNight(S.nights);
   if (!end) return `<section><h1>${esc(t('empty.h1'))}</h1><p class="sub">${esc(t('empty.sub'))}</p><div class="row" style="margin-top:18px"><button class="btn pri" data-act="import-open">${esc(t('imp.cta'))}</button><button class="btn" data-act="demo">${esc(t('empty.demo'))}</button></div></section>${syncAsk()}${howToExport()}`;
@@ -156,6 +158,34 @@ function planNow() {
   const by = E.planBy(bases, S.plan, S.target, today());
   return { end, live, started, bases, by, tonightType: E.dayType(E.tonightWake(), S.off) };
 }
+/* NO-4: an if-then plan for the costliest cause of the last 28 days, ticked each evening */
+function ifThenCard() {
+  const end = E.lastNight(S.nights); if (!end) return '';
+  const b = E.bridge(S.nights, S.tags, E.range(end, 28), S.target);
+  const top = b ? b.rows.filter(r => E.CAUSES.includes(r.k) && r.min > 0).sort((x, y) => y.min - x.min)[0] : null;
+  const cause = top ? top.k : 'winddown', tdy = today(), streak = ifThenStreak(S.ifthen, tdy, E.addDays);
+  return `<section class="ifthen"><h2>${esc(t('ift.h'))}</h2><p class="sub">${esc(top ? t('ift.why', { c: t('cause.' + cause).toLowerCase(), m: Math.round(top.min) }) : t('ift.none'))}</p>
+<p class="plan-if"><b>${esc(t('ift.' + cause))}</b></p>
+<label class="chk"><input type="checkbox" data-set="ifthen" ${S.ifthen && S.ifthen[tdy] ? 'checked' : ''}> <span>${esc(t('ift.done'))}</span></label>${streak > 1 ? `<p class="note">${esc(t('ift.streak', { n: streak }))}</p>` : ''}</section>`;
+}
+/* NO-4: open the window tonight? from the outside temperature between 21:00 and 07:00 */
+let wxNight = null, wxTried = '';
+function windowCard() {
+  const tdy = today();
+  if (!wxNight || wxNight.d !== tdy) {
+    try { const c = JSON.parse(localStorage.getItem('nocturne.wx')); if (c && c.d === tdy) wxNight = c; } catch (e) { }
+    if ((!wxNight || wxNight.d !== tdy) && wxTried !== tdy) {
+      wxTried = tdy; const pl = placeGuess();
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pl.lat}&longitude=${pl.lon}&hourly=temperature_2m&timezone=auto&forecast_days=2`).then(r => r.ok ? r.json() : null).then(j => {
+        const a = j && windowAdvice(j.hourly, tdy); if (!a) return;
+        wxNight = { d: tdy, ...a, place: pl.name }; try { localStorage.setItem('nocturne.wx', JSON.stringify(wxNight)); } catch (e) { }
+        if (S.ui.tab === 'plan') render();
+      }).catch(() => { });
+    }
+  }
+  if (!wxNight || wxNight.d !== tdy) return '';
+  return `<section class="window"><h2>${esc(t('win.h'))}</h2><p><b>${esc(t('win.' + wxNight.k + '.t', { min: wxNight.min }))}</b></p><p class="sub">${esc(t('win.' + wxNight.k + '.b', { min: wxNight.min, eve: wxNight.eve }))}</p><p class="note">${esc(t('win.src', { p: wxNight.place || '' }))}</p></section>`;
+}
 function renderPlan() {
   if (!E.lastNight(S.nights)) return needData();
   const { started, bases, by, tonightType } = planNow(), ty = ui.planType && E.TYPES.includes(ui.planType) ? ui.planType : tonightType;
@@ -164,6 +194,7 @@ function renderPlan() {
   let h = `<section><h1>${esc(t('plan.h1', { v: clock(bedShow) }))}</h1><p class="sub">${esc(t('plan.tom.' + tonightType))} ${esc(tn.steps === 0 ? t('plan.noShift') : started ? (tn.final ? t('plan.final') : t('plan.step', { k: tn.step, n: tn.steps, end: clock(tn.bed), every: E.STEP_NIGHTS, m: E.STEP_MIN })) : t('plan.preview', { first: clock(bedShow), end: clock(tn.bed), n: tn.steps, days: tn.days, every: E.STEP_NIGHTS, m: E.STEP_MIN }))}</p>`;
   h += `<div class="tonight"><div><b>${clock(bedShow - S.plan.wind)}</b><span>${esc(t('plan.wind'))}</span></div><div class="key"><b>${clock(bedShow)}</b><span>${esc(t('plan.bed'))}</span></div><div><b>${clock(tn.wake)}</b><span>${esc(t('plan.wake'))}</span></div></div>`;
   h += `<div class="row" style="margin-top:18px">${started ? '' : `<button class="btn pri" data-act="plan-start">${esc(t('plan.start'))}</button>`}</div></section>`;
+  h += ifThenCard() + windowCard();
   // the three kinds of night side by side
   h += `<section><h2>${esc(t('plan.typesT'))}</h2><div class="types" role="table"><div role="row" class="hd"><span></span><span>${esc(t('plan.bed'))}</span><span>${esc(t('plan.wake'))}</span><span>${esc(t('plan.colGoal'))}</span></div>`;
   for (const k of E.TYPES) h += `<div role="row"${k === tonightType ? ' class="now"' : ''}><span>${esc(t('type.' + k))}<small>${esc(t('plan.colNow', { a: dur(by[k].base.a) }))}</small></span><span>${clock(show(by[k]))}${started && !by[k].final ? `<small>→ ${clock(by[k].bed)}</small>` : !started && by[k].steps ? `<small>→ ${clock(by[k].bed)}</small>` : ''}</span><span>${clock(by[k].wake)}</span><span>${dur(by[k].goal)}<small>${by[k].gain ? '+' + dur(by[k].gain) : esc(t('plan.atTarget'))}</small></span></div>`;
@@ -216,7 +247,8 @@ const SOURCES = [
 ];
 function renderGuide() {
   const end = E.lastNight(S.nights); if (!end) return needData();
-  const dates = E.range(end, 28), g = E.advice(S.nights, S.tags, dates, S.target, S.activity, S.off), tm = g.tm;
+  const fl = forgeLoad(readJSON('forge.v1')), act = S.activity === 'forge' ? (fl ? fl.load : 'regular') : S.activity;
+  const dates = E.range(end, 28), g = E.advice(S.nights, S.tags, dates, S.target, act, S.off), tm = g.tm;
   const lead = g.items[0].level === 0 ? t('guide.allFine') : t('guide.lead', { n: g.s.n, to: day(end) });
   let h = `<section><h1>${esc(t('guide.h1'))}</h1><p class="sub">${esc(lead)}</p><ol class="advice">`;
   for (const it of g.items) {
@@ -228,7 +260,7 @@ function renderGuide() {
     h += `<li class="lv${it.level}"><span class="lv">${esc(t('guide.lv' + it.level))}</span><h3>${esc(t('adv.' + key + '.t', v))}</h3><p>${esc(t('adv.' + key + '.b', v))}</p>${it.level && to ? `<button class="link" data-act="tab" data-tab="${to}">${esc(t('guide.go.' + to))}</button>` : ''}</li>`;
   }
   h += '</ol></section>';
-  h += `<section><h2>${esc(t('guide.volT'))}</h2><p class="sub">${esc(t('guide.volLead'))}</p><div class="seg" role="group" aria-label="${esc(t('guide.volT'))}">${Object.keys(E.ACTIVITY).map(k => `<button data-act="activity" data-k="${k}" aria-pressed="${S.activity === k}">${esc(t('act.' + k))}</button>`).join('')}</div><p class="note" style="margin-top:8px">${esc(t('act.' + S.activity + '.d'))}</p>`;
+  h += `<section><h2>${esc(t('guide.volT'))}</h2><p class="sub">${esc(t('guide.volLead'))}</p><div class="seg" role="group" aria-label="${esc(t('guide.volT'))}">${Object.keys(E.ACTIVITY).map(k => `<button data-act="activity" data-k="${k}" aria-pressed="${S.activity === k}">${esc(t('act.' + k))}</button>`).join('')}${fl ? `<button data-act="activity" data-k="forge" aria-pressed="${S.activity === 'forge'}">${esc(t('act.forge'))}</button>` : ''}</div><p class="note" style="margin-top:8px">${S.activity === 'forge' && fl ? esc(t('act.forge.d', { h: String(fl.hours).replace('.', lang() === 'fr' ? ',' : '.'), l: t('act.' + fl.load).toLowerCase() })) + ' ' : ''}${esc(t('act.' + act + '.d'))}</p>`;
   const lo = 360, hi = 600, x = m => Math.max(0, Math.min(100, (m - lo) / (hi - lo) * 100));
   h += `<div class="rng" role="img" aria-label="${esc(t('guide.rngAria', { low: dur(g.low), high: dur(g.high), a: dur(g.a), target: dur(S.target) }))}"><i class="band" style="left:${x(g.low)}%;width:${x(g.high) - x(g.low)}%"></i><i class="you" style="left:${x(g.a)}%"></i><i class="tgt" style="left:${x(S.target)}%"></i></div>
     <div class="legend"><span><i style="background:var(--line-2)"></i>${esc(t('guide.rngBand', { low: dur(g.low), high: dur(g.high) }))}</span><span><i class="l" style="background:var(--accent)"></i>${esc(t('guide.rngYou', { a: dur(g.a) }))}</span><span><i class="l" style="background:var(--moon)"></i>${esc(t('guide.rngTarget', { target: dur(S.target) }))}</span></div>
@@ -369,6 +401,7 @@ export function init() {
     } else if (el.dataset.set === 'target') { S.target = +el.value; save(); render(); }
     else if (el.dataset.set === 'lang') { S.lang = el.value; save(); render(); }
     else if (el.dataset.set === 'theme') { S.theme = el.value; save(); render(); }
+    else if (el.dataset.set === 'ifthen') { const d = today(); S.ifthen = { ...(S.ifthen || {}) }; if (el.checked) S.ifthen[d] = 1; else delete S.ifthen[d]; save(); render(); }
     else if (el.dataset.set === 'sync') { if (el.checked) { setSyncChoice('1'); window.nocturneSync?.(); render(); } else { setSyncChoice('0'); location.reload(); } }
   });
   $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet' && !ui.busy) closeSheet(); });

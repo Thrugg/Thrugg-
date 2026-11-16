@@ -11,7 +11,7 @@
      bs  start of time in bed (when m)               d   [core, deep, REM] minutes when the source records stages
      src source name                                 z   time zone of the night when it differs from the usual one */
 
-export const CAUSES = ['winddown', 'screen', 'training', 'social', 'travel', 'other'];
+export const CAUSES = ['winddown', 'screen', 'training', 'social', 'travel', 'dog', 'other'];
 export const CLEAN = 'clean';
 export const WIN0 = -360, WIN1 = 1080;          // 18:00 → 18:00
 export const SESSION_GAP = 120;                 // asleep stretches less than 2 h apart belong to one sleep

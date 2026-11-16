@@ -212,3 +212,21 @@ test('three kinds of night: workday, weekend, time off', () => {
   // the guide counts time off as days off
   assert.equal(S.timing(nights, S.range('2026-11-13', 28), off).midFree, S.median([...Array(8).fill(310), ...Array(5).fill(300)]));
 });
+
+/* ---------- other apps and the evening (Nov 2026) ---------- */
+import { forgeLoad, ifThenStreak, windowAdvice } from '../js/links.js';
+test('training load from Forge, if-then streak, window advice', () => {
+  const f = w => ({ profile: { onboarded: true }, activity: { workouts: w } });
+  assert.equal(forgeLoad(f([{ minutes: 60, perWeek: 2, intensity: 'moderate' }])).load, 'light');
+  assert.equal(forgeLoad(f([{ minutes: 60, perWeek: 4, intensity: 'moderate' }])).load, 'regular');
+  assert.equal(forgeLoad(f([{ minutes: 75, perWeek: 5, intensity: 'vigorous' }])).load, 'heavy');
+  assert.equal(forgeLoad({ profile: { onboarded: false }, activity: { workouts: [] } }), null);
+  const add = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  assert.equal(ifThenStreak({ '2026-11-14': 1, '2026-11-15': 1 }, '2026-11-16', add), 2, 'tonight not ticked yet: the streak still counts');
+  assert.equal(ifThenStreak({ '2026-11-14': 1, '2026-11-16': 1 }, '2026-11-16', add), 1);
+  const hours = (vals) => ({ time: vals.map((_, i) => `2026-11-${i < 3 ? '16' : '17'}T${String((21 + i) % 24).padStart(2, '0')}:00`), temperature_2m: vals });
+  assert.equal(windowAdvice(hours([15, 14, 13, 12, 12, 13]), '2026-11-16').k, 'open');
+  assert.equal(windowAdvice(hours([6, 4, 3, 2, 2, 2]), '2026-11-16').k, 'air');
+  assert.equal(windowAdvice(hours([24, 23, 22, 21, 21, 22]), '2026-11-16').k, 'hot');
+  assert.equal(windowAdvice({ time: [], temperature_2m: [] }, '2026-11-16'), null);
+});

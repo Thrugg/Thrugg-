@@ -132,7 +132,22 @@ const EN = {
   'ex.rest.2': 'A whole night without sleep clearly hurts performance. What one to three slightly short nights do is not settled. The practical reading: protect the average, and do not worry about one bad night.',
   'ex.rest.you': 'For you: “late training” is one of your tags; the bridge shows what those evenings cost.',
   'guide.srcT': 'Sources',
-  'guide.srcNote': 'Small laboratory studies and population associations show a direction, not what will happen to one person. Nocturne is not medical advice.'
+  'guide.srcNote': 'Small laboratory studies and population associations show a direction, not what will happen to one person. Nocturne is not medical advice.',
+  'cause.dog': 'Dog or puppy night',
+  'act.forge': 'From Forge', 'act.forge.d': 'Forge logs about {h} h of training a week, read as {l}.',
+  'ift.h': 'Your if-then for the evening', 'ift.why': 'Your costliest cause over the last 28 days is {c}: about {m} min a night. One plan, the same every evening.', 'ift.none': 'No tagged cause yet. Start with the wind-down plan, and tag your mornings.', 'ift.done': 'I kept it this evening', 'ift.streak': '{n} evenings in a row.',
+  'ift.winddown': 'If it is 45 minutes before lights out, then I dim the lights and stop work, messages and anything that needs an answer.',
+  'ift.screen': 'If it is 30 minutes before lights out, then the phone goes to charge outside the bedroom.',
+  'ift.training': 'If a session ends after 20:00, then I take a cool shower, eat a light meal and set lights out 30 minutes later rather than lying awake.',
+  'ift.social': 'If I am out in the evening, then I fix the time I leave before I go, and keep the same wake time the next day.',
+  'ift.travel': 'If I am travelling, then I keep my home wake time for the first two days and get daylight early.',
+  'ift.dog': 'If the dog needs a late walk, then it happens before the wind-down, and the bed stays out of reach.',
+  'ift.other': 'If it is my lights-out time, then I go to bed even if the evening feels unfinished.',
+  'win.h': 'Open the window tonight?', 'win.src': 'Outside temperature tonight in {p}, from Open-Meteo.',
+  'win.open.t': 'Yes: open it, it drops to {min}° outside.', 'win.open.b': 'A bedroom around 16–19° helps you fall and stay asleep. Air it now ({eve}°) and leave it open or tilted.',
+  'win.tilt.t': 'Tilt it: down to {min}° outside.', 'win.tilt.b': 'Open wide for ten minutes before bed, then leave it tilted so the room cools without getting cold.',
+  'win.air.t': 'Air it, then close it: {min}° outside.', 'win.air.b': 'A short, wide airing before bed brings fresh air in; a closed window keeps the room from dropping below 16°.',
+  'win.hot.t': 'Warm night: {min}° at its coolest.', 'win.hot.b': 'Keep blinds shut in the day, open everything late in the evening, and use a light cover.'
 };
 const FR = {
   'tab.bridge': 'Pont', 'tab.numbers': 'Chiffres', 'tab.nights': 'Nuits', 'tab.plan': 'Plan', 'tab.settings': 'Réglages',
@@ -267,7 +282,22 @@ const FR = {
   'ex.rest.2': 'Une nuit blanche nuit clairement à la performance. L’effet d’une à trois nuits un peu courtes n’est pas tranché. En pratique : protégez la moyenne, et ne vous inquiétez pas d’une mauvaise nuit.',
   'ex.rest.you': 'Pour vous : « sport tardif » fait partie de vos étiquettes ; le pont montre ce que coûtent ces soirées.',
   'guide.srcT': 'Sources',
-  'guide.srcNote': 'De petites études de laboratoire et des associations en population indiquent une direction, pas ce qui arrivera à une personne donnée. Nocturne n’est pas un avis médical.'
+  'guide.srcNote': 'De petites études de laboratoire et des associations en population indiquent une direction, pas ce qui arrivera à une personne donnée. Nocturne n’est pas un avis médical.',
+  'cause.dog': 'Nuit du chien ou du chiot',
+  'act.forge': 'Depuis Forge', 'act.forge.d': 'Forge compte environ {h} h d’entraînement par semaine, soit une charge {l}.',
+  'ift.h': 'Votre si-alors du soir', 'ift.why': 'Votre cause la plus coûteuse sur 28 jours est {c} : environ {m} min par nuit. Un seul plan, le même chaque soir.', 'ift.none': 'Pas encore de cause étiquetée. Commencez par le retour au calme, et étiquetez vos matins.', 'ift.done': 'Je l’ai tenu ce soir', 'ift.streak': '{n} soirs d’affilée.',
+  'ift.winddown': 'Si c’est 45 minutes avant d’éteindre, alors je baisse les lumières et j’arrête le travail, les messages et tout ce qui demande une réponse.',
+  'ift.screen': 'Si c’est 30 minutes avant d’éteindre, alors le téléphone charge hors de la chambre.',
+  'ift.training': 'Si une séance finit après 20 h, alors douche fraîche, repas léger, et j’éteins 30 minutes plus tard plutôt que de rester éveillé au lit.',
+  'ift.social': 'Si je sors le soir, alors je fixe l’heure de départ avant de partir, et je garde la même heure de lever le lendemain.',
+  'ift.travel': 'Si je voyage, alors je garde mon heure de lever habituelle les deux premiers jours et je prends la lumière du jour tôt.',
+  'ift.dog': 'Si le chien a besoin d’une sortie tardive, alors elle a lieu avant le retour au calme, et le lit lui reste interdit.',
+  'ift.other': 'Si c’est mon heure d’extinction, alors je vais au lit même si la soirée semble inachevée.',
+  'win.h': 'Ouvrir la fenêtre ce soir ?', 'win.src': 'Température extérieure cette nuit à {p}, d’après Open-Meteo.',
+  'win.open.t': 'Oui : ouvrez, il fera {min}° dehors.', 'win.open.b': 'Une chambre vers 16–19° aide à s’endormir et à rester endormi. Aérez maintenant ({eve}°) et laissez ouvert ou entrouvert.',
+  'win.tilt.t': 'Entrouvrez : {min}° dehors au plus bas.', 'win.tilt.b': 'Grand ouvert dix minutes avant le coucher, puis en oscillo-battant pour rafraîchir sans refroidir.',
+  'win.air.t': 'Aérez, puis fermez : {min}° dehors.', 'win.air.b': 'Une aération courte et large avant le coucher fait entrer l’air frais ; fenêtre fermée, la chambre ne descend pas sous 16°.',
+  'win.hot.t': 'Nuit chaude : {min}° au plus frais.', 'win.hot.b': 'Volets fermés le jour, tout ouvrir tard le soir, et une couverture légère.'
 };
 const DICT = { en: EN, fr: FR };
 let cur = 'en';

@@ -9,7 +9,8 @@ const DEF = () => ({
   lang: (navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en',
   theme: 'night',
   target: 510,                                // 8 h 30
-  activity: 'regular',                        // training load for the guide: light, regular, heavy
+  activity: 'regular',                        // training load for the guide: light, regular, heavy, or 'forge' (read from Forge)
+  ifthen: {},                                 // wake date → 1 when the if-then plan was kept that evening
   nights: {},                                 // by wake date, see sleep.js
   tags: {},                                   // by wake date: { t: ['screen', …] or ['clean'], n: 'note' }
   plan: { wake: { work: null, weekend: null, off: null }, gain: 50, conv: 0.65, wind: 45, start: null, base: null },
