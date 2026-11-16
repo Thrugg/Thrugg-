@@ -40,7 +40,8 @@ const Dlg = {
           ${h && h.custom ? `<label class="chk"><input type="checkbox" name="wUpd" ${h.auto !== false ? 'checked' : ''}> Use these numbers for the hike as well</label>` : ''}
         </details>
         <div class="field">Photos<div class="ph-edit" id="fPh"></div><small class="muted" id="fPhMsg">${photos.length ? '' : 'As many as you like. They are made smaller on this device first.'}</small><input type="file" id="fPhFile" accept="image/*" multiple hidden></div>
-        <label class="field">Note<textarea name="note" placeholder="Conditions, the view, where we had lunch…">${esc(L?.note || '')}</textarea></label>`,
+        <label class="field">Note<textarea name="note" placeholder="Conditions, the view, where we had lunch…">${esc(L?.note || '')}</textarea></label>
+        ${(() => { try { const f = JSON.parse(localStorage.getItem('forge.v1')); return f && f.profile && f.profile.onboarded ? '<p class="muted small">Forge counts the hikes you log here in your maintenance calories.</p>' : ''; } catch (e) { return ''; } })()}`,
       foot: `${logId ? '<button type="button" class="btn ghost left" id="logDel">Delete entry</button>' : ''}<button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary" type="submit">Save</button>`,
       onOpen: f => {
         f.querySelectorAll('#fWho button').forEach(b => b.onclick = () => { const i = +b.dataset.i; who = who.includes(i) ? who.filter(x => x !== i) : [...who, i].sort(); b.setAttribute('aria-pressed', who.includes(i)); });
@@ -326,6 +327,50 @@ const Backup = {
       toast(`Imported ${n} entries`);
     } catch (e) { toast('Import failed: ' + e.message, 4000); }
   }
+};
+
+/* ───────────── GPX export (a hike or your own route, for a watch or another app) ───────────── */
+const GpxOut = {
+  /* [lon, lat, ele] points: the traced or imported line when there is one, else the waypoints */
+  points(h) { const r = Routes.cached(h); if (r && r.c && r.c.length > 1) return r.c; return (h.p || []).map(([la, lo]) => [lo, la, null]); },
+  text(h) {
+    const x = s => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+    const pts = this.points(h).map(([lo, la, e]) => `<trkpt lat="${la.toFixed(6)}" lon="${lo.toFixed(6)}">${e != null ? `<ele>${Math.round(e)}</ele>` : ''}</trkpt>`).join('\n');
+    const wpt = (h.p || []).map(([la, lo], i) => `<wpt lat="${la.toFixed(6)}" lon="${lo.toFixed(6)}"><name>${x((h.pq && h.pq[i]) || (i === 0 ? 'Start' : i === h.hi ? (h.tn || 'Goal') : 'Point ' + (i + 1)))}</name></wpt>`).join('\n');
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Cordée" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>${x(h.n)}</name></metadata>\n${wpt}\n<trk><name>${x(h.n)}</name><trkseg>\n${pts}\n</trkseg></trk>\n</gpx>\n`;
+  },
+  async send(h) {
+    const name = (h.n || 'hike').replace(/[^\p{L}\p{N} -]+/gu, '').trim().replace(/\s+/g, '-') + '.gpx';
+    const file = new File([this.text(h)], name, { type: 'application/gpx+xml' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: h.n }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.append(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); toast('GPX saved');
+  }
+};
+
+/* ───────────── More like this: hikes close to one you liked, not done yet ───────────── */
+const Similar = {
+  GR: ['easy', 'moderate', 'hard', 'expert'],
+  score(a, b) {
+    const ta = new Set(a.tg || []), tb = new Set(b.tg || []), inter = [...ta].filter(t => tb.has(t)).length, uni = new Set([...ta, ...tb]).size || 1;
+    const dg = Math.abs(this.GR.indexOf(a.g) - this.GR.indexOf(b.g));
+    const lk = Math.abs(Math.log(((b.km || 1) + 1) / ((a.km || 1) + 1))), lu = Math.abs(Math.log(((b.up || 50) + 50) / ((a.up || 50) + 50)));
+    const dogOk = !(a.d && a.d.r !== 'banned') || !(b.d && b.d.r === 'banned');
+    return (a.ar === b.ar ? 1.2 : a.rg === b.rg ? 0.6 : 0) + (dg === 0 ? 1.5 : dg === 1 ? 0.6 : 0) + 3 * inter / uni + Math.max(0, 1 - lk) + Math.max(0, 1 - lu) + (a.tk === b.tk ? 0.6 : 0) + (dogOk ? 0 : -3);
+  },
+  /* similar to one hike */
+  to(h, n = 3) { const dm = doneMap(); return HK.filter(x => x.id !== h.id && !dm[x.id]).map(x => ({ h: x, s: this.score(h, x) })).sort((a, b) => b.s - a.s).slice(0, n); },
+  /* from the hikes rated 4 or 5 stars: the best unseen matches, each with the liked hike it resembles */
+  fromLiked(n = 5) {
+    const dm = doneMap(), liked = [...new Set(logs().filter(l => l.rating >= 4).map(l => l.hike))].map(id => HBY[id]).filter(Boolean);
+    if (!liked.length) return [];
+    const best = {};
+    for (const src of liked) for (const x of HK) { if (dm[x.id] || x.id === src.id) continue; const s = this.score(src, x); if (!best[x.id] || s > best[x.id].s) best[x.id] = { h: x, s, like: src }; }
+    return Object.values(best).sort((a, b) => b.s - a.s).slice(0, n);
+  },
+  why(a, b) { const tb = new Set(b.tg || []), common = (a.tg || []).filter(t => tb.has(t)).slice(0, 2); return [a.ar === b.ar ? 'same area' : '', a.g === b.g ? 'same grade' : '', ...common].filter(Boolean).join(' · '); },
+  row(x, sub) { return `<li class="like" data-id="${x.h.id}" role="button" tabindex="0"><b>${esc(x.h.n)}</b><small>${esc(x.h.ar)} · ${fmtKm(x.h.km)} · ↑ ${fmtM(x.h.up)} · ${GL[x.h.g]}${sub ? ' · ' + esc(sub) : ''}</small></li>`; },
+  bind(root) { root.querySelectorAll('.like').forEach(el => { el.onclick = () => UI.openHike(el.dataset.id); el.onkeydown = e => { if (e.key === 'Enter') UI.openHike(el.dataset.id); }; }); }
 };
 
 /* ───────────── GPX import ───────────── */

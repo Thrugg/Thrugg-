@@ -651,7 +651,10 @@ const FR2 = {
   }
 };
 const deep = (a, b) => { for (const [k, v] of Object.entries(b)) { if (v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' && !Array.isArray(a[k])) deep(a[k], v); else a[k] = v; } return a; };
-deep(EN, EN2); deep(FR, FR2);
+/* ---------- 2026.11.16: other apps on this site ---------- */
+const EN3 = { links: { fromCordee: 'From your Cordée logbook: {n} hikes in the last 4 weeks. Updated each time Forge opens.', sleep: 'Sleep (Nocturne)', short: '{n} of {of} nights under 6 h', nights: '{n} nights', shortNote: 'Short nights ({n} under 6 hours this week) raise water and hunger and slow training. Read the scale with that in mind.' } };
+const FR3 = { links: { fromCordee: 'Depuis votre carnet Cordée : {n} randonnées ces 4 dernières semaines. Mis à jour à chaque ouverture de Forge.', sleep: 'Sommeil (Nocturne)', short: '{n} nuits sur {of} sous 6 h', nights: '{n} nuits', shortNote: 'Des nuits courtes ({n} sous 6 heures cette semaine) augmentent l’eau retenue et la faim et ralentissent l’entraînement. Lisez la balance en le sachant.' } };
+deep(EN, EN2); deep(FR, FR2); deep(EN, EN3); deep(FR, FR3);
 
 const DICT = { en: EN, fr: FR };
 let lang = 'en';

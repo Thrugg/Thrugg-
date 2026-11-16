@@ -29,6 +29,7 @@ jobs:
           node forge/test/calc.test.mjs
           node forge/test/coach.test.mjs
           node forge/test/renpho.test.mjs
+          node forge/test/links.test.mjs
           node forge/test/health.test.mjs /tmp/fflate/node_modules/fflate/umd/index.js
       - name: Ask helper checks
         run: if [ -d supabase/functions/ask ]; then node --test supabase/functions/ask/*.test.mjs; fi

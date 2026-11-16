@@ -264,6 +264,7 @@ const UI = {
       (ar.length > 8 ? `<button class="btn ghost small" id="areasMore">${showAll ? 'Show fewer' : `All ${ar.length} areas`}</button>` : '');
     $$('#logAreas .area').forEach(el => el.onclick = () => { this.f().area = el.dataset.a; this.syncFind(); this.setTab('hikes'); this.refresh(); fitRegion(); });
     const more = $('#areasMore'); if (more) more.onclick = () => { this._allAreas = !this._allAreas; this.renderLog(); };
+    { const lk = Similar.fromLiked(), box = $('#logLike'); if (box) { box.innerHTML = lk.length ? `<h3 class="sec-title">More like the hikes you loved</h3><ol class="likes">${lk.map(x => Similar.row(x, 'like ' + x.like.n)).join('')}</ol>` : ''; Similar.bind(box); } }
     $('#logList').innerHTML = L.length ? L.map(l => {
       const h = HBY[l.hike], [y, m, d] = l.date.split('-');
       const who = (l.who || [0, 1]).map(i => esc(personName(i))).join(' & ');
@@ -345,9 +346,11 @@ const UI = {
       <button class="btn glow grow" id="dDone">${ic('i-check')}${done.length ? 'Log again' : 'Mark as done'}</button>
       <button class="btn ghost" id="dFly">${ic('i-play')}Fly over</button>
       <button class="btn ghost" id="dTrail">${ic('i-pin')}Follow me</button>
+      <button class="btn ghost" id="dGpx">${ic('i-upload')}GPX</button>
       <a class="btn ghost" id="dDir" href="${(() => { const b = Parking.best(h); return b ? Parking.nav(b, h).g : `https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}`; })()}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
     </div>
     ${h.lf ? `<div class="note-box">${esc(h.lf)}</div>` : ''}
+    <div id="dSimilar"></div>
     <div class="d-sec" id="dPark"><h3>${ic('i-car')} Parking <span class="r" id="dParkNote"></span></h3><div id="dParkList"><p class="muted">Looking for car parks near the start…</p></div></div>
     ${done.length ? `<div class="d-sec"><h3>Our visits</h3><ol class="log-list">${done.map(l => `<li class="log-item"><div class="log-date"><b>${+l.date.slice(8)}</b>${MONTHS[+l.date.slice(5, 7) - 1]} ${l.date.slice(0, 4)}</div><div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' (signposted ' + fmtDur(logDin(l)) + ')' : 'No time logged'}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' · ↑ ' + fmtM(l.up) : '') : ''}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}${Album.strip(l)}</div><button class="icon-btn" data-edit="${l.id}" aria-label="Edit entry">${ic('i-edit')}</button></li>`).join('')}</ol></div>` : ''}
     <div class="d-sec"><h3>Elevation profile <span class="r" id="dProfNote"></span></h3><div class="profile" id="dProfile"><p class="muted">Tracing the route on the trail network…</p></div></div>
@@ -381,6 +384,8 @@ const UI = {
     $('#dDone').onclick = () => Dlg.log(h);
     $('#dFly').onclick = () => Fly.hike(h);
     $('#dTrail').onclick = () => Trail.start(h);
+    $('#dGpx').onclick = () => GpxOut.send(h);
+    { const sim = Similar.to(h), box = $('#dSimilar'); if (box) { box.innerHTML = sim.length ? `<h3 class="sec-title">More like this</h3><ol class="likes">${sim.map(x => Similar.row(x, Similar.why(h, x.h))).join('')}</ol>` : ''; Similar.bind(box); } }
     $('#dOsm').onclick = () => Explore.checkRules(h);
     v.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => Dlg.log(h, b.dataset.edit));
     Album.bindStrips(v);

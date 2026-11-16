@@ -1,4 +1,5 @@
 /* Forge — screens. Vanilla JS: each screen is a function of the derived model; inputs bind to state paths. */
+import { sleepBetween } from './links.js';
 import { S, save, set, upsert, remove, logDay, uid, storeImage, getPhoto, delPhoto, exportBackup, importBackup, reset, clearPhotos } from './store.js';
 import * as C from './calc.js';
 import { CATALOGUE, INTENSITIES, EVENTS, TIERS, TIER_P, DOMAINS, SOURCES, DATA_VERSION, HELPLINES } from './data.js';
@@ -106,6 +107,7 @@ export function model(modeOverride) {
   return out;
 }
 
+const readJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
 /* ---------- shared pieces ---------- */
 function workoutsEditor() {
   const types = Object.entries(CATALOGUE).map(([id, c]) => [id, c[getLang()]]);
@@ -114,7 +116,7 @@ function workoutsEditor() {
     const c = CATALOGUE[w.type] || CATALOGUE.other, b = `activity.workouts.${i}.`;
     const extra = c.pace ? field(t('fuel.pace'), numIn(b + 'paceKmh', w.paceKmh, { ph: '10' })) : c.watts ? field(t('fuel.watts'), numIn(b + 'watts', w.watts, { ph: '150' })) : '';
     const lbl = c.lift ? 'fuel.intS.' : 'fuel.int.';
-    const hint = w.src === 'health' ? `<p class="xs muted">${t('fuel.fromHealthNote')}${w.watchKcal ? ' · ' + t('fuel.watchSession', { k: nf(w.watchKcal) }) : ''}${w.spm != null ? ' · ' + t('fuel.spm', { s: nf(w.spm) }) : ''}</p>` : '';
+    const hint = w.src === 'cordee' ? `<p class="xs muted">${t('links.fromCordee', { n: w.n || 0 })}</p>` : w.src === 'health' ? `<p class="xs muted">${t('fuel.fromHealthNote')}${w.watchKcal ? ' · ' + t('fuel.watchSession', { k: nf(w.watchKcal) }) : ''}${w.spm != null ? ' · ' + t('fuel.spm', { s: nf(w.spm) }) : ''}</p>` : '';
     return `<div class="wrow">${field(t('fuel.type'), selIn(b + 'type', w.type, types))}<div class="g3">${field(t('fuel.minutes'), numIn(b + 'minutes', w.minutes, { step: 5 }))}${field(t('fuel.per'), numIn(b + 'perWeek', w.perWeek, { step: 0.5 }))}${extra}</div>${field(t('fuel.intensity'), selIn(b + 'intensity', w.intensity, INTENSITIES.map(k => [k, t(lbl + k)])))}${hint}<button class="lnk danger" data-act="wdel" data-i="${i}">${t('common.del')}</button></div>`;
   }).join('')}</div><button class="btn ghost" data-act="wadd">+ ${t('ob.addWorkout')}</button>`;
 }
@@ -159,8 +161,11 @@ function reviewCard(M, td) {
   if (R.steps != null) tiles.push([t('review.steps'), nf(rnd(R.steps, 100)), t('review.assumed', { v: nf(R.stepsAssumed) })]);
   const P = M.pred, dk = P && R.steps != null && R.stepsAssumed ? Math.abs(R.steps - R.stepsAssumed) * C.strideM(S.profile.sex, S.profile.cm, S.activity.strideCm) / 1000 * M.kg * P.kcalPerKgKm / 0.9 : 0;
   const vars = { s: nf(rnd(R.steps || 0, 100)), a: nf(R.stepsAssumed || 0), k: nf(rnd(dk, 10)), d: R.delta != null ? kgS(R.delta) : '', e: R.expected != null ? kgS(R.expected) : '', i: nf(rnd(R.intake || 0, 10)), tg: nf(rnd(R.target || 0, 10)) };
+  const sl = sleepBetween(readJSON('nocturne.v1'), R.from, R.to);
+  if (sl) tiles.push([t('links.sleep'), `${Math.floor(sl.avg / 60)} h ${String(sl.avg % 60).padStart(2, '0')}`, sl.short ? t('links.short', { n: sl.short, of: sl.nights }) : t('links.nights', { n: sl.nights })]);
+  const sleepNote = sl && sl.short >= 3 ? `<p class="rv">${t('links.shortNote', { n: sl.short })}</p>` : '';
   const fix = (R.adjust === 'stepsLow' || R.adjust === 'stepsHigh') ? `<button class="btn ghost sm" data-act="usesteps" data-v="${Math.round(R.steps / 100) * 100}">${t('review.useSteps', { s: vars.s })}</button>` : '';
-  return card(t('review.title'), `<p class="muted xs">${df(R.from, dm)} – ${df(R.to, dm)}</p>${tiles.length ? `<div class="tiles">${tiles.map(([l, v, sub]) => `<div><span>${l}</span><b>${v}</b><small>${sub}</small></div>`).join('')}</div>` : ''}${R.win ? `<p class="rv win"><b>${t('review.winL')}</b> ${t('review.win.' + R.win, vars)}</p>` : ''}<p class="rv adj"><b>${t('review.adjL')}</b> ${t('review.adj.' + R.adjust, vars)}</p>${fix}`);
+  return card(t('review.title'), `<p class="muted xs">${df(R.from, dm)} – ${df(R.to, dm)}</p>${tiles.length ? `<div class="tiles">${tiles.map(([l, v, sub]) => `<div><span>${l}</span><b>${v}</b><small>${sub}</small></div>`).join('')}</div>` : ''}${R.win ? `<p class="rv win"><b>${t('review.winL')}</b> ${t('review.win.' + R.win, vars)}</p>` : ''}<p class="rv adj"><b>${t('review.adjL')}</b> ${t('review.adj.' + R.adjust, vars)}</p>${fix}${sleepNote}`);
 }
 function screenToday(M) {
   const p = S.profile, td = C.today(), log = M.L[td] || {}, rpToday = log._s?.w === 'renpho';

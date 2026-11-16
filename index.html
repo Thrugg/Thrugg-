@@ -13,9 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=Spectral:ital,wght@0,500;0,600;1,400;1,500&display=swap">
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/maplibre-contour@0.1.0/dist/index.min.js"></script>
@@ -570,6 +568,12 @@ a.btn{text-decoration:none}
 .pk-name:disabled{cursor:default}
 .pk-x{font-size:12.5px;color:var(--ink-2);margin-top:2px}
 
+/* more like this (Nov 2026) */
+.likes{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
+.like{display:grid;gap:2px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--surface)}
+.like:hover,.like:focus-visible{border-color:var(--lake)}
+.like small{color:var(--ink-3)}
+
 </style>
 </head>
 <body>
@@ -728,6 +732,7 @@ a.btn{text-decoration:none}
           <button class="btn ghost" id="btnReview"><svg><use href="#i-star"/></svg>Year in review</button>
         </div>
         <div class="pace-card" id="paceCard"></div>
+        <div id="logLike"></div>
         <h3 class="sec-title">Areas</h3>
         <div id="logAreas" class="areas"></div>
         <h3 class="sec-title">Our hikes</h3>
@@ -2065,6 +2070,7 @@ const UI = {
       (ar.length > 8 ? `<button class="btn ghost small" id="areasMore">${showAll ? 'Show fewer' : `All ${ar.length} areas`}</button>` : '');
     $$('#logAreas .area').forEach(el => el.onclick = () => { this.f().area = el.dataset.a; this.syncFind(); this.setTab('hikes'); this.refresh(); fitRegion(); });
     const more = $('#areasMore'); if (more) more.onclick = () => { this._allAreas = !this._allAreas; this.renderLog(); };
+    { const lk = Similar.fromLiked(), box = $('#logLike'); if (box) { box.innerHTML = lk.length ? `<h3 class="sec-title">More like the hikes you loved</h3><ol class="likes">${lk.map(x => Similar.row(x, 'like ' + x.like.n)).join('')}</ol>` : ''; Similar.bind(box); } }
     $('#logList').innerHTML = L.length ? L.map(l => {
       const h = HBY[l.hike], [y, m, d] = l.date.split('-');
       const who = (l.who || [0, 1]).map(i => esc(personName(i))).join(' & ');
@@ -2146,9 +2152,11 @@ const UI = {
       <button class="btn glow grow" id="dDone">${ic('i-check')}${done.length ? 'Log again' : 'Mark as done'}</button>
       <button class="btn ghost" id="dFly">${ic('i-play')}Fly over</button>
       <button class="btn ghost" id="dTrail">${ic('i-pin')}Follow me</button>
+      <button class="btn ghost" id="dGpx">${ic('i-upload')}GPX</button>
       <a class="btn ghost" id="dDir" href="${(() => { const b = Parking.best(h); return b ? Parking.nav(b, h).g : `https://www.google.com/maps/dir/?api=1&destination=${h.start[0]},${h.start[1]}`; })()}" target="_blank" rel="noopener">${ic('i-car')}Directions</a>
     </div>
     ${h.lf ? `<div class="note-box">${esc(h.lf)}</div>` : ''}
+    <div id="dSimilar"></div>
     <div class="d-sec" id="dPark"><h3>${ic('i-car')} Parking <span class="r" id="dParkNote"></span></h3><div id="dParkList"><p class="muted">Looking for car parks near the start…</p></div></div>
     ${done.length ? `<div class="d-sec"><h3>Our visits</h3><ol class="log-list">${done.map(l => `<li class="log-item"><div class="log-date"><b>${+l.date.slice(8)}</b>${MONTHS[+l.date.slice(5, 7) - 1]} ${l.date.slice(0, 4)}</div><div><div class="log-meta">${l.dur ? fmtDur(l.dur) + ' (signposted ' + fmtDur(logDin(l)) + ')' : 'No time logged'}${l.km ? ' · ' + fmtKm(l.km) + (l.up != null ? ' · ↑ ' + fmtM(l.up) : '') : ''}${l.dog ? ' · with ' + esc(dogName() || 'the dog') : ''}${l.rating ? ' · ' + '★'.repeat(l.rating) : ''}</div>${l.note ? `<div class="log-note">${esc(l.note)}</div>` : ''}${Album.strip(l)}</div><button class="icon-btn" data-edit="${l.id}" aria-label="Edit entry">${ic('i-edit')}</button></li>`).join('')}</ol></div>` : ''}
     <div class="d-sec"><h3>Elevation profile <span class="r" id="dProfNote"></span></h3><div class="profile" id="dProfile"><p class="muted">Tracing the route on the trail network…</p></div></div>
@@ -2182,6 +2190,8 @@ const UI = {
     $('#dDone').onclick = () => Dlg.log(h);
     $('#dFly').onclick = () => Fly.hike(h);
     $('#dTrail').onclick = () => Trail.start(h);
+    $('#dGpx').onclick = () => GpxOut.send(h);
+    { const sim = Similar.to(h), box = $('#dSimilar'); if (box) { box.innerHTML = sim.length ? `<h3 class="sec-title">More like this</h3><ol class="likes">${sim.map(x => Similar.row(x, Similar.why(h, x.h))).join('')}</ol>` : ''; Similar.bind(box); } }
     $('#dOsm').onclick = () => Explore.checkRules(h);
     v.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => Dlg.log(h, b.dataset.edit));
     Album.bindStrips(v);
@@ -3412,7 +3422,8 @@ const Dlg = {
           ${h && h.custom ? `<label class="chk"><input type="checkbox" name="wUpd" ${h.auto !== false ? 'checked' : ''}> Use these numbers for the hike as well</label>` : ''}
         </details>
         <div class="field">Photos<div class="ph-edit" id="fPh"></div><small class="muted" id="fPhMsg">${photos.length ? '' : 'As many as you like. They are made smaller on this device first.'}</small><input type="file" id="fPhFile" accept="image/*" multiple hidden></div>
-        <label class="field">Note<textarea name="note" placeholder="Conditions, the view, where we had lunch…">${esc(L?.note || '')}</textarea></label>`,
+        <label class="field">Note<textarea name="note" placeholder="Conditions, the view, where we had lunch…">${esc(L?.note || '')}</textarea></label>
+        ${(() => { try { const f = JSON.parse(localStorage.getItem('forge.v1')); return f && f.profile && f.profile.onboarded ? '<p class="muted small">Forge counts the hikes you log here in your maintenance calories.</p>' : ''; } catch (e) { return ''; } })()}`,
       foot: `${logId ? '<button type="button" class="btn ghost left" id="logDel">Delete entry</button>' : ''}<button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary" type="submit">Save</button>`,
       onOpen: f => {
         f.querySelectorAll('#fWho button').forEach(b => b.onclick = () => { const i = +b.dataset.i; who = who.includes(i) ? who.filter(x => x !== i) : [...who, i].sort(); b.setAttribute('aria-pressed', who.includes(i)); });
@@ -3698,6 +3709,50 @@ const Backup = {
       toast(`Imported ${n} entries`);
     } catch (e) { toast('Import failed: ' + e.message, 4000); }
   }
+};
+
+/* ───────────── GPX export (a hike or your own route, for a watch or another app) ───────────── */
+const GpxOut = {
+  /* [lon, lat, ele] points: the traced or imported line when there is one, else the waypoints */
+  points(h) { const r = Routes.cached(h); if (r && r.c && r.c.length > 1) return r.c; return (h.p || []).map(([la, lo]) => [lo, la, null]); },
+  text(h) {
+    const x = s => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+    const pts = this.points(h).map(([lo, la, e]) => `<trkpt lat="${la.toFixed(6)}" lon="${lo.toFixed(6)}">${e != null ? `<ele>${Math.round(e)}</ele>` : ''}</trkpt>`).join('\n');
+    const wpt = (h.p || []).map(([la, lo], i) => `<wpt lat="${la.toFixed(6)}" lon="${lo.toFixed(6)}"><name>${x((h.pq && h.pq[i]) || (i === 0 ? 'Start' : i === h.hi ? (h.tn || 'Goal') : 'Point ' + (i + 1)))}</name></wpt>`).join('\n');
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Cordée" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>${x(h.n)}</name></metadata>\n${wpt}\n<trk><name>${x(h.n)}</name><trkseg>\n${pts}\n</trkseg></trk>\n</gpx>\n`;
+  },
+  async send(h) {
+    const name = (h.n || 'hike').replace(/[^\p{L}\p{N} -]+/gu, '').trim().replace(/\s+/g, '-') + '.gpx';
+    const file = new File([this.text(h)], name, { type: 'application/gpx+xml' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: h.n }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.append(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); toast('GPX saved');
+  }
+};
+
+/* ───────────── More like this: hikes close to one you liked, not done yet ───────────── */
+const Similar = {
+  GR: ['easy', 'moderate', 'hard', 'expert'],
+  score(a, b) {
+    const ta = new Set(a.tg || []), tb = new Set(b.tg || []), inter = [...ta].filter(t => tb.has(t)).length, uni = new Set([...ta, ...tb]).size || 1;
+    const dg = Math.abs(this.GR.indexOf(a.g) - this.GR.indexOf(b.g));
+    const lk = Math.abs(Math.log(((b.km || 1) + 1) / ((a.km || 1) + 1))), lu = Math.abs(Math.log(((b.up || 50) + 50) / ((a.up || 50) + 50)));
+    const dogOk = !(a.d && a.d.r !== 'banned') || !(b.d && b.d.r === 'banned');
+    return (a.ar === b.ar ? 1.2 : a.rg === b.rg ? 0.6 : 0) + (dg === 0 ? 1.5 : dg === 1 ? 0.6 : 0) + 3 * inter / uni + Math.max(0, 1 - lk) + Math.max(0, 1 - lu) + (a.tk === b.tk ? 0.6 : 0) + (dogOk ? 0 : -3);
+  },
+  /* similar to one hike */
+  to(h, n = 3) { const dm = doneMap(); return HK.filter(x => x.id !== h.id && !dm[x.id]).map(x => ({ h: x, s: this.score(h, x) })).sort((a, b) => b.s - a.s).slice(0, n); },
+  /* from the hikes rated 4 or 5 stars: the best unseen matches, each with the liked hike it resembles */
+  fromLiked(n = 5) {
+    const dm = doneMap(), liked = [...new Set(logs().filter(l => l.rating >= 4).map(l => l.hike))].map(id => HBY[id]).filter(Boolean);
+    if (!liked.length) return [];
+    const best = {};
+    for (const src of liked) for (const x of HK) { if (dm[x.id] || x.id === src.id) continue; const s = this.score(src, x); if (!best[x.id] || s > best[x.id].s) best[x.id] = { h: x, s, like: src }; }
+    return Object.values(best).sort((a, b) => b.s - a.s).slice(0, n);
+  },
+  why(a, b) { const tb = new Set(b.tg || []), common = (a.tg || []).filter(t => tb.has(t)).slice(0, 2); return [a.ar === b.ar ? 'same area' : '', a.g === b.g ? 'same grade' : '', ...common].filter(Boolean).join(' · '); },
+  row(x, sub) { return `<li class="like" data-id="${x.h.id}" role="button" tabindex="0"><b>${esc(x.h.n)}</b><small>${esc(x.h.ar)} · ${fmtKm(x.h.km)} · ↑ ${fmtM(x.h.up)} · ${GL[x.h.g]}${sub ? ' · ' + esc(sub) : ''}</small></li>`; },
+  bind(root) { root.querySelectorAll('.like').forEach(el => { el.onclick = () => UI.openHike(el.dataset.id); el.onkeydown = e => { if (e.key === 'Enter') UI.openHike(el.dataset.id); }; }); }
 };
 
 /* ───────────── GPX import ───────────── */

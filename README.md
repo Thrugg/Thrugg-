@@ -93,6 +93,13 @@ Every Monday morning an update adds the hikes on the wish list, then about six m
 - `index.html` is the whole app, built from `src/` and `data/hikes.json` by `python3 tools/build.py` (which also checks every hike). The app also reads `data/hikes.json` live, so a fix to that file shows up even before the page is rebuilt.
 - Free services, no keys: map tiles from OpenFreeMap and OpenTopoMap, Esri satellite imagery and swisstopo maps, terrain from the AWS open terrain tiles, weather and elevation from Open-Meteo, routes from BRouter (FOSSGIS OSRM as fallback), drive times from the OSRM demo server, photos from Wikimedia Commons, places from Nominatim and Overpass, the trails overlay from Waymarked Trails. Map data © OpenStreetMap contributors.
 
+## More like this, GPX out, and Forge
+
+- **More like this**: every hike shows three similar ones you have not done (same kind of area, grade, tags, length and climb, and dog rules). The logbook adds "More like the hikes you loved", from the hikes you gave 4 or 5 stars.
+- **GPX**: the GPX button on a hike sends its line (the traced or imported one) with named waypoints to a watch or a navigation app.
+- **Forge** reads the hikes you log here: they count as a "Hiking" workout in its maintenance calories, with your real weekly rate, length and climbing rate.
+- **Repair sprint** (Nov 2026): a nightly scheduled task brings 20 older hikes a night up to the standard of a new one (sources, place names, car parks, dog rules) and fixes the hikes whose figures disagree with their traced line, then switches itself off.
+
 ## Your own routes
 
 **Draw a route** (pencil button on the map, or under the hike list): search or tap the start and the finish, tap any place you pass, and the line follows the trails on OpenStreetMap. Distance, ascent, descent, signposted time, your time, the grade (from the trail difficulty tags on the map) and what's underfoot are worked out automatically; one way, out and back or loop. Turn off "Follow the trails" for a path that isn't on the map. After the hike, **Mark as done** takes the numbers from your watch, typed in or read from a screenshot of the summary (the text is recognised on the phone; nothing is uploaded).
