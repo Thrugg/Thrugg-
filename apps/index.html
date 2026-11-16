@@ -43,6 +43,8 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
   <li><a class="app" href="../ladder/"><span class="ic"><img src="../ladder/icon-192.png" alt=""></span><span><b>The Funds Ladder</b><small>Your next money targets, rung by rung</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../grand-tour/"><span class="ic"><img src="../grand-tour/icon-192.png" alt=""></span><span><b>Grand Tour</b><small>Five-star hotels, graded your way</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../sillage/"><span class="ic"><img src="../sillage/icon-192.png" alt=""></span><span><b>Sillage</b><small>Fragrance wardrobe and today's pick</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../tandem/"><span class="ic"><img src="../tandem/icon-192.png" alt=""></span><span><b>Tandem</b><small>Ten minutes of Polish and German a day, checked by each other</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../bridgelab/"><span class="ic"><img src="../bridgelab/icon-192.png" alt=""></span><span><b>BridgeLab</b><small>Price, volume and mix bridge, and the order-of-effects trap</small></span><span class="tag">Synced</span></a></li>
 </ul>
 <h2>In Claude</h2>
 <ul>
@@ -94,6 +96,16 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
     if (w) line('../sillage/', 'Wearing ' + [w.house, w.name].filter(Boolean).join(' ') + ' today');
     else if (own) line('../sillage/', own + ' bottle' + (own === 1 ? '' : 's') + ' · nothing logged today, open for the pick');
   }
+  /* Tandem: the day's cards once the first-day choices are made, and what waits to be checked for the partner */
+  const ta = get('tandem.v1');
+  if (ta && ta.setup && ta.cards) import('../tandem/js/engine.js').then(E => {
+    const q = E.buildQueue(ta, new Date()), left = q.due.length + q.fresh.length, st = E.streak(ta), p = get('tandem.partner');
+    const check = ta.pair && p && Array.isArray(p.flags) ? p.flags.filter(f => !(ta.answers || {})[f.id]).length : 0;
+    let s = left ? left + ' card' + (left === 1 ? '' : 's') + ' today, about ' + E.minutesLeft(q) + ' min' : 'Done for today';
+    if (st > 1) s += ' · ' + st + ' days in a row';
+    if (check) s += ' · ' + check + ' to check for ' + (String(p.name || '').trim() || 'your partner');
+    line('../tandem/', s);
+  }).catch(() => { });
 })();
 </script>
 </body>

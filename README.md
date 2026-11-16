@@ -13,6 +13,8 @@
 | The Funds Ladder | The next money targets after the emergency fund, as a ladder: what comes next and when you get there | https://thrugg.github.io/Thrugg-/ladder/ | Yes, sign in from its Settings |
 | Grand Tour | Five-star hotels stayed at and wished for, on a five-grade ladder, with value for the grade | https://thrugg.github.io/Thrugg-/grand-tour/ | Yes, sign in from its Settings |
 | Sillage | Fragrance wardrobe: today's pick from the weather, cost per wear, what to sample next | https://thrugg.github.io/Thrugg-/sillage/ | Yes, sign in from its Settings |
+| Tandem | Ten minutes a day of Polish and German on one spaced-repetition engine, for two learners who check each other's language | https://thrugg.github.io/Thrugg-/tandem/ | Yes, sign in from its Settings |
+| BridgeLab | A price, volume and mix bridge with sliders on an invented portfolio, and the order-of-effects trap | https://thrugg.github.io/Thrugg-/bridgelab/ | Yes, sign in from its Settings |
 | Forkcast | Snap a meal, get the nutrition (opens in Claude) | https://claude.ai/artifact/5wenBM41wM6kANsCCpzwRN | In Claude |
 | Prüfstand | German car market analyst (opens in Claude) | https://claude.ai/artifact/EsViuZGJAHhRTYqBgBnQSu | In Claude |
 
@@ -26,7 +28,7 @@ A hiking app for mountain and lake hikes in Bavaria, Austria, Switzerland and th
 
 ## Saving and syncing (all apps)
 
-Everything you enter is saved automatically on the device. Sign in once on each device (Cordée: Settings → Sync; Safety Net Score and Gains & Greeks: the "Sign in to sync" button at the bottom left; Forge, Nocturne, Seuil, The Funds Ladder, Grand Tour and Sillage: in their own Settings) and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once. The sync runs on Supabase (`tools/supabase-setup.sql`, settings in `cloud.js`).
+Everything you enter is saved automatically on the device. Sign in once on each device (Cordée: Settings → Sync; Safety Net Score and Gains & Greeks: the "Sign in to sync" button at the bottom left; Forge, Nocturne, Seuil, The Funds Ladder, Grand Tour, Sillage, Tandem and BridgeLab: in their own Settings) and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once. The sync runs on Supabase (`tools/supabase-setup.sql`, settings in `cloud.js`).
 
 Your logbook, names, settings and inputs live in your browser and your own Supabase project, never in this repository.
 
@@ -42,6 +44,16 @@ Gains & Greeks can fill in the last price of a symbol on any device, the phone i
 
 After that, the **Fetch** button appears in the options lab whenever you are signed in, and the price fills in when you change the symbol. Prices come from Yahoo Finance (Stooq as a fallback for US symbols) and are delayed or last close. Until the function exists, the app shows the Yahoo and TradingView links as before.
 
+## Tandem for two (one-time setup, about 3 minutes)
+
+Tandem works alone. To flag cards for each other, each learner signs in with their own account and one table is added to your Supabase project:
+
+1. Supabase dashboard → **SQL Editor** → New query → paste the content of [`tandem/supabase.sql`](tandem/supabase.sql) → **Run**. Safe to run again.
+2. If your partner has no account yet: **Authentication → Users → Add user** (email and password).
+3. In Tandem on your phone: **Together → Create a tandem code → Send the code**. Your partner opens the link on hers, signs in, and joins.
+
+Each learner can only write their own row, and only the two people on a code can read it. What travels: name, colour, the flagged cards, the answers, and the week's totals. Decks, review history and your own cards stay private.
+
 ## Routes traced on GitHub
 
 The route line of every hike is traced on GitHub's machines every Tuesday night and whenever the catalogue changes (`.github/workflows/trace-routes.yml`), and published as `data/routes.json`. Phones use those lines directly, so a hike opens with its line at once and needs no routing server. A hike you edited, or a GPX you imported, keeps its own line. To run it by hand: Actions tab → **Trace hike routes** → **Run workflow**.
@@ -52,7 +64,7 @@ The route line of every hike is traced on GitHub's machines every Tuesday night 
 
 Nocturne has its own checks on invented data (Health import, the bridge adding up, regularity index, plan): `node --test nocturne/test/*.mjs`. Its notes are in [`nocturne/MAINTAINING.md`](nocturne/MAINTAINING.md).
 
-Seuil, The Funds Ladder, Grand Tour and Sillage have their own checks on invented data: `node --test seuil/test/*.mjs ladder/test/*.mjs grand-tour/test/*.mjs sillage/test/*.mjs`. Each folder has a `MAINTAINING.md` with how it works and what to re-check: [`seuil/`](seuil/MAINTAINING.md) (country rules, once a year), [`ladder/`](ladder/MAINTAINING.md), [`grand-tour/`](grand-tour/MAINTAINING.md) (grade bands, once a year), [`sillage/`](sillage/MAINTAINING.md).
+Seuil, The Funds Ladder, Grand Tour, Sillage, Tandem and BridgeLab have their own checks on invented data: `node --test seuil/test/*.mjs ladder/test/*.mjs grand-tour/test/*.mjs sillage/test/*.mjs tandem/test/*.mjs bridgelab/test/*.mjs`. Each folder has a `MAINTAINING.md` with how it works and what to re-check: [`seuil/`](seuil/MAINTAINING.md) (country rules, once a year), [`ladder/`](ladder/MAINTAINING.md), [`grand-tour/`](grand-tour/MAINTAINING.md) (grade bands, once a year), [`sillage/`](sillage/MAINTAINING.md), [`tandem/`](tandem/MAINTAINING.md) (decks: only add cards at the end), [`bridgelab/`](bridgelab/MAINTAINING.md) (synthetic data only).
 
 The rules in Safety Net Score and Gains & Greeks are updated once a year, in January: see [`RULES.md`](RULES.md).
 
