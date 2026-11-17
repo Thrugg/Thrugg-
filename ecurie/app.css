@@ -290,3 +290,6 @@ table.cmp td.best { background: var(--good-soft); color: var(--good); font-weigh
 #toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .92rem; z-index: 60; transition: .2s; max-width: calc(100% - 32px); }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } #toast { transition: none; } }
+
+.reqline { white-space: pre-wrap; word-break: break-word; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: .82rem var(--f-mono); margin: 0; }
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; color: var(--ink-2); }

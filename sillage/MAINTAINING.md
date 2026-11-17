@@ -41,7 +41,7 @@ Size minus wears × sprays per wear × 0.1 ml. Sprays per wear is a setting (6 t
 - **A bottle typed without notes** borrows the library's pyramid when its name matches.
 - **Profile**: each bottle weighs grade/10 (ungraded 5) × (1 + 3 × its share of all wears), so what is worn counts as much as what is graded. Gaps: a season nothing covers (tagged, or family carrying well in that weather), an occasion nothing is tagged for (when tags are used), a main family missing; untried notes from a fixed list of 15 notable notes; "worn more than its grade says" from 8 wears on.
 - **Next picks**: safe = closest to the profile and to one bottle; gap = covers a gap, still close; wildcard = related (cosine 0.45–0.82) and brings an untried note. Owned, listed and dropped scents are left out.
-- **Claude** (through `../ask.js` and the "ask" function, see the README): "Ask Claude for more" on a bottle, "Write my portrait", and next picks checked on the web for price and samples. The portrait and the last picks are saved in the state (`ai`); similar results are kept for the session only.
+- **Claude** (through `../ask.js`: the question is pasted into the person's own Claude app and the answer pasted back, see the README): "Ask Claude for more" on a bottle, "Write my portrait", and next picks checked on the web for price and samples. The portrait and the last picks are saved in the state (`ai`); similar results are kept for the session only.
 - The copy-and-paste loop is still there, folded under the next picks, for when the function is not set up.
 
 ## Library checks

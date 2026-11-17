@@ -28,7 +28,7 @@ Swiss loans are modelled the Swiss way: repaid down to 65 % of the price over 15
 
 - **Renewal** (`fixYears`, `rate2`): after the fixed period the rate becomes `rate2` (empty = the same rate); an annuity is recomputed for the remaining term at the new rate, a Swiss loan just pays the new interest. The one-at-a-time range moves the renewal rate with the first rate.
 - **Simulation** (`monteCarlo`): 400 seeded draws; price growth ~ N(guess, 1.2 points), rent growth ~ N(guess, 1 point) correlated 0.6 with prices, return ~ N(guess, 2 points), renewal rate ~ N(guess, 1.2 points) when a fixed period is set. Shown: share of draws in which buying is ahead at the planned stay, and the 10th / 50th / 90th percentile of the threshold year.
-- **Ask Claude for a place** (task `place_prices` of the "ask" function): price and rent per m², the period they describe, a confidence word and sources, saved with the place (`research`); "Use these figures" switches the place to per-m² entry.
+- **Ask Claude for a place** (task `place_prices` in `../ask.js`, answered in the person's own Claude app): price and rent per m², the period they describe, a confidence word and sources, saved with the place (`research`); "Use these figures" switches the place to per-m² entry.
 - **History** (`js/history.js`): Eurostat `prc_hpi_a` (all dwellings, 2015 = 100) read in the browser once a month and cached (`seuil.hpi`); average yearly growth from the latest year back ten years, shown next to the price-growth guess. Switzerland is not in Eurostat; the Claude answer's 10-year growth is shown there. Not exercised from the build machine (Eurostat is blocked there): if the site refuses the browser's request, the line simply does not appear.
 
 ## Yearly check (rule packs)

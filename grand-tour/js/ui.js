@@ -260,8 +260,8 @@ function act(el) {
   else if (a === 'ideas') {
     if (ideasBusy) return; if (!window.Ask) { toast(t('idea.off')); return; }
     ideasBusy = true; render();
-    window.Ask.ready().then(ok => ok ? window.Ask.run('hotel_suggest', { home: S.home, maxDrive: 5, weights: Object.fromEntries(CRITERIA.map(k => [k, S.weights[k] === undefined ? 1 : Number(S.weights[k])])), bands: S.bands.map((b, i) => `${NUMERALS[i]} < ${b}`), exclude: S.hotels.map(h => h.name) }) : Promise.reject(new Error(t('idea.off'))))
-      .then(d => { ideas = d; }).catch(e => toast(e.message || t('idea.off'))).finally(() => { ideasBusy = false; render(); });
+    window.Ask.run('hotel_suggest', { home: S.home, maxDrive: 5, weights: Object.fromEntries(CRITERIA.map(k => [k, S.weights[k] === undefined ? 1 : Number(S.weights[k])])), bands: S.bands.map((b, i) => `${NUMERALS[i]} < ${b}`), exclude: S.hotels.map(h => h.name) }, { title: t('idea.btn') })
+      .then(d => { ideas = d; }).catch(e => { if (e.code !== 'cancelled') toast(e.message || t('idea.off')); }).finally(() => { ideasBusy = false; render(); });
   }
   else if (a === 'cand-add') { const c = CANDIDATES.find(x => x.name === el.dataset.n); if (!c) return; S.hotels.push({ ...blank(), name: c.name, place: c.place, lat: c.lat ?? null, lon: c.lon ?? null, ref: c.ref || 0, has: { ...(c.has || {}) }, note: c.why || '' }); save(); render(); toast(t('idea.added')); }
   else if (a === 'idea-add') {

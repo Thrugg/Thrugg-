@@ -36,8 +36,9 @@ function candRow(f, why, src, meta) {
 }
 const metaOf = f => [f.year, f.price ? t('pb.' + f.price) : ''].filter(Boolean).join(' · ');
 async function askClaude(task, input) {
-  if (!window.Ask || !(await window.Ask.ready())) { toast(t('ai.off')); return null; }
-  try { return await window.Ask.run(task, input); } catch (e) { toast(e.message || t('ai.off')); return null; }
+  if (!window.Ask) { toast(t('ai.off')); return null; }
+  /* the question goes to the person's own Claude app; closing the dialog is not an error */
+  try { return await window.Ask.run(task, input, { title: t('ai.more') }); } catch (e) { if (e.code !== 'cancelled') toast(e.message || t('ai.off')); return null; }
 }
 const wardrobeForAI = () => { const ix = wearIndex(S.wears); return S.bottles.filter(b => !b.ex || S.bottles.every(x => x.ex)).map(b => ({ ...b, notes: { top: parseNotes(b.notes && b.notes.top), heart: parseNotes(b.notes && b.notes.heart), base: parseNotes(b.notes && b.notes.base) }, wears: (ix[b.id] || { n: 0 }).n })); };
 const excludeForAI = () => S.queue.map(q => `${q.house} ${q.name}`.trim());

@@ -41,7 +41,7 @@ Names and bands are his to change on the Grades tab. A hotel takes its own grade
 - **Several stays** (`staysOf`, `newStay`): a hotel's own stay fields hold the latest stay; "Add another stay" moves it into `h.past` and opens the form for the new one. Stats count every stay (`visits`), nights and money included. Value for the grade and the ranking still read the latest stay.
 - **Own par** (`fitPar`): least-squares line through (grade, experience) of every scored stay, earlier ones included; needs 10 stays over 3 grades and a rising line. "Use my own par" saves it in `S.par`; `usePar` applies it before every render.
 - **Hikes nearby** (`hikesNear`): Cordée's catalogue (`../data/hikes.json`), hike starts within a rough 30-minute drive (straight line × 1.3 at 85 km/h), with the dog rule. Weekend ideas list the hotels with the most nearby hikes, wish-list hotels first.
-- **Hotel ideas from Claude** (task `hotel_suggest` of the "ask" function): five hotels within about five hours matching the criterion weights, with season rate; "Add to my wish list" creates the hotel with its pin, rate and facilities.
+- **Hotel ideas from Claude** (task `hotel_suggest` in `../ask.js`, answered in the person's own Claude app): five hotels within about five hours matching the criterion weights, with season rate; "Add to my wish list" creates the hotel with its pin, rate and facilities.
 - **Candidates** (`js/candidates.js`): a public list filled and re-checked by the scheduled task "Grand Tour refresh" (2 April and 2 October), which also re-checks the calibration hotels below.
 
 ## The compass and the map

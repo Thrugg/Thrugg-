@@ -1,5 +1,5 @@
 /* Seuil service worker: network first, cache as a fallback so the app opens without signal. */
-const V = 'seuil-2026.11.16a';
+const V = 'seuil-2026.11.17b';
 const CORE = ['./', 'index.html', 'app.css', 'js/main.js', 'js/ui.js', 'js/engine.js', 'js/history.js', '../ask.js', 'js/packs.js', 'js/charts.js', 'js/store.js', 'js/i18n.js', 'fonts/bricolage-grotesque.woff2', 'fonts/instrument-sans.woff2', 'fonts/ibm-plex-mono.woff2', 'manifest.webmanifest', 'icon-192.png', '../cloud.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('seuil-') && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

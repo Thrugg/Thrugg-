@@ -1,6 +1,6 @@
 # Écurie — how it works and what to maintain
 
-Écurie replaces Prüfstand (the claude.ai car analyst). You type any car with its model year, power, mileage, asking price and options; Écurie finds it in its checked list or has Claude research it once, then shows what it is worth at that mileage, what it costs a month at your mileage, what falls due while you own it, whether the asking price is fair, whether your finances carry it, and four scores out of 100. Germany only for now (euros with VAT, Kfz-Steuer, TÜV, no-claims classes). English only.
+Écurie replaces Prüfstand (the claude.ai car analyst). You type any car with its model year, power, mileage, asking price and options; Écurie finds it in its checked list, or the person's own Claude app researches it once (or the weekly task adds it to the list), then shows what it is worth at that mileage, what it costs a month at your mileage, what falls due while you own it, whether the asking price is fair, whether your finances carry it, and four scores out of 100. Germany only for now (euros with VAT, Kfz-Steuer, TÜV, no-claims classes). English only.
 
 ## What is where
 
@@ -14,7 +14,8 @@
 | `js/art.js` | The side-profile illustrations by body archetype, from Prüfstand. |
 | `js/charts.js` | Value curve, score rings, bars. |
 | `test/ecurie.test.mjs` | `node --test ecurie/test/*.mjs` — checks on invented finances. |
-| `../supabase/functions/ask/index.ts` | The Claude tasks `car_lookup` (research one exact car), `car_market` (live ads), `car_ad_read` (read an ad screenshot). |
+| `../ask.js` | The Claude tasks `car_lookup` (research one exact car), `car_market` (live ads), `car_ad_read` (read an ad screenshot): Écurie writes the question, the person pastes it into their own Claude app and pastes the answer back. |
+| `data/requests.md` | The weekly list: cars a scheduled task researches every Wednesday and adds to `cars.json`. |
 
 ## The model
 
@@ -40,6 +41,10 @@ Runs on 5 and 6 January and July. It edits `data/cars.json` and `data/market.jso
 - `market.json`: fuel (ADAC), electricity (BDEW/Verivox), loans, DAT, `asOf`, and one changelog entry per refresh (keep 12).
 
 Then run `node --test ecurie/test/*.mjs`, bump `V` in `sw.js`, commit and push to main.
+
+## Weekly list (scheduled task “Écurie weekly car requests”, Wednesdays 18:33 Berlin)
+
+“Add to the weekly list” gives one line for `data/requests.md` (make and model, year, power); the person pastes it under **Waiting** on GitHub. The task researches each waiting car (at most 6 a run) into a full record in `cars.json` following the rules above, with its own id, `conf` M or L and its sources in `src`, moves the line to **Done** with the id, runs the tests, bumps `V` and pushes. With nothing waiting it changes nothing.
 
 ## After changing a file
 

@@ -37,10 +37,10 @@ const entryOf = q => S.garage.find(g => keyOf(g.q) === keyOf(q)) || null;
 const liveKey = q => `${q.carId}|${num(q.year)}|${Math.round((num(q.km) || 0) / 10000)}`;
 const liveOf = q => { const l = (S.live || {})[liveKey(q)]; return l && (Date.now() - new Date(l.at).getTime()) < 30 * 864e5 ? l : null; };
 
-const ui = { session: null, askReady: false, busy: false, busyMsg: '', err: '', note: '', choice: null, ticks: {}, delSure: null, sugg: [], suggOn: -1, finEdit: false };
+const ui = { session: null, busy: false, busyMsg: '', err: '', note: '', choice: null, ticks: {}, delSure: null, sugg: [], suggOn: -1, finEdit: false };
 export async function refreshSession() {
   if (!window.Cloud || !window.Cloud.configured()) return;
-  try { const s = await window.Cloud.session(); const e = s ? s.user.email : null; ui.askReady = !!(window.Ask && await window.Ask.ready()); if (e !== ui.session) { ui.session = e; if (S.ui.tab === 'profile') render(); } } catch (e) { }
+  try { const s = await window.Cloud.session(); const e = s ? s.user.email : null; if (e !== ui.session) { ui.session = e; if (S.ui.tab === 'profile') render(); } } catch (e) { }
 }
 
 /* ---------- shell ---------- */
@@ -66,7 +66,7 @@ function viewAnalyse() {
 <div class="chips">${E.OPTIONS.filter(o => !o.cond).map(o => chip(o, on.has(o.id))).join('')}</div>
 <div class="sublbl">Condition</div><div class="chips">${E.OPTIONS.filter(o => o.cond).map(o => chip(o, on.has(o.id))).join('')}</div>
 <div class="field wide"><label for="q-extras">Other equipment</label><input id="q-extras" data-q="extras" type="text" maxlength="300" value="${esc(q.extras)}" placeholder="e.g. Bowers &amp; Wilkins, soft-close doors"></div></details>
-<div class="row"><button class="btn pri" data-act="analyse">Analyse</button><button class="btn" data-act="ad">${ICON.camera}<span>Read an ad screenshot</span></button><input type="file" id="adfile" accept="image/*" hidden></div>
+<div class="row"><button class="btn pri" data-act="analyse">Analyse</button><button class="btn" data-act="ad">${ICON.camera}<span>Read an ad screenshot</span></button></div>
 <div id="status" class="status" aria-live="polite">${statusHtml()}</div>
 </section>
 <div id="report" class="report">${reportHtml()}</div>`;
@@ -79,8 +79,8 @@ function statusHtml() {
     const why = !ms.length ? 'Nothing in Écurie’s checked list matches that name.' : ms[0].words < 0.99 ? 'Écurie’s checked list has no car with exactly that name.' : 'The closest cars in the checked list differ in year or power.';
     return `<div class="choice"><p><b>Not an exact match.</b> ${esc(why)}</p>
 ${ms.length ? `<div class="alts">${ms.slice(0, 4).map(m => `<button class="alt" data-act="use" data-id="${esc(m.car.id)}"><span>${esc(fullName(m.car))}</span><small>${m.car.years[0]}–${m.car.onSale ? 'today' : m.car.years[1]} · ${m.car.ps} PS${!m.yearOk ? ' · other years' : ''}${!m.psOk && num(q.ps) ? ' · other power' : ''}</small></button>`).join('')}</div>` : ''}
-<div class="row"><button class="btn pri" data-act="research">Research this exact car with Claude</button></div>
-<p class="note">Claude searches the web for its specs, known faults, prices and what falls due: 30 to 60 seconds, about €0.25 on your Anthropic key. The result is kept and synced, so this car is free next time.${ui.askReady ? '' : ' It needs you signed in (Profile → Sync) and the “ask” function set up in Supabase.'}</p></div>`;
+<div class="row"><button class="btn pri" data-act="research">Research it now in Claude</button><button class="btn" data-act="weekly">Add to the weekly list</button></div>
+<p class="note"><b>Now:</b> Écurie writes the question, you paste it into your Claude app and paste the answer back (about a minute, on your Claude plan). The result is kept and synced. <b>Weekly list:</b> it joins the checked list for everyone after the next Wednesday update.</p></div>`;
   }
   if (ui.note) return `<p class="note ok">${esc(ui.note)}</p>`;
   return '';
@@ -125,32 +125,35 @@ function use(id) {
 }
 async function research() {
   if (!window.Ask) return fail('Asking Claude is not available here.');
-  ui.busy = true; ui.err = ''; ui.choice = null; ui.busyMsg = `Claude is researching the ${S.q.name} (${S.q.year}): specs, known faults, prices and what falls due. This takes 30 to 60 seconds.`; renderStatus();
+  ui.busy = true; ui.err = ''; ui.choice = null; ui.busyMsg = `Waiting for Claude’s answer about the ${S.q.name} (${S.q.year})…`; renderStatus();
   try {
-    const j = await window.Ask.run('car_lookup', { car: carIn(S.q) });
+    const j = await window.Ask.run('car_lookup', { car: carIn(S.q) }, { title: `Research the ${S.q.name} (${S.q.year})` });
     if (!j || !j.found) ui.err = `Claude found no such car${j && j.note ? ': ' + j.note : '.'}`;
     else {
       const c = E.fromLookup(j, qOf(S.q)); if (!E.validCar(c)) throw new Error('Claude’s answer could not be used. Try again.');
       S.lookups[c.id] = c; S.q.carId = c.id; ui.note = c.note || ''; save();
     }
-  } catch (e) { ui.err = e.message || 'Claude did not answer this time.'; }
+  } catch (e) { if (e.code !== 'cancelled') ui.err = e.message || 'Claude’s answer could not be used.'; }
   ui.busy = false; render();
 }
-/* a screenshot of an advert: shrunk on the phone, read by Claude, written into the form */
-function shrink(file) {
-  return new Promise((res, rej) => {
-    const url = URL.createObjectURL(file), img = new Image();
-    img.onload = () => { const s = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res({ data: c.toDataURL('image/jpeg', 0.85).split(',')[1], media: 'image/jpeg' }); };
-    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('That picture could not be opened. Take a screenshot (PNG or JPEG) of the ad and try again.')); };
-    img.src = url;
-  });
+/* the weekly list: one line for data/requests.md, which a weekly task researches into the checked list */
+const REQUESTS_EDIT = 'https://github.com/Thrugg/Thrugg-/edit/main/ecurie/data/requests.md';
+function weeklySheet() {
+  const q = S.q, line = `- [ ] ${q.name.trim()}${num(q.year) ? `, ${num(q.year)}` : ''}${num(q.ps) ? `, ${num(q.ps)} PS` : ''} (asked on ${today()})`;
+  sheet(`<div class="sheet-head"><h2>Add to the weekly list</h2><button class="x" data-act="close" aria-label="Close">×</button></div>
+<p>Every Wednesday evening, the cars on this list are researched and added to Écurie’s checked list, on all your devices.</p>
+<pre class="reqline">${esc(line)}</pre>
+<ol class="steps"><li>Copy the line.</li><li>Open the list on GitHub (signed in) and paste it under <b>Waiting</b>.</li><li>Press <b>Commit changes</b>.</li></ol>
+<div class="row"><button class="btn" data-act="reqcopy">Copy the line</button><a class="btn pri" data-act="reqopen" href="${REQUESTS_EDIT}" target="_blank" rel="noopener">Open the list</a></div>`);
+  ui.reqLine = line;
 }
-async function readAd(file) {
+async function copyText(t) { try { await navigator.clipboard.writeText(t); toast('Copied. Paste it under “Waiting”.'); } catch (e) { toast('Select the line and copy it.'); } }
+/* an advert: the screenshot is attached in Claude, the answer fills the form */
+async function readAd() {
   if (!window.Ask) return fail('Asking Claude is not available here.');
-  ui.busy = true; ui.err = ''; ui.note = ''; ui.choice = null; ui.busyMsg = 'Claude is reading the ad…'; renderStatus();
+  ui.busy = true; ui.err = ''; ui.note = ''; ui.choice = null; ui.busyMsg = 'Waiting for Claude to read the ad…'; renderStatus();
   try {
-    const img = await shrink(file);
-    const r = await window.Ask.run('car_ad_read', img);
+    const r = await window.Ask.run('car_ad_read', {}, { title: 'Read an ad screenshot' });
     if (!r || !r.readable) ui.err = 'Claude could not find a car advert in that picture. Try a sharper screenshot that shows the title, the price and the key facts.';
     else {
       const q = S.q, y = r.year || (r.first_reg ? Number(String(r.first_reg).slice(0, 4)) : null);
@@ -158,16 +161,15 @@ async function readAd(file) {
       ui.note = `Filled in from the ad${r.seller && r.seller !== 'unknown' ? ` (${r.seller} seller${r.location ? ', ' + r.location : ''})` : ''}. Check the fields, then Analyse.${r.accident_free === false ? ' The ad mentions accident damage.' : ''}`;
       save();
     }
-  } catch (e) { ui.err = e.message || 'Could not read the ad.'; }
+  } catch (e) { if (e.code !== 'cancelled') ui.err = e.message || 'Claude’s answer could not be used.'; }
   ui.busy = false; render();
 }
 async function checkLive() {
   const q = S.q, c = byId(q.carId); if (!c || !window.Ask) return;
-  const btn = $('[data-act="live"]'); if (btn) { btn.disabled = true; btn.textContent = 'Claude is checking the ads… (about a minute)'; }
   try {
-    const r = await window.Ask.run('car_market', { car: carIn(q), variant: `${fullName(c)}, ${c.ps} PS` });
+    const r = await window.Ask.run('car_market', { car: carIn(q), variant: `${fullName(c)}, ${c.ps} PS` }, { title: 'Check live ads' });
     S.live = S.live || {}; S.live[liveKey(q)] = { ...r, at: today() }; save(); renderReport();
-  } catch (e) { toast(e.message || 'Claude did not answer this time.'); if (btn) { btn.disabled = false; btn.textContent = 'Check live ads with Claude'; } }
+  } catch (e) { if (e.code !== 'cancelled') toast(e.message || 'Claude’s answer could not be used.'); }
 }
 
 /* ---------- the report ---------- */
@@ -180,7 +182,7 @@ const pill = (t, txt) => `<span class="pill ${t}">${esc(txt)}</span>`;
 const sourceTag = c => c.status === 'researched' ? `<span class="tag ai">Researched by Claude ${esc(c.checked || '')}</span>` : `<span class="tag ok">Checked list${c.checked ? ' · ' + esc(c.checked) : ''}</span>`;
 function reportHtml() {
   const q0 = S.q;
-  if (!q0.carId) return `<section class="card empty">${carSVG({ art: 'coupe', color: '#8a96a3', ps: 400, cls: 'sports', body: 'coupe' }, { shadow: false })}<p><b>Type a car, its year and its mileage, then Analyse.</b></p><p class="note">${CARS.length} cars are in the checked list, carried over from Prüfstand. Anything else, Claude researches once and Écurie keeps. On the iPhone, a screenshot of a mobile.de or AutoScout24 ad fills the form for you.</p></section>`;
+  if (!q0.carId) return `<section class="card empty">${carSVG({ art: 'coupe', color: '#8a96a3', ps: 400, cls: 'sports', body: 'coupe' }, { shadow: false })}<p><b>Type a car, its year and its mileage, then Analyse.</b></p><p class="note">${CARS.length} cars are in the checked list, carried over from Prüfstand. Anything else, your Claude app researches once and Écurie keeps. A screenshot of a mobile.de or AutoScout24 ad, read in Claude, fills the form for you.</p></section>`;
   const c = byId(q0.carId);
   if (!c) return `<section class="card"><p>This car’s record is missing on this device. Analyse it again.</p></section>`;
   const q = qOf(q0), x = compute(c, q), s = x.sc, d = s.detail, g = entryOf(q0);
@@ -237,7 +239,7 @@ function priceCard(c, q, x) {
 ${p.asking ? `<div class="ask">${pill(v[0], v[1])}<p>Asking ${eur(p.asking)}: ${pct(Math.abs(p.ratio - 1))} ${p.ratio >= 1 ? 'above' : 'below'} fair.</p></div>` : ''}</div>
 ${p.asking ? `<div class="nego"><div><span>Open at</span><b>${eur(p.open)}</b></div><div><span>Aim for</span><b>${eur(p.aim)}</b></div><div><span>Walk away above</span><b>${eur(p.walk)}</b></div></div>` : '<p class="note">Add the asking price above to see whether it is fair and what to offer.</p>'}
 <p class="note">Based on: ${esc(src)}.</p>
-${live ? liveHtml(live) : `<div class="row"><button class="btn sm" data-act="live">Check live ads with Claude</button></div><p class="note">Claude looks up comparable listings on mobile.de and AutoScout24 now (about €0.20). The result counts for 30 days.</p>`}
+${live ? liveHtml(live) : `<div class="row"><button class="btn sm" data-act="live">Check live ads with Claude</button></div><p class="note">Claude looks up comparable listings on mobile.de and AutoScout24 in your Claude app. The result counts for 30 days.</p>`}
 ${sweet ? `<p class="callout">${esc(sweet)}</p>` : ''}</section>`;
 }
 function liveHtml(l) {
@@ -388,7 +390,7 @@ ${manual ? `<div class="g2">${pnum('fin.net', 'Net income a month', f.net || '',
 ${p.mode !== 'cash' ? `<div class="g3">${pnum('downPct', 'Down payment', p.downPct, '%', { max: 100, step: 5 })}${pnum('term', 'Term', p.term, 'months', { min: 6, max: 96, step: 6 })}${pnum('apr', 'Interest', p.apr || '', '%', { dec: true, step: 0.1, ph: String((META && META.loan && META.loan.good) || 5.9), hint: 'Empty: today’s typical good rate.' })}</div>` : ''}</section>
 <section class="card"><h2>What matters most</h2><p class="note">How the four scores weigh in the Écurie score.</p>${E.SCORE_KEYS.map(k => `<label class="slider"><span>${E.SCORE_LABEL[k]}</span><input type="range" min="0" max="50" step="5" data-p="w.${k}" value="${p.w[k]}"><output>${p.w[k]}</output></label>`).join('')}</section>
 <section class="card"><h2>Market data</h2><p class="note">Fuel ${pr.date ? `(${esc(pr.date)})` : ''}: Super E10 €${pr.e10.toFixed(3)}, Super Plus €${pr.sp98.toFixed(3)}, Diesel €${pr.diesel.toFixed(3)} a litre; electricity €${pr.home.toFixed(2)} at home, €${pr.dc.toFixed(2)} fast-charging. Loans from ${n1((META && META.loan && META.loan.good) || 5.9)} %. ${CARS.length} cars in the checked list${META && META.asOf ? `, prices as of ${esc(META.asOf)}` : ''}; ${Object.keys(S.lookups || {}).length} researched by Claude on your account.</p></section>
-<section class="card"><h2>Sync</h2><p class="note">${!on ? 'Sync is not set up on this site.' : ui.session ? `Signed in as ${esc(ui.session)}. Your garage, my car, profile and researched cars follow you to every device.` : 'Not signed in: everything stays on this device.'}</p>${on ? `<div class="row"><button class="btn sm" data-act="sync">${ui.session ? 'Manage' : 'Sign in to sync'}</button></div>` : ''}<p class="note">Asking Claude (research, live ads, reading a screenshot) needs you signed in.</p></section>
+<section class="card"><h2>Sync</h2><p class="note">${!on ? 'Sync is not set up on this site.' : ui.session ? `Signed in as ${esc(ui.session)}. Your garage, my car, profile and researched cars follow you to every device.` : 'Not signed in: everything stays on this device.'}</p>${on ? `<div class="row"><button class="btn sm" data-act="sync">${ui.session ? 'Manage' : 'Sign in to sync'}</button></div>` : ''}</section>
 <section class="card"><h2>Backup</h2><div class="row"><button class="btn sm" data-act="export">Export a backup</button><label class="btn sm">Import<input type="file" accept="application/json" data-act="import" hidden></label></div>
 <div class="row"><button class="link danger" data-act="reset">${ui.delSure === 'reset' ? 'Tap again to erase Écurie on this device' : 'Erase Écurie on this device'}</button></div></section>
 <section class="card"><h2>Ideas inbox</h2><p class="note">A link to a shared document where you jot ideas for the apps; every app on this site shows the same one.</p><label class="field wide"><span class="box"><input type="url" data-act="inbox" value="${esc(S.inbox || '')}" placeholder="https://docs.google.com/…"></span></label>${S.inbox ? `<p><a href="${esc(S.inbox)}" target="_blank" rel="noopener">Open the ideas inbox</a></p>` : ''}</section>
@@ -409,7 +411,9 @@ function onClick(e) {
   else if (a === 'use') use(id);
   else if (a === 'research' || a === 'reresearch') research();
   else if (a === 'sugg') pickSugg(Number(b.dataset.i));
-  else if (a === 'ad') { const f = $('#adfile'); if (f) f.click(); }
+  else if (a === 'ad') readAd();
+  else if (a === 'weekly') { if (!S.q.name.trim()) return fail('Type the make and model first.'); weeklySheet(); }
+  else if (a === 'reqcopy' || a === 'reqopen') copyText(ui.reqLine || '');
   else if (a === 'live') checkLive();
   else if (a === 'save') { if (!entryOf(S.q)) { S.garage.unshift({ id: uid(), q: { ...S.q, options: [...S.q.options] }, added: today(), checks: { ...ui.ticks } }); save(); toast('Saved to your Garage.'); render(); } }
   else if (a === 'mine') { let g = entryOf(S.q); if (!g) { g = { id: uid(), q: { ...S.q, options: [...S.q.options] }, added: today(), checks: { ...ui.ticks } }; S.garage.unshift(g); } const c = byId(S.q.carId), q = qOf(S.q); S.mine = { gid: g.id, bought: q.price || (c ? E.priceCheck(c, q).fair : null), boughtOn: today().slice(0, 7), log: [{ d: today(), km: q.km }] }; save(); toast('Set as your car: see My car.'); render(); }
@@ -433,7 +437,6 @@ function onInput(e) {
 }
 function onChange(e) {
   const t = e.target;
-  if (t.id === 'adfile') { const f = t.files && t.files[0]; t.value = ''; if (f) readAd(f); return; }
   if (t.dataset.q) {
     const k = t.dataset.q; save();
     if (['year', 'km', 'price', 'ps'].includes(k) && S.q.carId) { const c = byId(S.q.carId); if (k === 'ps' && c && num(S.q.ps) && Math.abs(num(S.q.ps) - c.ps) / c.ps > 0.08) { S.q.carId = null; render(); return; } renderReport(); }

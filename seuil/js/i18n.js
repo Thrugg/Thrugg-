@@ -69,7 +69,7 @@ const EN = {
   'mc.title': 'In 400 possible futures', 'mc.ahead': 'Buying is ahead after your {n} years in {p} % of them.', 'mc.half': 'Half of them cross by year {y}; one in ten by year {lo}, nine in ten by {hi}.', 'mc.mostNever': 'In most of them buying never catches up within {n} years ({p} % never do).', 'mc.never': 'never',
   'mc.how': 'Each future draws price growth, rent growth (moving together), the return and the renewal rate around your guesses.',
   'ask.btn': 'Ask Claude for price and rent here', 'ask.wait': 'Claude is researching…', 'ask.found': 'Claude found for {p}:', 'ask.price': '{v} per m² to buy,', 'ask.rent': '{v} per m² a month to rent.', 'ask.conf.high': 'sources agree', 'ask.conf.medium': 'sources roughly agree', 'ask.conf.low': 'few or uneven sources',
-  'ask.use': 'Use these figures (per m²)', 'ask.used': 'Price and rent set per m²', 'ask.off': 'Ask Claude needs the one-time setup in the README and a signed-in account.',
+  'ask.use': 'Use these figures (per m²)', 'ask.used': 'Price and rent set per m²', 'ask.off': 'Asking Claude is not available on this page.',
   'hist.hpi': '{c}: house prices grew {v} % a year from {a} to {b} (Eurostat house price index).', 'hist.claude': 'For this place Claude found about {v} % a year over ten years.'
 };
 const FR = {
@@ -142,7 +142,7 @@ const FR = {
   'mc.title': 'Sur 400 avenirs possibles', 'mc.ahead': 'L’achat est devant après vos {n} ans dans {p} % d’entre eux.', 'mc.half': 'La moitié basculent avant l’année {y} ; un sur dix avant l’année {lo}, neuf sur dix avant {hi}.', 'mc.mostNever': 'Dans la plupart, l’achat ne rattrape jamais la location en {n} ans ({p} % jamais).', 'mc.never': 'jamais',
   'mc.how': 'Chaque avenir tire la hausse des prix, celle des loyers (liées), le rendement et le taux de renégociation autour de vos hypothèses.',
   'ask.btn': 'Demander à Claude le prix et le loyer ici', 'ask.wait': 'Claude cherche…', 'ask.found': 'Claude a trouvé pour {p} :', 'ask.price': '{v} le m² à l’achat,', 'ask.rent': '{v} le m² par mois en location.', 'ask.conf.high': 'sources concordantes', 'ask.conf.medium': 'sources à peu près concordantes', 'ask.conf.low': 'sources rares ou inégales',
-  'ask.use': 'Utiliser ces chiffres (au m²)', 'ask.used': 'Prix et loyer réglés au m²', 'ask.off': 'Demander à Claude nécessite la mise en place décrite dans le README et un compte connecté.',
+  'ask.use': 'Utiliser ces chiffres (au m²)', 'ask.used': 'Prix et loyer réglés au m²', 'ask.off': 'Demander à Claude n’est pas disponible sur cette page.',
   'hist.hpi': '{c} : les prix des logements ont augmenté de {v} % par an de {a} à {b} (indice Eurostat des prix des logements).', 'hist.claude': 'Pour ce lieu, Claude a trouvé environ {v} % par an sur dix ans.'
 };
 const DICT = { en: EN, fr: FR };

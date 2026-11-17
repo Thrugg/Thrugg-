@@ -233,9 +233,9 @@ function act(el, ev) {
     const l = cur(); if (!l || askBusy) return;
     if (!window.Ask) { toast(t('ask.off')); return; }
     askBusy = true; render();
-    window.Ask.ready().then(ok => ok ? window.Ask.run('place_prices', { place: l.name || '', country: t('pack.' + l.pack), currency: l.cur, size: Number(l.sqm) || 70, kind: 'flat' }) : Promise.reject(Object.assign(new Error(t('ask.off')), { code: 'off' })))
+    window.Ask.run('place_prices', { place: l.name || '', country: t('pack.' + l.pack), currency: l.cur, size: Number(l.sqm) || 70, kind: 'flat' }, { title: t('ask.btn') })
       .then(data => { edit(x => { x.research = { d: new Date().toISOString().slice(0, 10), data }; }); })
-      .catch(e => toast(e.message || t('ask.off')))
+      .catch(e => { if (e.code !== 'cancelled') toast(e.message || t('ask.off')); })
       .finally(() => { askBusy = false; render(); });
   }
   else if (a === 'ask-use') { const l = cur(); const r = l && l.research && l.research.data; if (!r) return; edit(x => { x.mode = 'sqm'; x.price = Math.round(r.price_m2); x.rent = Math.round(r.rent_m2 * 10) / 10; }); render(); toast(t('ask.used')); }
