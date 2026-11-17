@@ -1,5 +1,5 @@
 /* The Funds Ladder — every screen. Reads the state, draws HTML, handles taps through data-act. */
-import { S, save, saveUi, reset, uid, examples, readSafety, readMove, readGG, setInbox, exportBackup, importBackup } from './store.js';
+import { S, save, saveUi, reset, uid, examples, readSafety, readMove, readGG, readCar, setInbox, exportBackup, importBackup } from './store.js';
 import { targetOf, needOf, fillOf, isFull, split, project, nextRung, carMaths } from './engine.js';
 import { t, setLang, lang } from './i18n.js';
 
@@ -18,7 +18,7 @@ function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList
 function sheet(html) { const d = $('#sheet'); d.innerHTML = html; if (!d.open) d.showModal(); d.scrollTop = 0; }
 const closeSheet = () => { const d = $('#sheet'); if (d.open) d.close(); ui.edit = null; };
 
-const nameOf = r => r.name || t('kind.' + (KINDS.includes(r.kind) ? r.kind : 'custom'));
+const nameOf = r => { if (r.name) return r.name; if (r.kind === 'car' && r.link) { const c = readCar(); if (c && c.name) return t('kind.carEc', { n: c.name }); } return t('kind.' + (KINDS.includes(r.kind) ? r.kind : 'custom')); };
 const partLabel = (r, p, i) => p.label || (r.kind === 'move' && i < 3 ? t('move.p' + i) : t('part.n', { n: i + 1 }));
 /* the emergency-fund rung can take its figures from Safety Net Score on this device */
 function eff(r) {
@@ -27,6 +27,8 @@ function eff(r) {
   if (r.kind === 'move' && r.link) { const mv = readMove(); if (mv && mv.cur === S.cur) return { ...r, parts: null, target: mv.target, linkedT: true, from: 'sn' }; }
   /* the ETF rung's balance from Gains & Greeks; the target stays yours, and this month's money is not added here */
   if (r.kind === 'etf' && r.link) { const g = readGG(); if (g && g.cur === S.cur) return { ...r, saved: g.saved, linked: true, from: 'gg' }; }
+  /* the car rung's target from the car put on the ladder in Écurie; what is set aside stays yours */
+  if (r.kind === 'car' && r.link) { const c = readCar(); if (c && c.cur === S.cur) return { ...r, parts: null, target: c.target, linkedT: true, from: 'ec' }; }
   return r;
 }
 const effRungs = () => S.rungs.map(eff);
@@ -73,9 +75,10 @@ function rungSheet(id) {
   const i = S.rungs.indexOf(r), e = eff(r), hasParts = r.parts && r.parts.length;
   const sn = r.kind === 'safety' ? readSafety() : null;
   const linkBox = r.kind === 'safety' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.use'))}</span></label><p class="note">${esc(!r.link ? t('link.off') : !sn ? t('link.none') : e.linked ? (e.levels ? t('link.on', { s: money(e.saved), t: money(e.target) }) : t('link.onNoLevel', { s: money(e.saved) })) : t('link.cur'))} <a href="../safety-net/">${esc(t('link.open'))}</a></p></div>` : '';
-  const mv = r.kind === 'move' ? readMove() : null, gg = r.kind === 'etf' ? readGG() : null;
+  const mv = r.kind === 'move' ? readMove() : null, gg = r.kind === 'etf' ? readGG() : null, ec = r.kind === 'car' ? readCar() : null;
   const linkBox2 = r.kind === 'move' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.useMove'))}</span></label><p class="note">${esc(!r.link ? t('link.offMove') : !mv ? t('link.noneMove') : mv.cur !== S.cur ? t('link.cur') : t('link.onMove', { t: money(mv.target), g: money(mv.good) }))} <a href="../safety-net/">${esc(t('link.open'))}</a></p></div>`
-    : r.kind === 'etf' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.useGG'))}</span></label><p class="note">${esc(!r.link ? t('link.offGG') : !gg ? t('link.noneGG') : gg.cur !== S.cur ? t('link.cur') : t('link.onGG', { s: money(gg.saved) }))} <a href="../gains-greeks/">${esc(t('link.openGG'))}</a></p></div>` : '';
+    : r.kind === 'etf' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.useGG'))}</span></label><p class="note">${esc(!r.link ? t('link.offGG') : !gg ? t('link.noneGG') : gg.cur !== S.cur ? t('link.cur') : t('link.onGG', { s: money(gg.saved) }))} <a href="../gains-greeks/">${esc(t('link.openGG'))}</a></p></div>`
+    : r.kind === 'car' ? `<div class="linkbox"><label class="chk"><input type="checkbox" data-rf="link" ${r.link ? 'checked' : ''}> <span>${esc(t('link.useEc'))}</span></label><p class="note">${esc(!r.link ? t('link.offEc') : !ec ? t('link.noneEc') : ec.cur !== S.cur ? t('link.cur') : t('link.onEc', { t: money(ec.target), n: ec.name }))} <a href="../ecurie/">${esc(t('link.openEc'))}</a></p></div>` : '';
   const parts = hasParts ? `<div class="parts">${r.parts.map((p, k) => `<div class="prow"><input type="text" maxlength="40" data-pf="label" data-k="${k}" value="${esc(p.label || '')}" placeholder="${esc(partLabel(r, p, k))}" aria-label="${esc(t('part.label'))}"><input type="number" inputmode="decimal" min="0" step="50" data-pf="amt" data-k="${k}" value="${p.amt || ''}" aria-label="${esc(t('part.amt'))}"><button class="x" data-act="part-del" data-k="${k}" aria-label="${esc(t('part.del'))}">×</button></div>`).join('')}<p class="note">${esc(t('part.sum', { v: money(targetOf(r)) }))}</p></div>` : '';
   sheet(`<h2>${esc(t('edit.h', { n: i + 1 }))}</h2>
 <div class="grid"><label class="fld wide"><span>${esc(t('f.name'))}</span><span class="box"><input type="text" maxlength="40" data-rf="name" value="${esc(r.name || '')}" placeholder="${esc(t('kind.' + (KINDS.includes(r.kind) ? r.kind : 'custom')))}"></span></label>

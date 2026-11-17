@@ -54,3 +54,20 @@ test('ask: research notes keep the source links; answers parse or report why not
   assert.deepEqual(parseAnswer({ stop_reason: 'refusal', content: [] }), { error: 'refused' });
   assert.deepEqual(parseAnswer({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { error: 'bad_answer' });
 });
+
+test('ask: Écurie tasks research a car, check live ads, and read an ad screenshot only from a valid image', () => {
+  const lk = requests('car_lookup', { car: { name: 'BMW M550i xDrive', year: 2021, ps: 530, km: 60000, options: ['air', 'exhaust'] } });
+  assert.equal(lk.research.tools[0].type, 'web_search_20260209');
+  assert.match(lk.research.messages[0].content, /M550i/); assert.match(lk.research.messages[0].content, /60000/);
+  const mk = requests('car_market', { car: { name: 'Golf GTI', year: 2021, km: 50000 } });
+  assert.ok(mk.research); assert.match(mk.format('notes').messages[0].content, /Golf GTI/);
+  const png = 'iVBORw0KGgo' + 'A'.repeat(200);
+  const ad = requests('car_ad_read', { image: png, media: 'image/png' });
+  assert.equal(ad.research, null);
+  const c = ad.format(null).messages[0].content;
+  assert.ok(Array.isArray(c)); assert.equal(c[0].type, 'image'); assert.equal(c[0].source.media_type, 'image/png'); assert.equal(c[1].type, 'text');
+  /* a wrong type or a non-base64 payload is dropped, so the task answers "not readable" instead of failing */
+  assert.equal(typeof requests('car_ad_read', { image: png, media: 'application/pdf' }).format(null).messages[0].content, 'string');
+  assert.equal(typeof requests('car_ad_read', { image: 'not base64 <script>', media: 'image/jpeg' }).format(null).messages[0].content, 'string');
+  assert.equal(typeof requests('car_ad_read', {}).format(null).messages[0].content, 'string');
+});

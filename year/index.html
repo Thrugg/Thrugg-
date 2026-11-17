@@ -125,6 +125,15 @@ select{font:inherit;padding:6px 10px;border-radius:10px;border:1px solid var(--l
       const es = la.log.filter(e => inY(e.d, y));
       if (es.length) out.push(card('The Funds Ladder', '../ladder/', [fig(money(es.reduce((a, e) => a + (Number(e.amt) || 0), 0), la.cur), 'put on the ladder'), fig(es.length, es.length === 1 ? 'month' : 'months')], ''));
     }
+    /* Écurie: cars looked at this year, and what the car you own did */
+    const ec = get('ecurie.v1');
+    if (ec && Array.isArray(ec.garage)) {
+      const seen = ec.garage.filter(g => inY(g.added, y));
+      const mine = ec.mine && ec.garage.find(g => g.id === ec.mine.gid), log = mine ? (ec.mine.log || []).filter(l => inY(l.d, y)).sort((a, b) => a.d.localeCompare(b.d)) : [];
+      const driven = log.length >= 2 ? log[log.length - 1].km - log[0].km : 0;
+      if (seen.length || driven > 0) out.push(card('Écurie', '../ecurie/', [seen.length ? fig(seen.length, seen.length === 1 ? 'car saved' : 'cars saved') : '', driven > 0 ? fig(nf.format(driven), 'kilometres in your car') : ''].filter(Boolean),
+        mine ? `Your car: <b>${esc(mine.q && mine.q.name || '')}</b>` : ''));
+    }
     /* Tandem */
     const ta = get('tandem.v1');
     if (ta && ta.days) {
