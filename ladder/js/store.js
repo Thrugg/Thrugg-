@@ -69,6 +69,10 @@ export function readSafety() {
 export function readMove() {
   try { const x = JSON.parse(localStorage.getItem(SAFETY_KEY)); const m = x && x.moveNeed; if (!m || !(m.through > 0)) return null; return { target: m.through, good: m.good, cur: m.cur, to: m.to, leave: m.leave }; } catch (e) { return null; }
 }
+/* The car rung can take its target from Écurie: the down payment (or the price, paying cash) of the car put on the ladder there. */
+export function readCar() {
+  try { const x = JSON.parse(localStorage.getItem('ecurie.v1')); const l = x && x.ladder; return l && l.target > 0 ? { target: Math.round(l.target), name: String(l.name || ''), cur: l.cur || 'EUR', at: l.at || null } : null; } catch (e) { return null; }
+}
 /* The ETF rung can take what is invested from Gains & Greeks ("Capital invested" on its tax desk, in euros). */
 export function readGG() {
   try { const x = JSON.parse(localStorage.getItem('gg.v1')); const c = x && x.p && Number(x.p.cap); return c > 0 ? { saved: c, cur: 'EUR' } : null; } catch (e) { return null; }

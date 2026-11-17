@@ -16,9 +16,9 @@
 | Tandem | Ten minutes a day of Polish and German on one spaced-repetition engine, for two learners who check each other's language | https://thrugg.github.io/Thrugg-/tandem/ | Yes, sign in from its Settings |
 | BridgeLab | A price, volume and mix bridge with sliders on an invented portfolio, and the order-of-effects trap | https://thrugg.github.io/Thrugg-/bridgelab/ | Yes, sign in from its Settings |
 | Révélateur | A photo editor that analyses each photo on the phone, adjusts it for its type (portrait, landscape, food, night…) and the look it already has, then learns your taste | https://thrugg.github.io/Thrugg-/revelateur/ | Taste and presets, sign in from its Settings (photos stay on the device) |
+| Écurie | Any car typed in with its year, power, mileage and options: what it is worth, what it costs at your mileage, what falls due, whether the asking price is fair, whether your finances (Safety Net Score) carry it, and four scores out of 100. Replaces Prüfstand | https://thrugg.github.io/Thrugg-/ecurie/ | Yes, sign in from its Profile |
 | Our year | Every app's year on one page: hikes, hotel stays, nights, wears, records, savings, practice and photos | https://thrugg.github.io/Thrugg-/year/ | Reads what the apps saved on the device |
 | Forkcast | Snap a meal, get the nutrition (opens in Claude) | https://claude.ai/artifact/5wenBM41wM6kANsCCpzwRN | In Claude |
-| Prüfstand | German car market analyst (opens in Claude) | https://claude.ai/artifact/EsViuZGJAHhRTYqBgBnQSu | In Claude |
 
 **On the iPhone:** open a link in Safari, tap Share, then **Add to Home Screen**. It opens full-screen like an app. On a Mac, bookmark it (or in Safari, File → Add to Dock).
 
@@ -30,7 +30,7 @@ A hiking app for mountain and lake hikes in Bavaria, Austria, Switzerland and th
 
 ## Saving and syncing (all apps)
 
-Everything you enter is saved automatically on the device. Sign in once on each device (Cordée: Settings → Sync; Safety Net Score and Gains & Greeks: the "Sign in to sync" button at the bottom left; Forge, Nocturne, Seuil, The Funds Ladder, Grand Tour, Sillage, Tandem, BridgeLab and Révélateur: in their own Settings) and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once. The sync runs on Supabase (`tools/supabase-setup.sql`, settings in `cloud.js`).
+Everything you enter is saved automatically on the device. Sign in once on each device (Cordée: Settings → Sync; Safety Net Score and Gains & Greeks: the "Sign in to sync" button at the bottom left; Forge, Nocturne, Seuil, The Funds Ladder, Grand Tour, Sillage, Tandem, BridgeLab, Révélateur and Écurie: in their own Settings or Profile) and the apps keep the same data on the Mac and the iPhone. On the iPhone, each app added to the Home Screen asks for the sign-in once. The sync runs on Supabase (`tools/supabase-setup.sql`, settings in `cloud.js`).
 
 Your logbook, names, settings and inputs live in your browser and your own Supabase project, never in this repository.
 
@@ -48,7 +48,7 @@ After that, the **Fetch** button appears in the options lab whenever you are sig
 
 ## Ask Claude (one-time setup, about 10 minutes)
 
-Sillage (similar fragrances, your scent profile, what to buy next), Seuil (price and rent for a place) and Grand Tour (hotel ideas) can ask Claude through a small function in your own Supabase project. Your Anthropic API key stays in Supabase and never reaches the browser; only signed-in accounts can call it, and each account gets at most 40 questions a day.
+Sillage (similar fragrances, your scent profile, what to buy next), Seuil (price and rent for a place), Grand Tour (hotel ideas) and Écurie (researching a car, checking live ads, reading an ad screenshot) can ask Claude through a small function in your own Supabase project. Your Anthropic API key stays in Supabase and never reaches the browser; only signed-in accounts can call it, and each account gets at most 40 questions a day.
 
 1. Get an API key at console.anthropic.com (API keys → Create key). Usage is billed there: roughly 5 cents for a plain answer and 15–30 cents for one that searches the web.
 2. Supabase dashboard → **Edge Functions** → **Secrets** → add `ANTHROPIC_API_KEY` with the key. Optional: `ASK_ALLOWED` = your email (only that account may ask), `ASK_DAILY_LIMIT` = another daily cap.
@@ -77,7 +77,7 @@ The route line of every hike is traced on GitHub's machines every Tuesday night 
 
 Nocturne has its own checks on invented data (Health import, the bridge adding up, regularity index, plan): `node --test nocturne/test/*.mjs`. Its notes are in [`nocturne/MAINTAINING.md`](nocturne/MAINTAINING.md).
 
-Seuil, The Funds Ladder, Grand Tour, Sillage, Tandem, BridgeLab and Révélateur have their own checks on invented data: `node --test seuil/test/*.mjs ladder/test/*.mjs grand-tour/test/*.mjs sillage/test/*.mjs tandem/test/*.mjs bridgelab/test/*.mjs revelateur/test/*.mjs`. Each folder has a `MAINTAINING.md` with how it works and what to re-check: [`seuil/`](seuil/MAINTAINING.md) (country rules, once a year), [`ladder/`](ladder/MAINTAINING.md), [`grand-tour/`](grand-tour/MAINTAINING.md) (grade bands, once a year), [`sillage/`](sillage/MAINTAINING.md), [`tandem/`](tandem/MAINTAINING.md) (decks: only add cards at the end), [`bridgelab/`](bridgelab/MAINTAINING.md) (synthetic data only), [`revelateur/`](revelateur/MAINTAINING.md) (the auto rules to tune).
+Seuil, The Funds Ladder, Grand Tour, Sillage, Tandem, BridgeLab, Révélateur and Écurie have their own checks on invented data: `node --test seuil/test/*.mjs ladder/test/*.mjs grand-tour/test/*.mjs sillage/test/*.mjs tandem/test/*.mjs bridgelab/test/*.mjs revelateur/test/*.mjs ecurie/test/*.mjs`. Each folder has a `MAINTAINING.md` with how it works and what to re-check: [`seuil/`](seuil/MAINTAINING.md) (country rules, once a year), [`ladder/`](ladder/MAINTAINING.md), [`grand-tour/`](grand-tour/MAINTAINING.md) (grade bands, once a year), [`sillage/`](sillage/MAINTAINING.md), [`tandem/`](tandem/MAINTAINING.md) (decks: only add cards at the end), [`bridgelab/`](bridgelab/MAINTAINING.md) (synthetic data only), [`revelateur/`](revelateur/MAINTAINING.md) (the auto rules to tune), [`ecurie/`](ecurie/MAINTAINING.md) (car list and market prices, refreshed by a scheduled task).
 
 The rules in Safety Net Score and Gains & Greeks are updated once a year, in January: see [`RULES.md`](RULES.md).
 

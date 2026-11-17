@@ -1,0 +1,50 @@
+{
+ "asOf": "2026-10-26",
+ "fuel": {
+  "date": "2026-10-20",
+  "diesel": 2.255,
+  "e10": 2.11,
+  "sp98": 2.24,
+  "src": "ADAC weekly national averages (press release 21.10.2026); Super Plus 98 estimated at E10 + €0.13"
+ },
+ "elec": {
+  "ac": 0.52,
+  "date": "2026-08",
+  "dc": 0.62,
+  "home": 0.37,
+  "src": "BDEW Strompreisanalyse (home); typical public AC/DC ad-hoc tariffs"
+ },
+ "loan": {
+  "avg": 8.5,
+  "date": "2026-08",
+  "good": 5.9,
+  "src": "smava car-loan median 5.73% (Aug 2026); Capitalo market average ~5.9%"
+ },
+ "lease": {
+  "ev": 0.8,
+  "exotic": 1.3,
+  "ice": 1.05,
+  "note": "Leasing factor = monthly rate ÷ gross list price × 100. EVs are often subsidised (0.6–0.8); rare performance cars 1.0–1.3."
+ },
+ "dat": {
+  "bev": 51.5,
+  "date": "2026-08",
+  "diesel": 58,
+  "petrol": 59.4,
+  "src": "DAT Barometer 3-year residual values (August 2026 data, published late Sept); September report indicates ICE ~58%, BEV gap narrowed to ~6 pts"
+ },
+ "changelog": [
+  {
+   "date": "2026-10-26",
+   "summary": "Weekly refresh: 26 market anchors for 17 models, 16 measured 100–200 times, 6 list prices, 2 cars added"
+  },
+  {
+   "date": "2026-10-19",
+   "summary": "Weekly refresh: 23 market price anchors for 14 models, 16 measured 100–200 times, 3 cars added"
+  },
+  {
+   "date": "2026-10-15",
+   "summary": "Initial dataset published"
+  }
+ ]
+}
