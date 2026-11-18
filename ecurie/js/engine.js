@@ -294,8 +294,13 @@ export function monthly(car, q, prof, meta, now = nowYear()) {
   if (mode === 'cash') { r.down = price; r.instalment = 0; r.interestM = 0; r.term = 0; }
   else {
     const down = price * clamp(num(prof.downPct, 20), 0, 100) / 100, P = price - down, n = Math.max(6, num(prof.term, 48));
-    r.down = down; r.principal = P; r.term = n; r.instalment = P > 0 ? annuity(P, apr, n) : 0;
-    r.interestTotal = r.instalment * n - P; r.interestM = r.interestTotal / Math.max(hold * 12, n);
+    /* the final payment (Schlussrate), usual in Germany: 30 to 50 % of the price, due with the last instalment */
+    const bp = clamp(num(prof.balloonPct, 30), 0, 70), balloon = Math.min(P, price * bp / 100);
+    r.down = down; r.principal = P; r.term = n; r.balloonPct = bp; r.balloon = balloon;
+    r.instalment = P > 0 ? annuity(P, apr, n, balloon) : 0;
+    r.interestTotal = r.instalment * n + balloon - P; r.interestM = r.interestTotal / Math.max(hold * 12, n);
+    /* what the car is worth when the final payment falls due, at your mileage: selling it should cover it */
+    if (balloon > 0) { const y = n / 12; r.valueAtEnd = valueAt(car, q, now + y, num(q.km) + num(prof.km, 15000) * y); r.balloonGap = balloon - r.valueAtEnd; }
   }
   r.opportunityM = r.down * 0.025 / 12;
   /* what you pay what for: the car's loss in value against what you paid, at your mileage */
@@ -327,6 +332,8 @@ export function burden(m, fin) {
   if (plan > 0 && cut > 0) { score -= 25 * Math.min(1, cut / plan); why.push('cut'); }
   if (lv && afterLv < before) { score -= 6 * (before - afterLv) + (afterLv < 1 && before >= 1 ? 10 : 0); why.push('level'); }
   if (lv && savingsAfter < lv[0]) { score = Math.min(score, 25); why.push('belowBasic'); }
+  /* a final payment the car will not be worth: the gap comes out of savings or a new loan */
+  if (m.balloonGap > 0 && room > 0) { score -= Math.min(15, 5 * m.balloonGap / room); why.push('balloon'); }
   if (after < 0) { score = Math.min(score, 10); why.push('short'); }
   if (savingsAfter < 0) { score = Math.min(score, 5); why.push('cannotPay'); }
   score = Math.round(clamp(score, 0, 100));

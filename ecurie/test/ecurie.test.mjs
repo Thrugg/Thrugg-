@@ -171,3 +171,19 @@ test('ad screenshots: facts from mobile.de and AutoScout24 text, monthly rates a
   assert.equal(ev.km, 45000, 'the range in km is not the mileage'); assert.equal(ev.fuel, 'ev'); assert.equal(ev.ps, 498);
   assert.deepEqual(parseAd('a photo of a cat').found, []);
 });
+
+test('final payment (Schlussrate): matches a published example, lowers the instalment, and is checked against the car’s value', () => {
+  /* 30,000 € price, 5,000 € down, 48 months at 5.9 %, 30 % final payment: 419.28 € a month (rechner-portal.de example) */
+  assert.ok(Math.abs(E.annuity(25000, 5.9, 48, 9000) - 419.28) < 0.05);
+  assert.ok(Math.abs(E.annuity(25000, 5.9, 48, 0) - 585.98) < 0.05);
+  const c = car('vw-golf-gti-mk8'), q = { year: 2021, km: 45000, price: 27000, options: [] };
+  const with30 = E.monthly(c, q, { ...prof, balloonPct: 30 }, meta, now), none = E.monthly(c, q, { ...prof, balloonPct: 0 }, meta, now);
+  assert.equal(with30.balloon, 8100); assert.ok(with30.instalment < none.instalment); assert.ok(with30.interestTotal > none.interestTotal);
+  assert.ok(with30.valueAtEnd > 0 && Math.abs(with30.balloonGap - (with30.balloon - with30.valueAtEnd)) < 0.01);
+  /* a final payment above what the car will be worth costs Financial-burden points */
+  const big = E.monthly(c, q, { ...prof, balloonPct: 70 }, meta, now);
+  assert.ok(big.balloonGap > 0);
+  const f = { net: 5200, essential: 2400, savings: 30000, plan: 800 };
+  assert.ok(E.burden(big, f).why.includes('balloon'));
+  assert.equal(E.monthly(c, q, { ...prof, mode: 'cash' }, meta, now).balloon, undefined);
+});

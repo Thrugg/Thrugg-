@@ -9,7 +9,7 @@ export const blankQ = () => ({ name: '', year: null, ps: null, km: null, price: 
 const DEF = () => ({
   v: 1,
   prof: {
-    km: 15000, hold: 4, sf: 'sf10', mode: 'loan', downPct: 20, term: 48, apr: 0,
+    km: 15000, hold: 4, sf: 'sf10', mode: 'loan', downPct: 20, term: 48, apr: 0, balloonPct: 30,
     usage: { autobahn: 40, mountain: 20, city: 35, track: 5 }, family: false, dog: false, homeShare: 70, phevShare: 40,
     w: { burden: 25, awe: 25, fun: 25, rel: 25 },
     finSrc: 'auto',                                    // auto: Safety Net Score when it holds figures; manual: the ones below

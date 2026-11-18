@@ -24,7 +24,7 @@ A car that is not in the checked list is analysed straight away from an **estima
 
 ## Costs
 
-“What leaves your account a month” lists only cash: loan instalment, fuel or charging, insurance, upkeep and repairs (with the items from options), tyres, tax and TÜV (`cashParts`). The loss in value is shown with the value, not as a monthly cost.
+“What leaves your account a month” lists only cash: loan instalment, fuel or charging, insurance, upkeep and repairs (with the items from options), tyres, tax and TÜV (`cashParts`). The loss in value is shown with the value, not as a monthly cost. Loans carry a final payment (Schlussrate), 30 % of the price by default (German sources give 30 to 50 %; set in Profile or on the report, 0 pays it all off monthly); the instalment is the annuity with that balloon, and the report compares the final payment with the car's value when it falls due. A final payment the car will not be worth costs Financial-burden points.
 
 ## The model
 
