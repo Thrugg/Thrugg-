@@ -127,3 +127,15 @@ test('Eurostat JSON-stat: ten-year growth per country', () => {
   assert.deepEqual(g.DE, { from: '2014', to: '2024', pct: 5 }); assert.equal(g.FR.pct, 2);
   assert.deepEqual(hpiGrowth(null), {});
 });
+
+test('sixty years, and an empty deposit takes the share lenders usually expect in that country', async () => {
+  assert.equal(HORIZON, 60);
+  const { PACKS } = await import('../js/packs.js');
+  for (const [k, p] of Object.entries(PACKS)) { assert.ok(p.usualDown >= p.minDown, k); assert.ok(p.usualDown > 0 && p.usualDown <= 40, k); }
+  const base = { pack: 'DE', region: 'BY', cur: 'EUR', mode: 'total', sqm: 70, price: 500000, rent: 1500, reno: 0, rate: 4, term: 30, stay: 50, gPrice: 2, gRent: 2, ret: 5, ov: {} };
+  const auto = analyse({ ...base, down: null }), typed = analyse({ ...base, down: 50000 });
+  assert.equal(auto.down, 100000, 'Germany: 20 % of 500,000'); assert.equal(typed.down, 50000);
+  assert.equal(analyse({ ...base, pack: 'FR', cur: 'EUR', down: null }).down, 50000, 'France: 10 %');
+  assert.equal(auto.stay, 50, 'a 50-year stay is no longer cut to 40');
+  assert.equal(analyse({ ...base, down: 0 }).down, 0, 'a typed 0 stays 0');
+});

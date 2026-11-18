@@ -5,7 +5,7 @@
    the threshold. */
 import { rulesFor } from './packs.js';
 
-export const HORIZON = 40;
+export const HORIZON = 60;
 const num = (v, d = 0) => { const n = Number(v); return isFinite(n) ? n : d; };
 
 /* price, rent and surface as totals, whichever way they were typed */
@@ -14,6 +14,9 @@ export function totals(loc) {
   const per = loc.mode === 'sqm';
   return { sqm, price: Math.max(0, num(loc.price) * (per ? sqm : 1)), rent: Math.max(0, num(loc.rent) * (per ? sqm : 1)) };
 }
+
+/* own funds into the price: what was typed, or (left empty) the share lenders usually expect in that country */
+export const downOf = (loc, R, P) => loc.down == null || loc.down === '' ? Math.round(P * num(R.usualDown, 20) / 100) : num(loc.down);
 
 /* Monthly payment of a loan repaid in full over n months. */
 export function annuity(loan, ratePct, months) {
@@ -26,7 +29,7 @@ export function annuity(loan, ratePct, months) {
 export function simulate(loc, shift = {}) {
   const R = rulesFor(loc), T = totals(loc);
   const P = T.price, rent0 = T.rent;
-  const down = Math.min(P, Math.max(0, num(loc.down)));
+  const down = Math.min(P, Math.max(0, downOf(loc, R, P)));
   const reno = Math.max(0, num(loc.reno));
   const rate = Math.max(0, num(loc.rate) + num(shift.rate));
   /* SE-1: the rate is fixed for fixYears, then renewed at rate2 (both optional; empty = one rate for the whole loan) */

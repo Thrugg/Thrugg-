@@ -119,7 +119,7 @@ function formHtml(l) {
 ${inp('sqm', l.sqm, { unit: 'm²', step: 1 })}${inp('price', l.price || '', { unit: u, step: per ? 50 : 1000 })}${inp('rent', l.rent || '', { unit: u, step: per ? 0.5 : 10, hint: t('f.rentHint') })}</div>
 <p class="note derived" id="derived">${derivedText(l, T)}</p>${researchHtml(l)}
 <h2>${esc(t('form.money'))}</h2>
-<div class="grid">${inp('down', l.down || '', { unit: l.cur, step: 1000, hint: t('f.downHint') })}${inp('reno', l.reno || '', { unit: l.cur, step: 1000, hint: t('f.renoHint') })}
+<div class="grid">${(() => { const P0 = totals(l).price, R0 = rulesFor(l), auto = Math.round(P0 * R0.usualDown / 100); return inp('down', l.down ?? '', { unit: l.cur, step: 1000, ph: P0 ? String(auto) : '', hint: l.down == null || l.down === '' ? t('f.downAuto', { p: R0.usualDown, v: money(auto, l.cur) }) : t('f.downHint') }); })()}${inp('reno', l.reno || '', { unit: l.cur, step: 1000, hint: t('f.renoHint') })}
 ${inp('rate', l.rate, { unit: '%', step: 0.05 })}${inp('fixYears', l.fixYears || '', { unit: t('u.years'), step: 1, min: 0, hint: t('f.fixHint') })}${Number(l.fixYears) > 0 ? inp('rate2', l.rate2 ?? '', { unit: '%', step: 0.05, ph: l.rate, hint: t('f.rate2Hint') }) : ''}${R.loan === 'annuity' ? inp('term', l.term, { unit: t('u.years'), step: 1, min: 1 }) : ''}${inp('stay', l.stay, { unit: t('u.years'), step: 1, min: 1, hint: t('f.stayHint') })}</div>
 <h2>${esc(t('form.guess'))}</h2><p class="note">${esc(t('form.guessSub'))}</p>${historyHtml(l)}
 <div class="slds">${slider('gPrice', l.gPrice, -2, 8, 0.25)}${slider('gRent', l.gRent, -2, 8, 0.25)}${slider('ret', l.ret, 0, 10, 0.25)}</div>
@@ -190,7 +190,7 @@ function renderRules() {
 ${RULE_FIELDS.filter(f => f !== 'cgtFree').map(f => line(f, pct(p[f], 3))).join('')}
 ${line('cgtFree', esc(cgtWord(p.cgtFree)))}
 <tr><th scope="row">${esc(t('r.loan'))}<small>${esc(t('rx.loan'))}</small></th><td>${esc(t('r.loan.' + p.loan))}${p.loan === 'target' ? ` (${p.loanTo} %, ${p.loanYears} ${esc(t('u.years'))})` : ''}</td></tr>
-${line('rate', pct(p.rate, 2))}${line('minDown', pct(p.minDown, 0))}
+${line('rate', pct(p.rate, 2))}${line('minDown', pct(p.minDown, 0))}${line('usualDown', pct(p.usualDown, 0))}
 </tbody></table>${reg}<p class="note">${esc(t('rules.note.' + k))}</p>${src}</section>
 <section><h2>${esc(t('method.h'))}</h2>${[1, 2, 3, 4, 5, 6].map(i => `<p class="note">${esc(t('method.' + i, { n: HORIZON }))}</p>`).join('')}</section>
 <section><h2>${esc(t('limits.h'))}</h2>${[1, 2, 3, 4].map(i => `<p class="note">${esc(t('limits.' + i))}</p>`).join('')}</section>`;
@@ -266,7 +266,8 @@ export function init() {
       if (f === 'pack') { edit(x => { const p = PACKS[el.value] || PACKS.XX; x.pack = el.value; x.region = p.region || null; x.cur = p.cur; x.rate = p.rate; x.term = p.term; x.ov = {}; }); render(); return; }
       if (f === 'region' || f === 'cur') { edit(x => { x[f] = el.value; }); render(); return; }
       if (f === 'fixYears' && done) { edit(x => { x.fixYears = el.value === '' ? 0 : Number(el.value); }); render(); return; }
-      edit(x => { x[f] = f === 'name' ? el.value : el.value === '' ? (f === 'rate2' ? '' : 0) : Number(el.value); });
+      edit(x => { x[f] = f === 'name' ? el.value : el.value === '' ? (f === 'rate2' ? '' : f === 'down' ? null : 0) : Number(el.value); });
+      if (f === 'down' && done) { render(); return; }
       if (el.type === 'range') { const o = document.querySelector(`[data-o="${f}"]`); if (o) o.textContent = pct(Number(el.value), 2); }
       if (f === 'name' && done) render(); else refresh();
     } else if (el.dataset.ov) {

@@ -7,7 +7,7 @@ Rent or buy: for any place, how many years you must stay before buying wins, as 
 | File | What it does |
 |------|--------------|
 | `js/packs.js` | Country rule packs: Germany, Switzerland, Denmark, Poland, France, and a neutral "Other country". Purchase tax by region for Germany (16 Länder) and Switzerland (10 cantons). Each value has a source link shown on the Rules tab. |
-| `js/engine.js` | The model. `simulate` runs one scenario month by month for 40 years; `analyse` adds the threshold, its range and the bridge. Pure functions, no screen. |
+| `js/engine.js` | The model. `simulate` runs one scenario month by month for 60 years (`HORIZON`); `analyse` adds the threshold, its range and the bridge. Pure functions, no screen. |
 | `js/charts.js` | The two drawings: the crossing curves with the doorway, and the comparison lines. |
 | `js/ui.js` | Every screen (Threshold, Compare, Rules, Settings). |
 | `js/store.js` | Saved state, the three example places, backup export and import. |
@@ -58,3 +58,7 @@ A scheduled refresh of researched price and rent levels; a house-deposit rung in
 ## After a change
 
 Run the tests, then bump `V` in `sw.js` so installed copies pick up the new files.
+
+## Deposit
+
+Each country pack has `usualDown`, the own funds lenders usually expect into the price (checked Nov 2026: Germany 20 % plus purchase costs, Switzerland 20 %, Denmark 20 % for standard terms with 5 % by law, Poland 20 % under KNF Recommendation S, France 10 %, other countries 20 %). A place whose deposit is left empty uses that share of its price (`downOf`); a typed amount, 0 included, is used as typed. Re-check `usualDown` with the yearly pack review.

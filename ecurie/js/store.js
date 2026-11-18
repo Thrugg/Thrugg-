@@ -80,8 +80,12 @@ export function readGrandTour() {
 /* Seuil: the first real place in euros with a deposit, for how much later the home deposit arrives */
 export function readSeuil() {
   const x = read('seuil.v1'); if (!x || !Array.isArray(x.locs)) return null;
-  const l = x.locs.find(p => !p.ex && p.cur === 'EUR' && Number(p.down) > 0);
-  return l ? { name: l.name, down: Number(l.down) } : null;
+  /* the deposit typed there, or (left empty) the share lenders usually expect: 10 % in France, 20 % elsewhere */
+  const total = p => Number(p.price) * (p.mode === 'sqm' ? Number(p.sqm) || 0 : 1);
+  const l = x.locs.find(p => !p.ex && p.cur === 'EUR' && (Number(p.down) > 0 || total(p) > 0));
+  if (!l) return null;
+  const down = Number(l.down) > 0 ? Number(l.down) : Math.round(total(l) * (l.pack === 'FR' ? 0.1 : 0.2));
+  return down > 0 ? { name: l.name, down } : null;
 }
 /* The Funds Ladder: whether it has a car rung linked to Écurie */
 export function readLadder() {

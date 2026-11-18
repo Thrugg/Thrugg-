@@ -11,7 +11,7 @@ export const uid = () => Math.random().toString(36).slice(2, 9);
 /* a new location with the pack's starting values */
 export function newLoc(pack = 'XX', name = '') {
   const p = PACKS[pack] || PACKS.XX;
-  return { id: uid(), name, pack, region: p.region || null, cur: p.cur, mode: 'total', sqm: 70, price: 0, rent: 0, down: 0, reno: 0, rate: p.rate, term: p.term, stay: 7, gPrice: 2, gRent: 2, ret: 5, ov: {} };
+  return { id: uid(), name, pack, region: p.region || null, cur: p.cur, mode: 'total', sqm: 70, price: 0, rent: 0, down: null, reno: 0, rate: p.rate, term: p.term, stay: 7, gPrice: 2, gRent: 2, ret: 5, ov: {} };
 }
 /* invented round figures, only there to show how the screen reads */
 export const examples = () => [
@@ -37,7 +37,9 @@ export let fresh = true;                      // true until something has been s
 export function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const x = JSON.parse(raw); if (x && x.v === 1 && Array.isArray(x.locs)) { const d = DEF(); S = { ...d, ...x, ui: { ...d.ui, ...(x.ui || {}) } }; fresh = false; } }
+    if (raw) { const x = JSON.parse(raw); if (x && x.v === 1 && Array.isArray(x.locs)) { const d = DEF(); S = { ...d, ...x, ui: { ...d.ui, ...(x.ui || {}) } }; fresh = false;
+      /* once: a deposit of 0 was the old blank; it now means "the usual share here" */
+      if (!S.downAuto) { S.locs.forEach(l => { if (l.down === 0) l.down = null; }); S.downAuto = 1; } } }
     else { S = DEF(); fresh = true; }
   } catch (e) { S = DEF(); }
   if (!S.locs.find(l => l.id === S.ui.loc)) S.ui.loc = S.locs[0] ? S.locs[0].id : null;
