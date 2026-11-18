@@ -11,11 +11,20 @@
 | `js/engine.js` | All the arithmetic, pure functions: value by year **and mileage**, price check, value curve, running costs, Kfz-Steuer, what falls due, financing, the four scores, coverage, fit, road trips, the test-drive checklist, matching typed names to the list, turning Claude's research into a record. |
 | `js/store.js` | One localStorage key `ecurie.v1`, synced by `cloud.js` (app key `ecurie`): profile, the car on the Analyse tab, garage, my car, researched cars, live-ad checks, the Funds Ladder target. Read-only links to Safety Net Score, Grand Tour, Seuil and The Funds Ladder. |
 | `js/ui.js` | Analyse (search and report), Garage (compare), My car, Profile. |
+| `js/adread.js` | Reading an ad screenshot on the phone: Tesseract text recognition (`vendor/tesseract`, Apache 2.0, German model, about 4 MB, loaded only when an ad is read and then cached), then `parseAd` picks name, year, power, mileage, price, fuel, gearbox and equipment out of the text (mobile.de, AutoScout24, German or English). Nothing is sent anywhere. “Read it with Claude instead” remains for what the phone could not read. |
 | `js/art.js` | The side-profile illustrations by body archetype, from Prüfstand. |
 | `js/charts.js` | Value curve, score rings, bars. |
 | `test/ecurie.test.mjs` | `node --test ecurie/test/*.mjs` — checks on invented finances. |
 | `../ask.js` | The Claude tasks `car_lookup` (research one exact car), `car_market` (live ads), `car_ad_read` (read an ad screenshot): Écurie writes the question, the person pastes it into their own Claude app and pastes the answer back. |
 | `data/requests.md` | The weekly list: cars a scheduled task researches every Wednesday and adds to `cars.json`. |
+
+## Every car
+
+A car that is not in the checked list is analysed straight away from an **estimate** (`estimateCar`): the make's price level, reliability, driven wheels and value retention (`MAKES`), the power, the year, the fuel and the body (both guessed from the name when not chosen: `guessFuel`, `guessBody`). List price, weight, consumption, insurance, upkeep and tyres follow from those; everyday cars use the `std` depreciation curve (the German market since 2022). Checked on real cars in the tests: a 2019 BMW 118i at 68,400 km comes out between €14,000 and €21,000. Estimates are marked “Estimated” and offer research in Claude or the weekly list for model-specific figures. They are not matched against later searches; they are rebuilt each time.
+
+## Costs
+
+“What leaves your account a month” lists only cash: loan instalment, fuel or charging, insurance, upkeep and repairs (with the items from options), tyres, tax and TÜV (`cashParts`). The loss in value is shown with the value, not as a monthly cost.
 
 ## The model
 
@@ -44,7 +53,7 @@ Then run `node --test ecurie/test/*.mjs`, bump `V` in `sw.js`, commit and push t
 
 ## Weekly list (scheduled task “Écurie weekly car requests”, Wednesdays 18:33 Berlin)
 
-“Add to the weekly list” gives one line for `data/requests.md` (make and model, year, power); the person pastes it under **Waiting** on GitHub. The task researches each waiting car (at most 6 a run) into a full record in `cars.json` following the rules above, with its own id, `conf` M or L and its sources in `src`, moves the line to **Done** with the id, runs the tests, bumps `V` and pushes. With nothing waiting it changes nothing.
+“Add to the weekly list” gives one line for `data/requests.md` (make and model, year, power); the person pastes it under **Waiting** on GitHub. The task researches each waiting car (at most 6 a run; when fewer are waiting, it fills up to 6 with Germany's most registered models not yet listed) into a full record in `cars.json` following the rules above, with its own id, `conf` M or L and its sources in `src`, moves the line to **Done** with the id, runs the tests, bumps `V` and pushes. With nothing waiting it changes nothing.
 
 ## After changing a file
 

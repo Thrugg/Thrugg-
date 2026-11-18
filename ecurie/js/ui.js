@@ -24,7 +24,8 @@ const TABS = [['analyse', 'Analyse'], ['garage', 'Garage'], ['mine', 'My car'], 
 
 let CARS = [], META = null;
 export function setData(cars, meta) { CARS = cars || []; META = meta || null; }
-const allCars = () => [...CARS, ...Object.values(S.lookups || {})];
+/* cars to match against: the checked list and researched ones; estimates are rebuilt each time */
+const allCars = () => [...CARS, ...Object.values(S.lookups || {}).filter(c => c.status !== 'estimated')];
 const byId = id => (S.lookups || {})[id] || CARS.find(c => c.id === id) || null;
 const nameOf = c => `${c.make} ${c.model}`;
 const fullName = c => `${c.make} ${c.model}${c.gen && c.gen !== '—' ? ` (${c.gen})` : ''}`;
@@ -62,11 +63,12 @@ function viewAnalyse() {
 <div class="shead"><div><div class="kicker">Analyse a car</div><h1>Which car?</h1></div>${q.name || q.km != null || q.options.length ? '<button class="link" data-act="newq">New search</button>' : ''}</div>
 <div class="field wide sbox"><label for="q-name">Make and model</label><input id="q-name" data-q="name" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="e.g. BMW M550i xDrive, Golf GTI, 911 Carrera S" value="${esc(q.name)}" role="combobox" aria-expanded="false" aria-controls="sugg"><div id="sugg" class="sugg" role="listbox" hidden></div></div>
 <div class="g4">${field('year', 'Model year', q.year, { min: 1990, max: CUR_YEAR + 1, ph: String(CUR_YEAR - 4) })}${field('ps', 'Power', q.ps, { unit: 'PS', ph: 'e.g. 300' })}${field('km', 'Mileage', q.km, { unit: 'km', step: 1000, ph: 'e.g. 60000' })}${field('price', 'Asking price', q.price, { unit: '€', step: 500, ph: 'optional' })}</div>
+<div class="g2"><div class="field"><label for="q-fuel">Fuel</label><span class="box"><select id="q-fuel" data-q="fuel">${[['', 'From the name'], ['petrol', 'Petrol'], ['diesel', 'Diesel'], ['hybrid', 'Hybrid'], ['phev', 'Plug-in hybrid'], ['ev', 'Electric']].map(([v, l]) => `<option value="${v}" ${q.fuel === v ? 'selected' : ''}>${l}</option>`).join('')}</select></span></div><div class="field"><label for="q-body">Body</label><span class="box"><select id="q-body" data-q="body">${[['', 'From the name'], ['hatch', 'Hatchback'], ['sedan', 'Saloon'], ['wagon', 'Estate'], ['suv', 'SUV'], ['coupe', 'Coupé'], ['roadster', 'Convertible'], ['van', 'MPV or van']].map(([v, l]) => `<option value="${v}" ${q.body === v ? 'selected' : ''}>${l}</option>`).join('')}</select></span></div></div>
 <details class="opts" ${q.options.length || q.extras ? 'open' : ''}><summary>Options and condition <span>${q.options.length ? `${q.options.length} chosen` : 'optional'}</span></summary>
 <div class="chips">${E.OPTIONS.filter(o => !o.cond).map(o => chip(o, on.has(o.id))).join('')}</div>
 <div class="sublbl">Condition</div><div class="chips">${E.OPTIONS.filter(o => o.cond).map(o => chip(o, on.has(o.id))).join('')}</div>
 <div class="field wide"><label for="q-extras">Other equipment</label><input id="q-extras" data-q="extras" type="text" maxlength="300" value="${esc(q.extras)}" placeholder="e.g. Bowers &amp; Wilkins, soft-close doors"></div></details>
-<div class="row"><button class="btn pri" data-act="analyse">Analyse</button><button class="btn" data-act="ad">${ICON.camera}<span>Read an ad screenshot</span></button></div>
+<div class="row"><button class="btn pri" data-act="analyse">Analyse</button><button class="btn" data-act="ad">${ICON.camera}<span>Read an ad screenshot</span></button><input type="file" id="adfile" accept="image/*" hidden></div>
 <div id="status" class="status" aria-live="polite">${statusHtml()}</div>
 </section>
 <div id="report" class="report">${reportHtml()}</div>`;
@@ -82,7 +84,7 @@ ${ms.length ? `<div class="alts">${ms.slice(0, 4).map(m => `<button class="alt" 
 <div class="row"><button class="btn pri" data-act="research">Research it now in Claude</button><button class="btn" data-act="weekly">Add to the weekly list</button></div>
 <p class="note"><b>Now:</b> Écurie writes the question, you paste it into your Claude app and paste the answer back (about a minute, on your Claude plan). The result is kept and synced. <b>Weekly list:</b> it joins the checked list for everyone after the next Wednesday update.</p></div>`;
   }
-  if (ui.note) return `<p class="note ok">${esc(ui.note)}</p>`;
+  if (ui.note) return `<p class="note ok">${esc(ui.note)}${ui.adFallback ? ' <button class="link" data-act="adclaude">Read it with Claude instead</button>' : ''}</p>`;
   return '';
 }
 const renderStatus = () => { const el = $('#status'); if (el) el.innerHTML = statusHtml(); };
@@ -114,7 +116,15 @@ function analyse() {
   if (num(q.km) == null) return fail('Add the mileage (0 for a new car).');
   const ms = E.match(allCars(), { name: q.name, year: num(q.year), ps: num(q.ps) });
   if (ms.length && E.sure(ms[0])) return use(ms[0].car.id);
-  ui.choice = ms.filter(m => m.words >= 0.5); renderStatus();
+  /* not in the list: estimate it from make, power, year, fuel and body, so every car gets a report */
+  const c = E.estimateCar({ name: q.name, year: num(q.year), ps: num(q.ps), fuel: q.fuel, body: q.body });
+  pruneEstimates(c.id); S.lookups[c.id] = c; use(c.id);
+  if (!num(q.ps)) { ui.note = 'Estimated with a typical power for this make: add the power (PS) for a closer estimate.'; renderStatus(); }
+}
+/* estimates are cheap to rebuild: keep only those the Analyse tab, the garage or my car still use */
+function pruneEstimates(keep) {
+  const used = new Set([keep, S.q.carId, ...S.garage.map(g => g.q.carId)]);
+  for (const [id, c] of Object.entries(S.lookups || {})) if (c.status === 'estimated' && !used.has(id)) delete S.lookups[id];
 }
 function use(id) {
   S.q.carId = id; ui.choice = null; ui.err = ''; ui.ticks = {};
@@ -148,8 +158,29 @@ function weeklySheet() {
   ui.reqLine = line;
 }
 async function copyText(t) { try { await navigator.clipboard.writeText(t); toast('Copied. Paste it under “Waiting”.'); } catch (e) { toast('Select the line and copy it.'); } }
-/* an advert: the screenshot is attached in Claude, the answer fills the form */
-async function readAd() {
+/* an advert, read on the phone: text recognition, then the facts into the form; analysed straight away when enough was found */
+const FIELD_LABEL = { name: 'make and model', year: 'year', ps: 'power', km: 'mileage', price: 'price' };
+async function readAd(file) {
+  ui.busy = true; ui.err = ''; ui.note = ''; ui.choice = null; ui.adFallback = false; ui.busyMsg = 'Reading the ad on your phone…'; renderStatus();
+  let go = false;
+  try {
+    const { readAdImage } = await import('./adread.js');
+    const r = await readAdImage(file, msg => { ui.busyMsg = msg; renderStatus(); });
+    if (!r.found.length) { ui.err = 'No car details found in that picture. Use a screenshot that shows the title, the price and the key facts (mileage, first registration, power).'; ui.adFallback = true; ui.note = ' '; }
+    else {
+      const q = S.q;
+      Object.assign(q, { name: r.name || q.name, year: r.year || q.year, ps: r.ps || q.ps, km: r.km ?? q.km, price: r.price || q.price, fuel: r.fuel || q.fuel, options: [...new Set([...(q.options || []), ...r.options])].filter(id => E.OPT[id]), carId: null });
+      const miss = Object.keys(FIELD_LABEL).filter(k => !r.found.includes(k)).map(k => FIELD_LABEL[k]);
+      ui.note = `Read from the ad: ${r.found.map(k => FIELD_LABEL[k]).join(', ')}${r.options.length ? ` and ${r.options.length} item${r.options.length === 1 ? '' : 's'} of equipment` : ''}.${miss.length ? ` Not found: ${miss.join(', ')}; fill ${miss.length === 1 ? 'it' : 'them'} in.` : ''} Check the fields.`;
+      ui.adFallback = miss.length > 0; save();
+      go = !!(q.name && num(q.year) && num(q.km) != null);
+    }
+  } catch (e) { ui.err = e.message || 'The ad could not be read.'; ui.adFallback = true; }
+  ui.busy = false; render();
+  if (go) { const note = ui.note, fb = ui.adFallback; analyse(); ui.note = ui.note || note; ui.adFallback = fb; renderStatus(); }
+}
+/* the same, through Claude, when the phone could not read everything */
+async function readAdClaude() {
   if (!window.Ask) return fail('Asking Claude is not available here.');
   ui.busy = true; ui.err = ''; ui.note = ''; ui.choice = null; ui.busyMsg = 'Waiting for Claude to read the ad…'; renderStatus();
   try {
@@ -179,7 +210,7 @@ function compute(c, q) {
   return { fin, now, live, sc, pc, m: sc.m, cv: sc.m.curve, due: sc.m.due, fit: E.fit(c, q, S.prof), check: E.checklist(c, q) };
 }
 const pill = (t, txt) => `<span class="pill ${t}">${esc(txt)}</span>`;
-const sourceTag = c => c.status === 'researched' ? `<span class="tag ai">Researched by Claude ${esc(c.checked || '')}</span>` : `<span class="tag ok">Checked list${c.checked ? ' · ' + esc(c.checked) : ''}</span>`;
+const sourceTag = c => c.status === 'estimated' ? `<span class="tag est">Estimated</span>` : c.status === 'researched' ? `<span class="tag ai">Researched by Claude ${esc(c.checked || '')}</span>` : `<span class="tag ok">Checked list${c.checked ? ' · ' + esc(c.checked) : ''}</span>`;
 function reportHtml() {
   const q0 = S.q;
   if (!q0.carId) return `<section class="card empty">${carSVG({ art: 'coupe', color: '#8a96a3', ps: 400, cls: 'sports', body: 'coupe' }, { shadow: false })}<p><b>Type a car, its year and its mileage, then Analyse.</b></p><p class="note">${CARS.length} cars are in the checked list, carried over from Prüfstand. Anything else, your Claude app researches once and Écurie keeps. A screenshot of a mobile.de or AutoScout24 ad, read in Claude, fills the form for you.</p></section>`;
@@ -194,6 +225,13 @@ const reasonOf = {
   fun: (x, c) => { const f = x.sc.detail.fun; return `${n1(f.ratio)} kg per PS · ${c.drive}${c.gearbox ? ' · ' + c.gearbox : ''}`; },
   rel: (x, c) => { const r = x.sc.detail.rel; return `${r.base} of 5 on TÜV and ADAC records${r.kmPen ? `, −${r.kmPen} for the mileage` : ''}${r.agePen ? `, −${r.agePen} for the age` : ''}.`; }
 };
+/* an estimated car: say so, offer close cars from the checked list, and the ways to precise figures */
+function estimBox(c, q) {
+  const alts = E.match(allCars(), { name: S.q.name, year: q.year }).filter(m => m.words >= 0.99).slice(0, 3);
+  return `<div class="estim"><p><b>Estimated.</b> This car is not in Écurie’s checked list yet, so its prices, costs and scores come from ${esc(c.make)}’s price level and reliability, its power, year, fuel (${esc(c.fuel === 'ev' ? 'electric' : c.fuel)}) and body (${esc({ hatch: 'hatchback', sedan: 'saloon', wagon: 'estate', suv: 'SUV', coupe: 'coupé', roadster: 'convertible' }[c.body] || c.body)}): close, usually within 15 to 20 %, but not model-specific. Fix the fuel or body above if they are wrong.</p>
+${alts.length ? `<p class="note">Same name in the checked list:</p><div class="alts">${alts.map(m => `<button class="alt" data-act="use" data-id="${esc(m.car.id)}"><span>${esc(fullName(m.car))}</span><small>${m.car.years[0]}–${m.car.onSale ? 'today' : m.car.years[1]} · ${m.car.ps} PS</small></button>`).join('')}</div>` : ''}
+<div class="row"><button class="btn sm" data-act="research">Research it now in Claude</button><button class="btn sm" data-act="weekly">Add to the weekly list</button></div></div>`;
+}
 function hero(c, q, x, g) {
   const s = x.sc, saved = !!g, mine = S.mine && g && S.mine.gid === g.id;
   const bars = E.SCORE_KEYS.map(k => `<div class="sbar t-${tone(s[k])}"><div class="sh"><span>${E.SCORE_LABEL[k]}</span><b>${s[k] ?? '–'}</b></div><div class="st"><span style="width:${s[k] ?? 0}%"></span></div><p>${esc(reasonOf[k](x, c))}</p></div>`).join('');
@@ -203,6 +241,7 @@ function hero(c, q, x, g) {
 <div class="road">${carSVG(c)}</div>
 <div class="hero-body">
 <div class="overall">${ring(s.overall, 84, 'Écurie score')}<div><div class="kicker">Écurie score</div><p class="big">${s.overall == null ? '–' : s.overall >= 75 ? 'A strong choice for you' : s.overall >= 60 ? 'A good fit, with trade-offs' : s.overall >= 45 ? 'Mixed: read the details' : 'A hard case for you'}</p><p class="note">Your four scores, weighted as set in Profile. ${sourceTag(c)}</p></div></div>
+${c.status === 'estimated' ? estimBox(c, q) : ''}
 <div class="sbars">${bars}</div>
 <div class="row"><button class="btn ${saved ? '' : 'pri'}" data-act="save" ${saved ? 'disabled' : ''}>${saved ? 'In your Garage ✓' : 'Save to Garage'}</button><button class="btn" data-act="mine">${mine ? 'This is your car ✓' : 'This is my car'}</button></div>
 ${c.note ? `<p class="note">${esc(c.note)}</p>` : ''}
@@ -249,18 +288,21 @@ function liveHtml(l) {
 function valueCard(c, q, x) {
   const cv = x.cv;
   const steps = cv.steps.map(s => `<li>Sell before <b>${kmf(s.km)}</b> (${when(s.years)}) and keep about <b>${eur(s.amount)}</b>: buyers pay noticeably less past it.</li>`).join('');
+  const lossM = x.m.deprM, lossT = lossM * cv.hold * 12;
   return `<section class="card"><div class="kicker">Value</div><h2>What it will be worth</h2>
+<div class="price-row"><div><div class="bignum">${eur(cv.vEnd)}</div><p class="note">worth in ${cv.hold} years, at ${kmf(cv.kmEnd)}</p></div><div><div class="bignum sm loss">−${eur(lossT)}</div><p class="note">loss in value, about ${eur(lossM)} a month</p></div></div>
+<p class="note">The loss in value is not paid each month: it is what you get back less when you sell, against the ${eur(x.m.price)} you pay.</p>
 ${valueChart(cv, q.year, { label: `Value of this ${nameOf(c)} from new, at your mileage from today` })}
-<ul class="facts"><li>Over your ${cv.hold} years and ${kmf(cv.kmEnd - q.km)}: worth about <b>${eur(cv.vEnd)}</b> at the end, a loss of <b>${eur(cv.loss)}</b> (${pct(cv.lossPct)}), ${eur(cv.perYear)} a year.</li>${steps}</ul>
+${steps ? `<ul class="facts">${steps}</ul>` : ''}
 <p class="note">Before today the curve assumes its mileage built up evenly; after today it adds your ${kmf(S.prof.km)} a year.</p></section>`;
 }
 function costCard(c, q, x) {
   const m = x.m, r = m.run;
-  const legend = m.parts.map((p, i) => `<li><i class="c${i}"></i>${esc(p[0])}<b>${eur(p[1])}</b></li>`).join('');
+  const legend = m.cashParts.map((p, i) => `<li><i class="c${i}"></i>${esc(p[0])}<b>${eur(p[1])}</b></li>`).join('');
   const en = r.en, unit = en.normal.unit, cons = `${n1(en.normal.amt)} ${unit} normal · ${n1(en.dynamic.amt)} spirited · ${n1(en.fast.amt)} at 200 km/h`;
-  return `<section class="card"><div class="kicker">Costs</div><h2>What it costs a month</h2>
-<div class="price-row"><div><div class="bignum">${eur(m.econM)}</div><p class="note">real cost a month, loss in value included</p></div><div><div class="bignum sm">${eur(m.cashM)}</div><p class="note">leaves your account a month</p></div></div>
-${stack(m.parts)}<ul class="legend">${legend}</ul>
+  return `<section class="card"><div class="kicker">Costs</div><h2>What leaves your account a month</h2>
+<div class="bignum">${eur(m.cashM)}</div><p class="note">${m.mode === 'loan' ? 'loan instalment and running costs' : 'running costs; paid in cash, so no instalment'}, at ${kmf(S.prof.km)} a year</p>
+${stack(m.cashParts)}<ul class="legend">${legend}</ul>
 <p class="note">${esc(cons)} per 100 km · ${esc(E.SF[S.prof.sf].label)} · Kfz-Steuer ${eur(r.tax)} a year${m.mode === 'loan' ? ` · loan: ${eur(m.down)} down, ${eur(m.instalment)} a month for ${m.term} months at ${n1(m.apr)} %, interest ${eur(m.interestTotal)}` : ''}.</p></section>`;
 }
 function dueCard(c, q, x) {
@@ -317,7 +359,7 @@ function viewGarage() {
     return `<article class="gcard"><button class="gopen" data-act="open" data-id="${g.id}" aria-label="Open ${esc(fullName(c))}">${carSVG(c, { shadow: false })}</button>
 <div class="gmain"><h3>${esc(nameOf(c))}${isMine ? ' <span class="badge">My car</span>' : ''}</h3><p class="note">${q.year} · ${kmf(q.km)} · ${q.price ? eur(q.price) : 'fair ' + eur(pc.fair)}</p>
 <div class="mini">${E.SCORE_KEYS.map(k => `<span class="t-${tone(sc[k])}" title="${E.SCORE_LABEL[k]}"><i style="height:${sc[k] ?? 0}%"></i><b>${sc[k] ?? '–'}</b></span>`).join('')}</div>
-<p class="note">${eur(sc.m.econM)} a month${b ? ` · <span class="dotv ${b.verdict}"></span>${b.verdict === 'covered' ? 'covered' : b.verdict === 'stretch' ? 'stretches' : 'not covered'}` : ''}</p></div>
+<p class="note">${eur(sc.m.cashM)} a month from your account${b ? ` · <span class="dotv ${b.verdict}"></span>${b.verdict === 'covered' ? 'covered' : b.verdict === 'stretch' ? 'stretches' : 'not covered'}` : ''}</p></div>
 <div class="gside">${ring(sc.overall, 54, 'Écurie score')}<label class="cmpk"><input type="checkbox" data-act="cmp" data-id="${g.id}" ${sel.has(g.id) ? 'checked' : ''}> Compare</label><button class="link danger" data-act="gdel" data-id="${g.id}">${ui.delSure === g.id ? 'Tap again' : 'Remove'}</button></div></article>`;
   }).join('');
   const k = [...sel].filter(id => S.garage.some(g => g.id === id)).length;
@@ -329,7 +371,7 @@ function compareSheet() {
   const R = ids.map(id => { const g = S.garage.find(x => x.id === id); return { g, ...rowScores(g) }; }).filter(r => r.c);
   const rows = [
     ['Écurie score', r => r.sc.overall, 'hi'], ...E.SCORE_KEYS.map(k => [E.SCORE_LABEL[k], r => r.sc[k], 'hi']),
-    ['Fair price', r => r.pc.fair, 'eur'], ['Asking price', r => r.q.price, 'eur'], ['Real cost a month', r => r.sc.m.econM, 'lo€'], ['Leaves the account a month', r => r.sc.m.cashM, 'lo€'],
+    ['Fair price', r => r.pc.fair, 'eur'], ['Asking price', r => r.q.price, 'eur'], ['Leaves the account a month', r => r.sc.m.cashM, 'lo€'], ['Loss in value a month', r => r.sc.m.deprM, 'lo€'],
     [`Loss over ${S.prof.hold} years`, r => r.sc.m.curve.loss, 'lo€'], ['Big items due', r => r.sc.m.due.total, 'lo€'], ['Power', r => r.c.ps, 'hi', ' PS'], ['0–100 km/h', r => r.c.acc && r.c.acc.claim, 'lo', ' s'], ['kg per PS', r => Math.round(r.c.kg / r.c.ps * 100) / 100, 'lo'], ['Boot', r => r.c.trunk, 'hi', ' L']
   ];
   const cell = (v, kind, unit) => v == null ? '–' : kind.includes('€') || kind === 'eur' ? eur(v) : `${typeof v === 'number' ? n1(v) : esc(v)}${unit || ''}`;
@@ -367,7 +409,7 @@ function viewMine() {
 <div class="row"><button class="btn pri" data-act="minekm">Update the mileage</button><button class="btn" data-act="open" data-id="${g.id}">Full report</button></div></div></section>
 <section class="card"><div class="kicker">Value</div><h2>Its value as the kilometres add up</h2>${valueChart(cv, q.year, { log: logPts, label: 'Value of your car over time' })}<p class="note">Dots are your mileage updates. ${log.length} update${log.length === 1 ? '' : 's'} so far.</p></section>
 <section class="card"><div class="kicker">Selling</div><h2>When to sell</h2><ul class="facts">${sell.map(s => `<li>${s}</li>`).join('')}</ul></section>
-<section class="card"><div class="kicker">Next</div><h2>Due in the next two years</h2>${next.length ? `<ul class="due">${next.map(i => `<li class="${i.extra ? 'extra' : ''}"><span class="w">${esc(when(i.in))}<small>${kmf(i.km)}</small></span><span class="i">${esc(i.item)}</span><b>${eur(i.cost)}</b></li>`).join('')}</ul>` : '<p>Nothing big in the next two years.</p>'}<p class="note">It costs you ${eur(m.runM + m.extraM)} a month to run, ${eur(m.deprM + m.runM + m.extraM)} with the loss in value.</p></section>
+<section class="card"><div class="kicker">Next</div><h2>Due in the next two years</h2>${next.length ? `<ul class="due">${next.map(i => `<li class="${i.extra ? 'extra' : ''}"><span class="w">${esc(when(i.in))}<small>${kmf(i.km)}</small></span><span class="i">${esc(i.item)}</span><b>${eur(i.cost)}</b></li>`).join('')}</ul>` : '<p>Nothing big in the next two years.</p>'}<p class="note">It takes ${eur(m.runM + m.extraM)} a month from your account to run, and loses about ${eur(m.deprM)} a month in value.</p></section>
 <div class="row center"><button class="link danger" data-act="unmine">${ui.delSure === 'mine' ? 'Tap again: it is no longer my car' : 'It is no longer my car'}</button></div>`;
 }
 
@@ -411,7 +453,8 @@ function onClick(e) {
   else if (a === 'use') use(id);
   else if (a === 'research' || a === 'reresearch') research();
   else if (a === 'sugg') pickSugg(Number(b.dataset.i));
-  else if (a === 'ad') readAd();
+  else if (a === 'ad') { const f = $('#adfile'); if (f) f.click(); }
+  else if (a === 'adclaude') readAdClaude();
   else if (a === 'weekly') { if (!S.q.name.trim()) return fail('Type the make and model first.'); weeklySheet(); }
   else if (a === 'reqcopy' || a === 'reqopen') copyText(ui.reqLine || '');
   else if (a === 'live') checkLive();
@@ -437,8 +480,10 @@ function onInput(e) {
 }
 function onChange(e) {
   const t = e.target;
+  if (t.id === 'adfile') { const f = t.files && t.files[0]; t.value = ''; if (f) readAd(f); return; }
   if (t.dataset.q) {
     const k = t.dataset.q; save();
+    if ((k === 'fuel' || k === 'body') && S.q.carId && (byId(S.q.carId) || {}).status === 'estimated') { analyse(); return; }
     if (['year', 'km', 'price', 'ps'].includes(k) && S.q.carId) { const c = byId(S.q.carId); if (k === 'ps' && c && num(S.q.ps) && Math.abs(num(S.q.ps) - c.ps) / c.ps > 0.08) { S.q.carId = null; render(); return; } renderReport(); }
     return;
   }
@@ -470,6 +515,8 @@ export function init() {
   document.addEventListener('input', onInput);
   document.addEventListener('change', onChange);
   document.addEventListener('keydown', onKey);
+  /* the suggestions close as soon as another field is used, so they never cover the form */
+  document.addEventListener('focusin', e => { if (!e.target.closest('.sbox')) { const s = $('#sugg'); if (s && !s.hidden) { s.hidden = true; const n = $('#q-name'); if (n) n.setAttribute('aria-expanded', 'false'); } } });
   $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
   render(); refreshSession();
 }

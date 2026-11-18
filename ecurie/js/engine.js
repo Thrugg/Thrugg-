@@ -13,10 +13,12 @@ export const CURVES = {
   gt: [[0, 1], [1, .86], [2, .79], [3, .73], [4, .68], [5, .64], [6, .60], [7, .57], [8, .54], [10, .50], [12, .47], [15, .45], [20, .43]],
   exotic: [[0, 1], [1, .84], [2, .75], [3, .68], [4, .62], [5, .57], [6, .53], [7, .50], [8, .47], [10, .43], [12, .41], [15, .40], [20, .39]],
   suv: [[0, 1], [1, .78], [2, .68], [3, .59], [4, .52], [5, .46], [6, .41], [7, .37], [8, .33], [10, .27], [12, .23], [15, .19], [20, .16]],
-  ref: [[0, 1], [1, .80], [2, .70], [3, .62], [4, .55], [5, .49], [6, .44], [7, .40], [8, .36], [10, .29], [12, .24], [15, .19], [20, .15]]
+  ref: [[0, 1], [1, .80], [2, .70], [3, .62], [4, .55], [5, .49], [6, .44], [7, .40], [8, .36], [10, .29], [12, .24], [15, .19], [20, .15]],
+  /* everyday cars as the German market prices them since 2022 (DAT: about 59 % after three years), for estimated records */
+  std: [[0, 1], [1, .82], [2, .72], [3, .64], [4, .58], [5, .53], [6, .49], [7, .455], [8, .42], [10, .36], [12, .31], [15, .24], [20, .17]]
 };
 export const CLASSES = Object.keys(CURVES);
-export const CLASS_LABEL = { hot: 'Compact performance', sport4: 'Performance saloon or coupé', super: 'Large performance car', sports: 'Sports car', gt: 'High-end GT', exotic: 'Supercar', suv: 'Performance SUV', ref: 'Everyday car' };
+export const CLASS_LABEL = { hot: 'Compact performance', sport4: 'Performance saloon or coupé', super: 'Large performance car', sports: 'Sports car', gt: 'High-end GT', exotic: 'Supercar', suv: 'Performance SUV', ref: 'Everyday car', std: 'Everyday car' };
 export const FIT_KEYS = ['autobahn', 'mountain', 'city', 'track', 'family', 'winter', 'long'];
 export const FIT_LABEL = { autobahn: 'Autobahn', mountain: 'Mountain roads', city: 'City & daily', track: 'Track days', family: 'Family', winter: 'Winter', long: 'Road trips' };
 export const USAGE_KEYS = ['autobahn', 'mountain', 'city', 'track'];
@@ -24,9 +26,9 @@ export const USAGE_KEYS = ['autobahn', 'mountain', 'city', 'track'];
 export const SF = { sf20: { f: 0.85, label: 'SF 20 or more' }, sf10: { f: 1.0, label: 'SF 10 to 19' }, sf4: { f: 1.5, label: 'SF 4 to 9' }, sf0: { f: 2.4, label: 'SF 0 to 3, or new driver' } };
 export const DEFAULT_META = { fuel: { e10: 2.11, sp98: 2.24, diesel: 2.255 }, elec: { home: 0.37, ac: 0.52, dc: 0.62 }, loan: { good: 5.9, avg: 8.5 } };
 /* price level of parts and labour by class, for the generic items that fall due */
-const TIER = { ref: 1, hot: 1.25, sport4: 1.5, super: 1.8, suv: 1.7, sports: 1.8, gt: 2.6, exotic: 4 };
+const TIER = { std: 1, ref: 1, hot: 1.25, sport4: 1.5, super: 1.8, suv: 1.7, sports: 1.8, gt: 2.6, exotic: 4 };
 /* how strongly the price reacts to mileage (per 10,000 km away from the typical mileage for the age) */
-const KM_K = { ref: 0.034, hot: 0.038, sport4: 0.036, super: 0.036, suv: 0.036, sports: 0.042, gt: 0.05, exotic: 0.055 };
+const KM_K = { std: 0.034, ref: 0.034, hot: 0.038, sport4: 0.036, super: 0.036, suv: 0.036, sports: 0.042, gt: 0.05, exotic: 0.055 };
 export const KM_PER_YEAR_TYPICAL = 14000;
 /* the price steps buyers make at round mileages */
 const KM_STEPS = [[100000, 0.04], [150000, 0.03], [200000, 0.03]];
@@ -301,6 +303,8 @@ export function monthly(car, q, prof, meta, now = nowYear()) {
   r.runM = run.total / 12; r.extraM = due.extra / (hold * 12);
   r.cashM = r.instalment + r.runM + r.extraM;                         // leaves the account each month
   r.econM = r.deprM + r.interestM + r.opportunityM + r.runM + r.extraM; // what owning it really costs
+  /* what leaves the account each month, item by item (the loss in value is shown with the value, not here) */
+  r.cashParts = [...(r.instalment > 0 ? [['Loan instalment', r.instalment]] : []), ['Fuel or charging', run.energyYear / 12], ['Insurance', run.ins / 12], ['Upkeep and repairs', run.upkeep / 12 + r.extraM], ['Tyres', run.tyres / 12], ['Tax and TÜV', (run.tax + run.hu) / 12]];
   r.parts = [['Loss in value', r.deprM], ['Fuel or charging', run.energyYear / 12], ['Insurance', run.ins / 12], ['Upkeep and repairs', run.upkeep / 12 + r.extraM], ['Tyres', run.tyres / 12], ['Tax and TÜV', (run.tax + run.hu) / 12], ['Interest', r.interestM + r.opportunityM]];
   return r;
 }
@@ -348,7 +352,7 @@ export function awe(car, q, now = nowYear()) {
 export function pleasure(car, q) {
   const o = opts(q), kg = num(car.kg, 1600), ps = Math.max(60, num(car.ps, 200)), ratio = kg / ps;
   const eng = String(car.engine || '').toLowerCase(), gear = o.has('manual') ? 'manual' : gearOf(car);
-  const power = 35 * (1 - Math.exp(-Math.max(0, 9 - ratio) / 2.2));
+  const power = 35 * Math.pow(clamp((13 - ratio) / 9, 0, 1), 0.6);   // full marks below 4 kg/PS, nothing above 13
   const light = 20 * clamp((2300 - kg) / 1100, 0, 1);
   const turbo = /turbo|kompressor|supercharg/.test(eng), na = car.fuel === 'petrol' && !turbo;
   const six = /v8|v10|v12|w12|flat-six|flat six|boxer six|inline-six|inline six|straight-six|i6|six-cylinder|\bv6\b|3\.0 i6/.test(eng);
@@ -540,4 +544,99 @@ export function homeDelay(m, fin, deposit) {
   const gap = Math.max(0, num(deposit) - Math.max(0, num(fin.savings) - good));
   const before = gap / plan, after = (gap + m.down) / newPlan;
   return { months: Math.max(0, Math.round(after - before)), before: Math.round(before), after: Math.round(after), plan, newPlan, gap };
+}
+
+/* ---------- any car: an estimated record from make, model, year, power, fuel and body ----------
+   For cars not in the checked list. Prices, weight, consumption and costs come from the make's price level, the power,
+   the body and the fuel; reliability from the make's TÜV/ADAC standing. Good to within about 15–20 %; research or the
+   weekly list then gives model-specific figures. */
+/* make: [price level, reliability 1–5, driven wheels by default, how it holds value (gamma)] */
+export const MAKES = {
+  abarth: ['main', 2.5, 'FWD', 1.05], 'alfa romeo': ['prem', 2.5, 'FWD', 1.2], alpine: ['sport', 3.5, 'RWD', 0.8], 'aston martin': ['lux', 2.5, 'RWD', 1.1], audi: ['prem', 3, 'FWD', 1.0],
+  bentley: ['lux', 3, 'AWD', 1.15], bmw: ['prem', 3, 'RWD', 1.0], byd: ['main', 3.5, 'FWD', 1.25], cadillac: ['prem', 2.5, 'RWD', 1.25], chevrolet: ['main', 3, 'FWD', 1.1], citroen: ['main', 3, 'FWD', 1.15],
+  cupra: ['main', 3.5, 'FWD', 1.0], dacia: ['budget', 3.5, 'FWD', 0.9], ds: ['prem', 3, 'FWD', 1.25], ferrari: ['lux', 3.5, 'RWD', 0.6], fiat: ['main', 2.5, 'FWD', 1.15], ford: ['main', 3, 'FWD', 1.1],
+  genesis: ['prem', 4, 'RWD', 1.2], honda: ['main', 4, 'FWD', 0.9], hyundai: ['main', 4, 'FWD', 1.0], jaguar: ['prem', 2.5, 'RWD', 1.25], jeep: ['main', 2.5, 'AWD', 1.1], kia: ['main', 4, 'FWD', 1.0],
+  lamborghini: ['lux', 3, 'AWD', 0.7], lancia: ['main', 2.5, 'FWD', 1.15], 'land rover': ['prem', 2, 'AWD', 1.05], lexus: ['prem', 4.5, 'FWD', 0.85], lotus: ['sport', 3, 'RWD', 0.9], 'lynk & co': ['main', 3, 'FWD', 1.15],
+  maserati: ['lux', 2.5, 'RWD', 1.3], mazda: ['main', 4.5, 'FWD', 0.9], mclaren: ['lux', 3, 'RWD', 1.0], 'mercedes-benz': ['prem', 3, 'RWD', 1.0], mg: ['budget', 3, 'FWD', 1.15], mini: ['prem', 3, 'FWD', 0.95],
+  mitsubishi: ['main', 3.5, 'FWD', 1.05], nissan: ['main', 3.5, 'FWD', 1.1], opel: ['main', 3, 'FWD', 1.1], peugeot: ['main', 3, 'FWD', 1.1], polestar: ['prem', 3, 'RWD', 1.25], porsche: ['sport', 4, 'RWD', 0.75],
+  renault: ['main', 3, 'FWD', 1.15], 'rolls-royce': ['lux', 3, 'RWD', 1.1], saab: ['main', 3, 'FWD', 1.1], seat: ['main', 3.5, 'FWD', 1.05], skoda: ['main', 3.5, 'FWD', 0.95], smart: ['main', 3, 'RWD', 1.15],
+  ssangyong: ['budget', 3, 'AWD', 1.15], subaru: ['main', 4, 'AWD', 0.95], suzuki: ['budget', 4, 'FWD', 0.9], tesla: ['prem', 3, 'RWD', 1.2], toyota: ['main', 4.5, 'FWD', 0.85], volkswagen: ['main', 3.5, 'FWD', 0.95], volvo: ['prem', 3.5, 'FWD', 1.0]
+};
+const MAKE_ALIAS = { vw: 'volkswagen', mercedes: 'mercedes-benz', 'mercedes amg': 'mercedes-benz', 'mercedes-amg': 'mercedes-benz', merc: 'mercedes-benz', benz: 'mercedes-benz', citroën: 'citroen', škoda: 'skoda', 'range rover': 'land rover', landrover: 'land rover', alfa: 'alfa romeo', aston: 'aston martin', rolls: 'rolls-royce', chevy: 'chevrolet', lynk: 'lynk & co' };
+const MAKE_LABEL = { bmw: 'BMW', mg: 'MG', ds: 'DS', byd: 'BYD', mini: 'MINI', vw: 'VW' };
+/* the make and the rest of the name */
+export function splitName(name) {
+  const s = String(name || '').trim(), low = s.toLowerCase().replace(/\s+/g, ' ');
+  const keys = [...Object.keys(MAKE_ALIAS), ...Object.keys(MAKES)].sort((a, b) => b.length - a.length);
+  for (const k of keys) if (low === k || low.startsWith(k + ' ') || low.startsWith(k + '-')) {
+    const key = MAKE_ALIAS[k] || k, rest = s.slice(k.length).replace(/^[\s-]+/, '');
+    const label = MAKE_LABEL[k] || MAKE_LABEL[key] || key.replace(/(^|[\s-])\w/g, c => c.toUpperCase());
+    return { key, make: label, model: rest || '' };
+  }
+  const [first, ...more] = s.split(/\s+/);
+  return { key: null, make: first || '', model: more.join(' ') };
+}
+const BODY_WORDS = [
+  ['wagon', /touring|avant|variant|kombi|estate|sports ?tourer|sportstourer|\bbreak\b|\bsw\b|shooting brake|t-modell|sportwagon|allroad|\bcombi\b|cross country|\bst\b/],
+  ['roadster', /cabrio|cabriolet|roadster|spider|spyder|convertible|\bz4\b|mx-?5|boxster/],
+  ['van', /touran|sharan|zafira|galaxy|s-max|b-max|c-max|caddy|multivan|transporter|california|berlingo|rifter|kangoo|v-klasse|v-class|vito|scenic|scénic|picasso|active tourer|gran tourer|\bt-?roc cabrio\b|id\.? ?buzz|proace|traveller|staria|carnival/],
+  ['suv', /\bx[1-7]\b|\bix\d?\b|\bq[2-8]\b|\bsq[2-8]\b|\bgl[abceks]\b|\bg-klasse|g-class|\beq[abces] suv|tiguan|t-?roc|t-?cross|touareg|taigo|kuga|puma|explorer|karoq|kodiaq|kamiq|elroq|enyaq|ateca|arona|tarraco|formentor|terramar|tucson|kona|santa fe|ioniq 5|sportage|sorento|niro|ev[39]\b|stonic|rav ?4|c-hr|yaris cross|corolla cross|highlander|land cruiser|qashqai|juke|x-trail|ariya|[235]008|duster|bigster|captur|kadjar|austral|arkana|mokka|grandland|crossland|frontera|xc[469]0|ex[34]0|macan|cayenne|model y|model x|id\.? ?[4567]\b|cx-\d+|mx-30|vitara|s-cross|jimny|outback|forester|crosstrek|xv\b|evoque|velar|discovery|defender|range rover|e-pace|f-pace|stelvio|tonale|compass|renegade|wrangler|countryman|ux\b|nx\b|rx\b|zs\b|hs\b|marvel|atto|seal u|polestar [34]|eclipse cross|outlander|tivoli|korando|cupra born/],
+  ['coupe', /coup[eé]|gran coupe|\bgt\b|\b[48]er\b|\bm[248]\b|\btt\b|\brc[ fz]?\b|\bgr86\b|\bbrz\b|supra|mustang|camaro|\bamg gt\b/],
+  ['sedan', /limousine|\bsedan\b|saloon|\b[357]er\b|\b[357]\d\d[a-z]*\b|\bm[35]\b|\b[ces][- ]?klasse|\b[ces][- ]?class|\b[ces] ?\d{3}\b|\ba[468]\b|\bs[468]\b|\brs[467]\b|passat|arteon|superb|octavia|insignia|mondeo|model s\b|model 3\b|\bi[457]\b|panamera|taycan|giulia|\bis\b|\bes\b|\bls\b|camry|accord|\bs60\b|\bs90\b|ghibli|quattroporte|xe\b|xf\b|xj\b|stinger|\bk5\b|ioniq 6|seal\b|polestar 2/]
+];
+export function guessBody(name) { const s = ' ' + String(name || '').toLowerCase() + ' '; for (const [b, rx] of BODY_WORDS) if (rx.test(s)) return b; return 'hatch'; }
+export function guessFuel(name) {
+  const s = ' ' + String(name || '').toLowerCase() + ' ';
+  if (/plug-?in|phev|e-hybrid|\bgte\b|\b\d{3}e\b|\b[a-z]\s?\d{3}\s?e\b|\bt8\b|recharge|e-tense/.test(s)) return 'phev';
+  if (/e-tron|\belectric\b|\belektro\b|\bev\b|\bid\.? ?\d|\bid\.? ?buzz|\beq[abces]\b|\bi[3457x]\b|\bix\d?\b|\bmodel [3sxy]\b|\bkwh\b|\be-[a-z0-9]+|ioniq [56]|\bev\d\b|enyaq|elroq|\bborn\b|\bzoe\b|\bleaf\b|ariya|polestar|taycan|mach-e|\bseal\b|\batto\b|\bdolphin\b|electrified|e-up|e-golf|spring\b|megane e|r5\b|\b4 e-tech|\bmg4\b|\bzs ev/.test(s)) return 'ev';
+  if (/\bhybrid\b|\bhev\b|\bfull hybrid\b/.test(s)) return 'hybrid';
+  if (/\b\d{3}d\b|\b\d{2,3}\s?d\b(?!-)|\btdi\b|\bcdi\b|\bhdi\b|bluehdi|\bdci\b|\bcrdi\b|\bd4d\b|\bd-4d\b|\bdiesel\b|\bjtd|\bmultijet\b|\btdci\b|ecoblue|\bcdti\b|\bd[2345]\b|\bxdrive\d{2}d\b|\btdv6\b|skyactiv-d|i-dtec|\b[a-z] ?\d{3} ?d\b/.test(s)) return 'diesel';
+  return 'petrol';
+}
+const BODY_FIT = { hatch: [5, 5, 8, 3, 5, 5, 6], sedan: [7, 5, 6, 3, 7, 5, 8], wagon: [7, 5, 6, 3, 9, 6, 9], suv: [6, 4, 6, 2, 8, 8, 7], coupe: [7, 7, 5, 5, 3, 4, 6], roadster: [5, 8, 5, 5, 1, 2, 5], van: [5, 3, 6, 1, 10, 6, 7] };
+const BODY_TRUNK = { hatch: 380, sedan: 480, wagon: 560, suv: 500, coupe: 400, roadster: 200, van: 700 };
+const BODY_ART = { hatch: 'hatch', sedan: 'sedan', wagon: 'wagon', suv: 'suv', coupe: 'coupe', roadster: 'roadster', van: 'boxy' };
+export function estimateCar(q, today = new Date().toISOString().slice(0, 10)) {
+  const sp = splitName(q.name), mk = MAKES[sp.key] || ['main', 3, 'FWD', 1.05], [lvl, rel, drive0, gam] = mk;
+  const ps = Math.round(clamp(num(q.ps, 0) || ({ budget: 90, main: 130, prem: 170, sport: 350, lux: 550 }[lvl]), 40, 1600));
+  const year = Math.round(num(q.year, new Date().getFullYear()));
+  const body = ['hatch', 'sedan', 'wagon', 'suv', 'coupe', 'roadster', 'van'].includes(q.body) ? q.body : guessBody(q.name);
+  const f0 = ['petrol', 'diesel', 'hybrid', 'phev', 'ev'].includes(q.fuel) ? q.fuel : guessFuel(q.name), hybrid = f0 === 'hybrid', fuel = hybrid ? 'petrol' : f0;
+  /* list price in today's euros, then back to the model year (about 1.5 % a year of list-price inflation) */
+  const P = { budget: [5000, 105], main: [9000, 145], prem: [10000, 165], sport: [20000, 220], lux: [40000, 320] }[lvl];
+  const PE = { budget: [20000, 40], main: [30000, 50], prem: [38000, 60], sport: [60000, 120], lux: [120000, 200] }[lvl];
+  let list = fuel === 'ev' ? PE[0] + PE[1] * ps : P[0] + P[1] * ps;
+  list *= { suv: 1.1, wagon: 1.05, coupe: 1.08, roadster: 1.08, van: 1.05 }[body] || 1;
+  list *= fuel === 'diesel' ? 1.05 : fuel === 'phev' ? 1.15 : hybrid ? 1.06 : 1;
+  list *= clamp(1 - 0.015 * (new Date().getFullYear() - year), 0.6, 1.05);
+  const kg = Math.round(950 + 2.6 * Math.min(ps, 500) + ({ wagon: 80, suv: 150, van: 200, roadster: -80 }[body] || 0) + ({ diesel: 60, phev: 250, ev: 350 }[fuel] || 0) + (hybrid ? 80 : 0) + (lvl === 'prem' || lvl === 'lux' ? 60 : 0));
+  const nPetrol = (4.2 + 0.02 * ps) * (hybrid ? 0.78 : 1) * (body === 'suv' || body === 'van' ? 1.1 : 1), nDiesel = (3.6 + 0.012 * ps) * (body === 'suv' || body === 'van' ? 1.1 : 1), nEv = 13 + 0.02 * ps + (body === 'suv' ? 2 : 0);
+  const normal = fuel === 'diesel' ? nDiesel : fuel === 'ev' ? nEv : nPetrol;
+  const sporty = ps >= 230, cls = lvl === 'lux' ? (ps >= 500 ? 'exotic' : 'gt') : lvl === 'sport' ? 'sports' : ps >= 400 ? (body === 'suv' ? 'suv' : 'super') : ps >= 280 ? (body === 'suv' ? 'suv' : 'sport4') : sporty && (body === 'hatch' || body === 'coupe') ? 'hot' : body === 'roadster' && ps >= 180 ? 'sports' : 'std';
+  const fitv = (BODY_FIT[body] || BODY_FIT.hatch).slice();
+  if (ps >= 200) { fitv[0]++; fitv[1]++; fitv[3]++; } if (ps < 100) { fitv[0] -= 2; fitv[6]--; }
+  const drive = /xdrive|quattro|4motion|4matic|awd|allrad|4x4|\b4wd\b|all4|q4\b/i.test(q.name) ? 'AWD' : drive0;
+  if (drive === 'AWD') fitv[5] += 2; if (fuel === 'ev') { fitv[6]--; fitv[2]++; }
+  const fitObj = Object.fromEntries(FIT_KEYS.map((k, i) => [k, clamp(Math.round(fitv[i]), 1, 10)]));
+  const cc = fuel === 'ev' ? 0 : Math.round(clamp(ps * (fuel === 'diesel' ? 11 : 10.5), fuel === 'diesel' ? 1500 : 1000, 6500) / 100) * 100;
+  const wow = clamp(({ budget: 1, main: 2, prem: 3, sport: 6, lux: 8 }[lvl]) + (ps >= 300 ? 1 : 0) + (ps >= 450 ? 1 : 0) + (body === 'coupe' || body === 'roadster' ? 1 : 0) - (body === 'van' ? 1 : 0), 1, 10);
+  const c = {
+    id: 'est-' + slug(`${q.name} ${year} ${ps} ${f0} ${body}`), make: sp.make, model: sp.model || '—', variant: '', gen: '—', years: [year, year], onSale: false,
+    cls, body: body === 'van' ? 'hatch' : body, art: BODY_ART[body], color: '#6b7480', fuel, energy: fuel === 'ev' ? 'ev' : fuel === 'diesel' ? 'diesel' : 'e10', drive,
+    gearbox: '', engine: [hybrid ? 'Hybrid petrol' : { petrol: year >= 2012 ? 'Turbo petrol' : 'Petrol', diesel: 'Turbo diesel', phev: 'Plug-in hybrid', ev: 'Electric' }[fuel], `${ps} PS`].join(', '), cc, ps, kw: Math.round(ps * 0.7355), nm: Math.round(ps * (fuel === 'diesel' ? 2.1 : fuel === 'ev' ? 1.9 : 1.6)), kg,
+    seats: body === 'roadster' ? 2 : body === 'van' ? 7 : 5, trunk: BODY_TRUNK[body], acc: { claim: Math.round((1.6 + 0.72 * kg / ps) * 10) / 10, meas: null }, vmax: { v: Math.round(Math.min(fuel === 'ev' ? 200 : 320, 120 + 0.55 * ps)), limited: false },
+    wltp: fuel === 'ev' ? null : Math.round(normal / 1.12 * 10) / 10, batt: fuel === 'ev' ? Math.round(45 + ps * 0.12) : fuel === 'phev' ? 15 : null,
+    rel, relNote: `${sp.make}'s general standing in TÜV and ADAC records; the model itself is not checked.`, issues: [], checks: [],
+    upkeep: Math.round(({ budget: 550, main: 750, prem: 1100, sport: 2000, lux: 4000 }[lvl]) + 2 * ps) * (fuel === 'ev' ? 0.7 : 1), ins: Math.round(({ budget: 500, main: 600, prem: 800, sport: 1800, lux: 4000 }[lvl]) + 3 * ps), tyres: Math.round(300 + 2.5 * ps + (lvl === 'prem' ? 100 : 0)),
+    bigTicket: null, parts: lvl === 'lux' ? 3 : lvl === 'budget' ? 4 : 4, partsNote: '', wow, wowNote: '', polar: false, pos: [], neg: [], fit: fitObj, milestones: [],
+    conf: 'L', note: null, src: [], status: 'estimated', checked: today
+  };
+  c.upkeep = Math.round(c.upkeep);
+  c.co2 = fuel === 'ev' ? 0 : Math.round((c.wltp || 0) * (fuel === 'diesel' ? 26.4 : 23.2) * (fuel === 'phev' ? 0.35 : 1));
+  if (fuel === 'ev') { c.kwh100 = { wltp: Math.round(nEv / 1.1 * 10) / 10, normal: Math.round(nEv * 10) / 10, dynamic: Math.round(nEv * 1.5 * 10) / 10, fast: Math.round(nEv * 1.7 * 10) / 10 }; c.l100 = null; }
+  else { c.l100 = { normal: Math.round(normal * 10) / 10, dynamic: Math.round(normal * 1.45 * 10) / 10, fast: Math.round(normal * 1.6 * 10) / 10 }; c.kwh100 = fuel === 'phev' ? { normal: 20, dynamic: 28, fast: 32 } : null; }
+  c.phev = fuel === 'phev' ? { batt: 15, er: 50 } : null;
+  c.price = { list: [[year, Math.round(list / 100) * 100]], opt: 1.15, gamma: fuel === 'ev' ? Math.max(gam, 1.15) : gam, anchors: {} };
+  const e = estimate100200(c); c.a200 = e ? { v: e, kind: 'estimated' } : { v: null, kind: 'na' };
+  return c;
 }

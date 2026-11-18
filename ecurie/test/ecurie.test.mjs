@@ -129,3 +129,45 @@ test('catalogue file: one car per line, sorted, so a refresh shows as a readable
   const keys = cars.map(c => `${c.make} ${c.model} ${c.years[0]}`);
   assert.deepEqual(keys, [...keys].sort((a, b) => a.localeCompare(b)));
 });
+
+test('any car: an estimate from make, power, year, fuel and body lands near real German prices', () => {
+  const est = (name, year, ps, extra = {}) => E.estimateCar({ name, year, ps, ...extra }, '2026-11-18');
+  const f20 = est('BMW 118i', 2019, 136);
+  assert.ok(E.validCar(f20)); assert.equal(f20.status, 'estimated'); assert.equal(f20.make, 'BMW'); assert.equal(f20.fuel, 'petrol'); assert.equal(f20.drive, 'RWD');
+  const fair = E.priceCheck(f20, { year: 2019, km: 68400, options: [] }, now).fair;
+  assert.ok(fair > 14000 && fair < 21000, `F20 118i 2019 at 68,400 km: ${fair}`);
+  /* fuel and body come from the name when not given */
+  assert.equal(est('BMW 320d Touring', 2020, 190).fuel, 'diesel'); assert.equal(est('BMW 320d Touring', 2020, 190).body, 'wagon');
+  assert.equal(est('VW ID.3 Pro', 2022, 204).fuel, 'ev'); assert.equal(est('Volvo XC60 T8', 2021, 390).fuel, 'phev'); assert.equal(est('Volvo XC60 T8', 2021, 390).art, 'suv');
+  assert.equal(est('Toyota Yaris Hybrid', 2021, 116).fuel, 'petrol', 'a full hybrid runs on petrol'); assert.equal(est('VW Golf 1.5 TSI', 2021, 150, { body: 'wagon' }).body, 'wagon');
+  assert.equal(est('Mercedes C 220 d T-Modell', 2019, 194).make, 'Mercedes-Benz');
+  /* sensible ordering */
+  const s = c => E.scores(c, { year: c.years[0], km: 50000, options: [] }, prof, meta, fin, now);
+  assert.ok(s(est('Dacia Sandero', 2022, 90)).fun < s(f20).fun);
+  assert.ok(s(f20).fun < s(car('vw-golf-gti-mk8')).fun);
+  assert.ok(s(est('Toyota Yaris Hybrid', 2021, 116)).rel > s(est('Fiat 500', 2021, 70)).rel);
+  for (const k of ['burden', 'awe', 'fun', 'rel', 'overall']) assert.ok(s(f20)[k] >= 0 && s(f20)[k] <= 100);
+});
+
+test('costs: what leaves the account adds up, and the loss in value is not part of it', () => {
+  const m = E.monthly(car('vw-golf-gti-mk8'), { year: 2021, km: 45000, options: [] }, prof, meta, now);
+  const sum = m.cashParts.reduce((a, p) => a + p[1], 0);
+  assert.ok(Math.abs(sum - m.cashM) < 0.01);
+  assert.ok(!m.cashParts.some(p => /value/i.test(p[0])));
+  const cash = E.monthly(car('vw-golf-gti-mk8'), { year: 2021, km: 45000, options: [] }, { ...prof, mode: 'cash' }, meta, now);
+  assert.ok(!cash.cashParts.some(p => /instalment/i.test(p[0])));
+});
+
+test('ad screenshots: facts from mobile.de and AutoScout24 text, monthly rates and consumption ignored', async () => {
+  const { parseAd } = await import('../js/adread.js');
+  const de = parseAd(`BMW 118i Advantage\n5-Türer, Navi, Sitzheizung\n17.490 €\nFinanzierung ab 219 € mtl.\nKilometerstand Erstzulassung\n68.400 km 03/2019\nLeistung Kraftstoffart\n100 kW (136 PS) Benzin\nGetriebe\nSchaltgetriebe\nVerbrauch: 5,6 1/100 km (kombiniert) - CO2: 128 g/km\nHead-Up Display\nAnhängerkupplung\nScheckheftgepflegt\nUnfallfrei`);
+  assert.deepEqual([de.name, de.year, de.ps, de.km, de.price, de.fuel, de.gearbox], ['BMW 118i Advantage', 2019, 136, 68400, 17490, 'petrol', 'manual']);
+  for (const o of ['hud', 'towbar', 'history', 'manual']) assert.ok(de.options.includes(o), o);
+  assert.ok(!de.options.includes('accident'), '“Unfallfrei” means accident-free');
+  const en = parseAd(`Mercedes-Benz C 220 d T-Modell AMG Line\n€ 24,990.-\nfrom € 299 per month\nMileage 112,000 km\nFirst registration 06/2019\nPower 143 kW (194 hp)\nFuel type Diesel\nTransmission Automatic\nAir suspension, Burmester sound, Panorama roof\nRepaired accident damage`);
+  assert.equal(en.name.startsWith('Mercedes-Benz C 220 d'), true); assert.equal(en.km, 112000); assert.equal(en.year, 2019); assert.equal(en.ps, 194); assert.equal(en.price, 24990); assert.equal(en.fuel, 'diesel');
+  for (const o of ['air', 'sound', 'pano', 'accident']) assert.ok(en.options.includes(o), o);
+  const ev = parseAd(`Tesla Model 3 Long Range\n31.900 €\n45.000 km · 04/2022 · 366 kW (498 PS) · Elektro\nReichweite 560 km`);
+  assert.equal(ev.km, 45000, 'the range in km is not the mileage'); assert.equal(ev.fuel, 'ev'); assert.equal(ev.ps, 498);
+  assert.deepEqual(parseAd('a photo of a cat').found, []);
+});

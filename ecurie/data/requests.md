@@ -4,4 +4,6 @@ Paste a line under **Waiting** (Écurie writes it for you: “Add to the weekly 
 
 ## Waiting
 
+- [ ] BMW 118i (F20 LCI), 2019, 136 PS (asked on 2026-11-18)
+
 ## Done

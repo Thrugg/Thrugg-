@@ -5,7 +5,7 @@ export const KEY = 'ecurie.v1';
 export const INBOX_KEY = 'hub.inbox';
 export const uid = () => Math.random().toString(36).slice(2, 9);
 
-export const blankQ = () => ({ name: '', year: null, ps: null, km: null, price: null, options: [], extras: '', carId: null });
+export const blankQ = () => ({ name: '', year: null, ps: null, km: null, price: null, fuel: '', body: '', options: [], extras: '', carId: null });
 const DEF = () => ({
   v: 1,
   prof: {
