@@ -348,7 +348,8 @@ const EN2 = {
   fuel: {
     slow: 'slow', appliedToast: 'Plan set', fine: 'Fine-tune: stairs, step length, walking speed',
     stride: 'Step length', strideHint: 'Leave empty to use your height. Your iPhone measures it (Health → Mobility → Walking Step Length), or walk 20 steps, measure the distance and divide by 20.',
-    src: { predicted: 'Predicted from your profile', blended: 'Measured from your logs, starting from the formula', blendedShort: 'measured from your logs' },
+    src: { predicted: 'Predicted from your profile', blended: 'Measured from your logs, starting from the formula', blendedShort: 'measured from your logs', formula: 'Formula only (your choice)' },
+    srcPick: 'Maintenance comes from', srcAuto: 'Logs + formula', srcFormula: 'Formula only', srcBeside: 'Your logs measure {m} kcal; the formula says {f}. If you keep losing faster than planned on the formula, your logs are probably closer.',
     stepsDetail: '{steps} steps → {km} km at {c} kcal per kg per km ({v} km/h)',
     walkSpeed: 'Walking speed', walkSpeedHint: 'Leave empty for 4.5 km/h. Your iPhone measures it (Health → Browse → Mobility → Walking Speed) and the Health import fills it in.',
     eaRange: 'kcal per kg of lean mass after training (likely {lo}–{hi}).', eaHow: 'Worked out from your target, not your maintenance: {k} kcal target − {x} kcal of training a day, ÷ {f} kg of lean mass. The more you train, the more of the target training uses up.',
@@ -517,7 +518,8 @@ const FR2 = {
   fuel: {
     slow: 'lente', appliedToast: 'Plan appliqué', fine: 'Affiner : escaliers, longueur de pas, vitesse de marche',
     stride: 'Longueur de pas', strideHint: 'Laisse vide pour utiliser ta taille. Ton iPhone la mesure (Santé → Mobilité → Longueur de pas), ou fais 20 pas, mesure la distance et divise par 20.',
-    src: { predicted: 'Estimé d’après ton profil', blended: 'Mesuré d’après tes saisies, en partant de la formule', blendedShort: 'mesuré d’après tes saisies' },
+    src: { predicted: 'Estimé d’après ton profil', blended: 'Mesuré d’après tes saisies, en partant de la formule', blendedShort: 'mesuré d’après tes saisies' , formula: 'Formule seule (ton choix)' },
+    srcPick: 'La maintenance vient de', srcAuto: 'Saisies + formule', srcFormula: 'Formule seule', srcBeside: 'Tes saisies mesurent {m} kcal ; la formule dit {f}. Si tu perds plus vite que prévu avec la formule, tes saisies sont sans doute plus proches.',
     stepsDetail: '{steps} pas → {km} km à {c} kcal par kg et par km ({v} km/h)',
     walkSpeed: 'Vitesse de marche', walkSpeedHint: 'Laisse vide pour 4,5 km/h. Ton iPhone la mesure (Santé → Parcourir → Mobilité → Vitesse de marche) et l’import Santé la remplit.',
     eaRange: 'kcal par kg de masse maigre après l’entraînement (probablement {lo}–{hi}).', eaHow: 'Calculée depuis ta cible, pas ta maintenance : {k} kcal de cible − {x} kcal d’entraînement par jour, ÷ {f} kg de masse maigre. Plus tu t’entraînes, plus l’entraînement consomme de la cible.',
