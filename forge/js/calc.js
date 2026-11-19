@@ -209,7 +209,8 @@ export function adaptiveTdee(logs, { end = today(), days = 28, fmKg, trained, ph
   }
   const all = Object.entries(logs || {}).filter(([d]) => d <= end).sort();
   const rows = all.filter(([d]) => d >= start);
-  const W = rows.filter(([, v]) => v.w > 0), Kall = rows.filter(([, v]) => v.kcal > 0);
+  /* intake from complete days only: today's meals are not all logged yet (a morning weigh-in today is fine) */
+  const W = rows.filter(([, v]) => v.w > 0), Kall = rows.filter(([d, v]) => v.kcal > 0 && d < today());
   const med = median(Kall.map(([, v]) => v.kcal));
   const K = Kall.filter(([, v]) => v.kcal >= 0.5 * med), nPartial = Kall.length - K.length;
   const span = rows.length ? dayNum(rows[rows.length - 1][0]) - dayNum(rows[0][0]) + 1 : 0;

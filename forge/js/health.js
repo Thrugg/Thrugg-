@@ -147,8 +147,9 @@ export async function readHealthFile(file, { days = 180, onProgress, fflate, now
 }
 
 /* Summaries used to offer profile updates after an import. */
-export function summarise(res, age) {
-  const dates = Object.keys(res.days).sort(); const end = dates[dates.length - 1];
+export function summarise(res, age, td = new Date().toISOString().slice(0, 10)) {
+  /* complete days only: today's steps are still growing, and a morning import would drag the average down */
+  const dates = Object.keys(res.days).filter(d => d < td).sort(); const end = dates[dates.length - 1];
   const since = end ? new Date(new Date(end + 'T12:00:00').getTime() - 27 * 864e5).toISOString().slice(0, 10) : null;
   const steps = dates.filter(d => d >= since && res.days[d].steps > 0).map(d => res.days[d].steps);
   const stepsAvg = steps.length >= 14 ? Math.round(steps.reduce((a, b) => a + b, 0) / steps.length) : null;

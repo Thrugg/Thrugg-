@@ -709,7 +709,7 @@ function applyHealth(res) {
   let n = 0;
   for (const [d, v] of Object.entries(res.days)) { logDay(d, v, 'health'); n++; }
   S.health.last = C.today(); save();
-  const sm = summarise(res, C.ageAt(S.profile.dob)), a = S.activity, offers = [];
+  const sm = summarise(res, C.ageAt(S.profile.dob), C.today()), a = S.activity, offers = [];
   if (sm.stepsAvg && Math.abs(sm.stepsAvg - (a.stepsAvg || 0)) > 300) offers.push(['steps', t('set.hApplySteps', { v: nf(sm.stepsAvg), o: nf(a.stepsAvg || 0) }), () => { a.stepsAvg = sm.stepsAvg; }]);
   if (sm.workouts.length) offers.push(['workouts', t('set.hApplyWorkouts', { n: sm.workouts.length }), () => { a.workouts = sm.workouts; }]);
   if (sm.walkSpeed && Math.abs(sm.walkSpeed - (a.walkSpeed || 0)) > 0.03) offers.push(['speed', t('set.hApplySpeed', { v: nf(sm.walkSpeed * 3.6, 1) }), () => { a.walkSpeed = sm.walkSpeed; }]);

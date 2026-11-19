@@ -54,16 +54,17 @@ export function seasonRecap(start, end, { L, series, prs, ctx, td }) {
 
 /* ---------- weekly review ---------- */
 /* The last 7 days against the plan. Returns numbers plus one win and one adjustment (keys for the interface text).
-   ctx: { td, series, plan: { kcal, weeklyKg, protein } | null, mode, stepsAvg, kg, noFood } */
+   ctx: { td, series, plan: { kcal, weeklyKg, protein } | null, mode, stepsAvg, kg, noFood }
+   The 7 days are the last complete ones, ending yesterday: today's steps and meals are not finished yet. */
 export function weeklyReview(L, ctx) {
-  const td = ctx.td, from = addDays(td, -6), days = []; for (let i = 0; i < 7; i++) days.push(addDays(from, i));
+  const td = ctx.td, from = addDays(td, -7), days = []; for (let i = 0; i < 7; i++) days.push(addDays(from, i));
   const rows = days.map(d => L[d] || {});
   const ks = rows.map(r => r.kcal).filter(k => k > 0), med = [...ks].sort((a, b) => a - b)[ks.length >> 1] || 0, full = ks.filter(k => k >= 0.5 * med);
   const st = rows.map(r => r.steps).filter(x => x > 0), ps = rows.filter(r => r.kcal >= 0.5 * med && r.p > 0).map(r => r.p);
   const tNow = ctx.series[ctx.series.length - 1], tThen = [...ctx.series].reverse().find(s => s.date <= addDays(td, -7));
   const fresh = tNow && dayNum(td) - dayNum(tNow.date) <= 3;
   const out = {
-    from, to: td, wN: rows.filter(r => r.w > 0).length, kN: full.length, sN: st.length,
+    from, to: addDays(td, -1), wN: rows.filter(r => r.w > 0).length, kN: full.length, sN: st.length,
     delta: fresh && tThen ? tNow.trend - tThen.trend : null, expected: ctx.plan ? ctx.plan.weeklyKg : null,
     intake: full.length ? mean(full) : null, target: ctx.plan ? ctx.plan.kcal : null,
     steps: st.length ? mean(st) : null, stepsAssumed: ctx.stepsAvg || null,
