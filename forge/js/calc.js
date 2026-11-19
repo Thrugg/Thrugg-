@@ -193,6 +193,7 @@ export function regress(xy) {
   let sse = 0; for (const [x, y] of xy) sse += (y - icpt - slope * x) ** 2;
   return { slope, icpt, se: Math.sqrt(sse / (n - 2) / sxx), n };
 }
+const intakeOf = K => mean(K.map(([, v]) => v.kcal));
 const median = a => { const x = [...a].sort((p, q) => p - q); return x.length ? (x.length % 2 ? x[x.length >> 1] : (x[x.length / 2 - 1] + x[x.length / 2]) / 2) : NaN; };
 /* Measured maintenance from the logs: energy balance over the window, in the person's own logging units.
    maintenance = mean logged intake − (trend weight at the end − trend weight at the start) / days × energy density.
@@ -201,6 +202,16 @@ const median = a => { const x = [...a].sort((p, q) => p - q); return x.length ? 
    - phaseStart: date a new plan began. The first 10 days after it are mostly water and glycogen, so the window
      starts after them when at least 14 days remain (`water: 'trimmed'`); otherwise the uncertainty is widened (`'recent'`).
    logs: { 'YYYY-MM-DD': { w, kcal } } */
+/* Carbohydrate and the water glycogen holds. Each gram of glycogen is stored with about 3 g of water, so a run of
+   high-carb days puts on weight that is mostly water and a run of low-carb days takes it off. On a weigh-in morning,
+   the carbs of the three days before against the person's usual carbs give the weight held above (or below) usual:
+   about 0.4 kg per 100 g a day (a third of the extra carbs stored as glycogen, with its water), at most ±1.5 kg. */
+export const GLY_KG_PER_G = 0.004;
+export function glycogenShift(logs, d, usual) {
+  const cs = [1, 2, 3].map(i => logs?.[addDays(d, -i)]?.c).filter(c => c > 0);
+  if (cs.length < 2 || !(usual > 0)) return 0;
+  return clamp(GLY_KG_PER_G * (mean(cs) - usual), -1.5, 1.5);
+}
 export function adaptiveTdee(logs, { end = today(), days = 28, fmKg, trained, phaseStart } = {}) {
   let start = addDays(end, -(days - 1)), water = null;
   if (phaseStart && phaseStart > addDays(start, -10) && phaseStart <= end) {
@@ -217,18 +228,38 @@ export function adaptiveTdee(logs, { end = today(), days = 28, fmKg, trained, ph
   const out = { ok: false, nW: W.length, nK: K.length, nPartial, span, water, need: { weights: 4, intakeDays: Math.max(10, Math.ceil(0.7 * Math.max(span, 14))), span: 14 } };
   if (span < 14 || W.length < 4 || K.length < out.need.intakeDays) return out;
   const lead = addDays(start, -14);
-  const tr = trendSeries(all.filter(([d, v]) => d >= lead && v.w > 0).map(([date, v]) => ({ date, w: v.w }))).filter(p => p.date >= start);
+  /* with carbs logged on most days, the weigh-ins are freed of the glycogen water the days before put on or took off,
+     so eating fewer (or more) carbs at the end of the period than at its start is not read as fat lost (or gained) */
+  const Cs = rows.filter(([d, v]) => v.c > 0 && d < today()).map(([, v]) => v.c);
+  const carbOk = Cs.length >= Math.max(10, 0.6 * span), usualC = carbOk ? median(Cs) : null;
+  const gw = d => carbOk ? glycogenShift(logs, d, usualC) : 0;
+  const wts = all.filter(([d, v]) => d >= lead && v.w > 0);
+  const tr = trendSeries(wts.map(([date, v]) => ({ date, w: v.w - gw(date) }))).filter(p => p.date >= start);
   if (tr.length < 2) return out;
   const a = tr[0], b = tr[tr.length - 1], D = dayNum(b.date) - dayNum(a.date);
   if (D < 10) return out;
   const slope = (b.trend - a.trend) / D, seSlope = Math.sqrt(a.sd ** 2 + b.sd ** 2) / D;
   const ed = energyDensity(fmKg, trained, slope < 0 ? -1 : 1);
+  /* the glycogen itself carries energy: about 1,000 kcal per kg of glycogen with its water */
+  let carb = null, gwKcal = 0;
+  if (carbOk) {
+    const inWin = tr.map(p => p.date), first = inWin.slice(0, 5), last = inWin.slice(-5);
+    const dGW = mean(last.map(gw)) - mean(first.map(gw));
+    gwKcal = dGW * 1000 / D;
+    const raw = trendSeries(wts.map(([date, v]) => ({ date, w: v.w }))).filter(p => p.date >= start);
+    const rs = (raw[raw.length - 1].trend - raw[0].trend) / D, rawTdee = intakeOf(K) - rs * energyDensity(fmKg, trained, rs < 0 ? -1 : 1);
+    const cAt = (from, to) => { const x = rows.filter(([d, v]) => d >= from && d <= to && v.c > 0 && d < today()).map(([, v]) => v.c); return x.length ? mean(x) : null; };
+    carb = { usual: usualC, start: cAt(a.date, addDays(a.date, 6)), end: cAt(addDays(b.date, -7), b.date), shiftKg: dGW, rawTdee, rawSlopeKgWk: rs * 7 };
+  }
   const ks = K.map(([, v]) => v.kcal), intake = mean(ks), n = ks.length;
   const sdK = n > 1 ? Math.sqrt(sum(ks.map(k => (k - intake) ** 2)) / (n - 1)) : 0;
   const coverage = Math.min(1, n / span);
   const seIntake = Math.sqrt(sdK ** 2 / n + ((1 - coverage) * 0.15 * intake) ** 2);
-  const sd = Math.sqrt((ed * seSlope) ** 2 + seIntake ** 2 + 60 ** 2 + (water === 'recent' ? 150 ** 2 : 0));
-  return { ...out, ok: true, tdee: intake - slope * ed, sd, slopeKgWk: slope * 7, intake, ed, coverage, from: a.date, to: b.date };
+  const tdee = intake - slope * ed - gwKcal;
+  if (carb) carb.effect = tdee - carb.rawTdee;
+  /* the glycogen model is approximate: a third of its effect is added to the uncertainty */
+  const sd = Math.sqrt((ed * seSlope) ** 2 + seIntake ** 2 + 60 ** 2 + (water === 'recent' ? 150 ** 2 : 0) + (carb ? (0.33 * carb.effect) ** 2 : 0));
+  return { ...out, ok: true, tdee, sd, slopeKgWk: slope * 7, intake, ed, coverage, from: a.date, to: b.date, carb, gwKcal };
 }
 /* Combine the formula with the measured figure. The two are not in the same unit: the formula estimates true
    expenditure, the logs measure it in "calories as this person logs them" (food logs run 0–20 % under true intake

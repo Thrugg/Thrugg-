@@ -109,3 +109,7 @@ No direct connection: MyFitnessPal writes Dietary Energy and macros to Apple Hea
 - **Healthspan panel** (Physique): VO₂max band (Mandsager 2018 groups on the FRIEND percentile), grip T-score against the young-adult peak (Dodds 2014: men 51.9 ± 9.9 kg, women 31.4 ± 6.1 kg; weak below 27 / 16 kg), 10-second one-leg stance (Araujo 2022, studied at 51–75), waist ÷ height, resting heart rate (trend only). Never merged into one figure.
 - **Level-up sheet**: shown when a saved record reaches a higher tier than the previous best in that event; the only animation in the app, off under `prefers-reduced-motion`.
 - **Design**: tokens in `app.css` (ash/iron light, soot/ember dark; the hero plate is always dark). Text and controls meet WCAG AA contrast; every non-button control gets `role=button` and keyboard activation in `a11y()`; charts carry a text label.
+
+## Carbs and glycogen water in the measured maintenance
+
+`adaptiveTdee` corrects each weigh-in for the glycogen and water that the three days before put on or took off (`glycogenShift`: 0.004 kg per g a day of carbs above or below the person's median, at most ±1.5 kg), when carbs are logged on at least 60 % of the days. The trend is fitted on the corrected weights, the glycogen's own energy (about 1,000 kcal per kg with its water) is counted separately, and a third of the correction is added to the uncertainty. The learning card shows the carbs at the start and end of the window and the figure without the correction. Checked in `test/today.test.mjs`.

@@ -254,7 +254,10 @@ function screenFuel(M0) {
     const r = M.tdee.ratio, dm = { day: 'numeric', month: 'short' };
     lh += `<div class="tiles"><div><span>${t('fuel.lMeasured')}</span><b>${nf(rnd(o.tdee, 10))}</b><small>± ${nf(rnd(o.sd, 10))} kcal</small></div><div><span>${t('fuel.lFormula')}</span><b>${nf(rnd(P.tdee, 10))}</b><small>± ${nf(rnd(P.sd, 10))} kcal</small></div><div><span>${t('fuel.lRatio')}</span><b>${nf(r * 100)} %</b><small>${t('fuel.lRatioS')}</small></div></div>`;
     lh += `<p>${t('fuel.learnOk', { a: df(o.from, dm), b: df(o.to, dm), i: nf(rnd(o.intake, 10)), k: o.nK, slope: signed(kgShow(o.slopeKgWk)) + ' ' + kgU() })}</p><p class="tip">${t(r < 0.9 ? 'fuel.ratioLow' : r > 1.1 ? 'fuel.ratioHigh' : 'fuel.ratioOk', { p: nf(Math.abs(1 - r) * 100) })}</p>`;
-    { const dk = -o.slopeKgWk / 7 * o.ed; lh += `<p class="muted xs">${t('fuel.learnCalc', { i: nf(rnd(o.intake, 10)), sg: dk >= 0 ? '+' : '−', d: nf(rnd(Math.abs(dk), 10)), s: signed(kgShow(o.slopeKgWk)) + ' ' + kgU(), e: nf(rnd(o.ed, 10)), v: nf(rnd(o.tdee, 10)) })}</p>`; }
+    { const dk = -o.slopeKgWk / 7 * o.ed, g = -(o.gwKcal || 0);
+      lh += `<p class="muted xs">${t('fuel.learnCalc', { i: nf(rnd(o.intake, 10)), sg: dk >= 0 ? '+' : '−', d: nf(rnd(Math.abs(dk), 10)), s: signed(kgShow(o.slopeKgWk)) + ' ' + kgU(), e: nf(rnd(o.ed, 10)), g: o.carb && Math.abs(g) >= 5 ? t('fuel.learnGly', { sg: g >= 0 ? '+' : '−', g: nf(rnd(Math.abs(g), 5)) }) : '', v: nf(rnd(o.tdee, 10)) })}</p>`;
+      /* carbs and glycogen water: what moved, and what it changed */
+      lh += o.carb ? `<p class="muted xs">${t('fuel.learnCarb', { a: nf(rnd(o.carb.start ?? o.carb.usual, 5)), b: nf(rnd(o.carb.end ?? o.carb.usual, 5)), kg: signed(kgShow(o.carb.shiftKg)) + ' ' + kgU(), e: (o.carb.effect >= 0 ? '+' : '−') + nf(rnd(Math.abs(o.carb.effect), 10)), r: nf(rnd(o.carb.rawTdee, 10)) })}</p>` : `<p class="muted xs">${t('fuel.learnNoCarb')}</p>`; }
     if (o.nPartial) lh += `<p class="muted xs">${t('fuel.partial', { n: o.nPartial })}</p>`;
     if (o.water) lh += `<p class="muted xs">${t('fuel.water.' + o.water, { d: df(S.plan.applied, dm) })}</p>`;
     lh += `<p class="muted xs">${t('fuel.learnWeight', { pct: nf((M.tdee.wObs || 0) * 100) })}</p>`;

@@ -35,4 +35,22 @@ t('measured maintenance leaves out today’s unfinished food log', () => {
   assert.ok(Math.abs(a.tdee - 2500) < 1, `steady weight on 2,500 kcal is 2,500 maintenance, got ${a.tdee}`);
 });
 
+t('carbs: a switch to fewer carbs is water leaving, not extra fat burnt', () => {
+  const ed = C.energyDensity(16, true, -1), fatPerDay = 300 / ed, logs = {};
+  const carbs = i => (i >= 14 ? 350 : 150);                       // i = days before today: 350 g early, 150 g in the last two weeks
+  for (let i = 42; i >= 0; i--) {
+    const d = C.addDays(td, -i), prev = [1, 2, 3].map(k => carbs(i + k)), water = C.GLY_KG_PER_G * (prev.reduce((a, b) => a + b, 0) / 3 - 250);
+    logs[d] = { w: 85 - fatPerDay * (42 - i) + water, kcal: 2500, c: carbs(i) };
+  }
+  const withCarbs = C.adaptiveTdee(logs, { fmKg: 16, trained: true });
+  const noCarbs = C.adaptiveTdee(Object.fromEntries(Object.entries(logs).map(([d, v]) => [d, { w: v.w, kcal: v.kcal }])), { fmKg: 16, trained: true });
+  assert.ok(withCarbs.ok && withCarbs.carb, 'the carb correction runs when carbs are logged');
+  assert.ok(noCarbs.tdee > 2950, `without carbs the water reads as fat: ${Math.round(noCarbs.tdee)}`);
+  assert.ok(Math.abs(withCarbs.tdee - 2800) < 80, `with carbs it finds the true maintenance: ${Math.round(withCarbs.tdee)}`);
+  assert.ok(withCarbs.carb.effect < -150 && withCarbs.carb.start > withCarbs.carb.end);
+  /* steady carbs: nothing to correct */
+  const flat = {}; for (let i = 42; i >= 0; i--) flat[C.addDays(td, -i)] = { w: 85 - fatPerDay * (42 - i), kcal: 2500, c: 250 };
+  assert.ok(Math.abs(C.adaptiveTdee(flat, { fmKg: 16, trained: true }).carb.effect) < 5);
+});
+
 console.log(`\n${n} test groups passed`);
