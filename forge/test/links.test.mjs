@@ -9,6 +9,11 @@ assert.equal(cordeeWorkout({}, {}, '2026-11-16'), null); assert.equal(cordeeWork
 const list = [{ type: 'strength', perWeek: 3 }];
 assert.equal(applyCordee(list, w), true); assert.equal(list.length, 2); assert.equal(applyCordee(list, { ...w }), false, 'unchanged: no save');
 assert.equal(applyCordee(list, null), true); assert.equal(list.length, 1); assert.equal(list[0].type, 'strength');
+/* a hiking workout from Apple Health (the watch) already counts the hikes: Cordée's is not added on top */
+const wh = [{ type: 'strength', minutes: 60, perWeek: 3 }, { type: 'hike', minutes: 200, perWeek: 1 }];
+assert.equal(applyCordee(wh, w), false); assert.equal(wh.filter(x => x.type === 'hike').length, 1);
+const wh2 = [{ type: 'hike', minutes: 200, perWeek: 1 }, { ...w }];
+assert.equal(applyCordee(wh2, w), true, 'an earlier Cordée copy is taken out'); assert.equal(wh2.length, 1);
 assert.deepEqual(sleepBetween({ nights: { '2026-11-10': { a: 300 }, '2026-11-11': { a: 420 }, '2026-11-12': { a: 340 } } }, '2026-11-10', '2026-11-16'), { nights: 3, avg: 353, short: 2 });
 assert.equal(sleepBetween({ demo: true, nights: { '2026-11-10': { a: 300 }, '2026-11-11': { a: 300 }, '2026-11-12': { a: 300 } } }, '2026-11-10', '2026-11-16'), null, 'example nights never count');
 console.log('links tests passed');

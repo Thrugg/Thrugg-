@@ -1,6 +1,6 @@
 /* Forge — what other apps on this site already know (read-only, same browser storage, nothing sent anywhere).
    - Cordée: hikes logged in the last 4 weeks become one "Hiking" workout (sessions a week, usual length, intensity
-     from the climbing rate), kept up to date each time Forge opens.
+     from the climbing rate), kept up to date each time Forge opens, unless Apple Health already brought a hiking workout.
    - Nocturne: the week's sleep for the weekly review. */
 const DAY = 864e5;
 const iso = d => new Date(d).toISOString().slice(0, 10);
@@ -25,6 +25,8 @@ export function cordeeWorkout(items, hikes, today) {
 }
 /* Put the Cordée workout into the list (replacing the previous one), or take it out when no hike was logged. Returns true when something changed. */
 export function applyCordee(workouts, w) {
+  /* hikes the watch already recorded (an Apple Health "Hiking" workout) are not counted a second time from Cordée */
+  if (workouts.some(x => x.src !== 'cordee' && x.type === 'hike')) w = null;
   const i = workouts.findIndex(x => x.src === 'cordee');
   if (!w) { if (i < 0) return false; workouts.splice(i, 1); return true; }
   if (i >= 0) { const o = workouts[i]; if (o.minutes === w.minutes && o.perWeek === w.perWeek && o.intensity === w.intensity && o.n === w.n) return false; workouts[i] = w; return true; }

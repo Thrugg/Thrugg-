@@ -226,7 +226,7 @@ function screenFuel(M0) {
   if (pl.weeklyKg) ph += `<p>${t('fuel.change')}: <b>${signed(kgShow(pl.weeklyKg))} ${kgU()}${t('common.perWeek')}</b> (${signed(pl.weeklyPct)} %)</p>`;
   if (pl.ea != null) {
     const ck = S.meta.checkin, flagged = ck && ck.n > 0 && daysSince(ck.date) <= 14;
-    ph += `<div class="ea ${pl.eaLevel}"><span>${t('fuel.ea')}</span><b>${nf(pl.ea, 0)}</b><small>${t('fuel.eaRange', { lo: nf(pl.eaLo, 0), hi: nf(pl.eaHi, 0) })} ${t('fuel.eaL.' + pl.eaLevel + (pl.eaLevel === 'amber' ? '_' + S.profile.sex : ''))}</small>${flagged ? `<small class="warnTxt">${t('fuel.checkinFlag', { d: df(ck.date, { day: 'numeric', month: 'short' }), n: ck.n })}</small>` : ''}${pl.eaLevel !== 'ok' || pl.delta < 0 ? `<button class="lnk" data-act="checkin">${t('fuel.checkin')}</button>` : ''}</div>`;
+    ph += `<div class="ea ${pl.eaLevel}"><span>${t('fuel.ea')}</span><b>${nf(pl.ea, 0)}</b><small>${t('fuel.eaRange', { lo: nf(pl.eaLo, 0), hi: nf(pl.eaHi, 0) })} ${t('fuel.eaL.' + pl.eaLevel + (pl.eaLevel === 'amber' ? '_' + S.profile.sex : ''))}</small><small>${t('fuel.eaHow', { k: nf(rnd(pl.kcal, 10)), x: nf(rnd(M.pred.exercise + M.pred.epoc, 10)), f: nf(M.ffm, 1) })}</small>${flagged ? `<small class="warnTxt">${t('fuel.checkinFlag', { d: df(ck.date, { day: 'numeric', month: 'short' }), n: ck.n })}</small>` : ''}${pl.eaLevel !== 'ok' || pl.delta < 0 ? `<button class="lnk" data-act="checkin">${t('fuel.checkin')}</button>` : ''}</div>`;
   }
   if (pl.flags.length) ph += `<ul class="flags">${pl.flags.map(f => `<li>${t('fuel.flags.' + f, { min: nf(rnd(pl.minKcal, 10)) })}</li>`).join('')}</ul>`;
   if (mode === 'cut') ph += `<p class="tip">${t('fuel.dietBreak')}</p>`;
@@ -254,6 +254,7 @@ function screenFuel(M0) {
     const r = M.tdee.ratio, dm = { day: 'numeric', month: 'short' };
     lh += `<div class="tiles"><div><span>${t('fuel.lMeasured')}</span><b>${nf(rnd(o.tdee, 10))}</b><small>± ${nf(rnd(o.sd, 10))} kcal</small></div><div><span>${t('fuel.lFormula')}</span><b>${nf(rnd(P.tdee, 10))}</b><small>± ${nf(rnd(P.sd, 10))} kcal</small></div><div><span>${t('fuel.lRatio')}</span><b>${nf(r * 100)} %</b><small>${t('fuel.lRatioS')}</small></div></div>`;
     lh += `<p>${t('fuel.learnOk', { a: df(o.from, dm), b: df(o.to, dm), i: nf(rnd(o.intake, 10)), k: o.nK, slope: signed(kgShow(o.slopeKgWk)) + ' ' + kgU() })}</p><p class="tip">${t(r < 0.9 ? 'fuel.ratioLow' : r > 1.1 ? 'fuel.ratioHigh' : 'fuel.ratioOk', { p: nf(Math.abs(1 - r) * 100) })}</p>`;
+    { const dk = -o.slopeKgWk / 7 * o.ed; lh += `<p class="muted xs">${t('fuel.learnCalc', { i: nf(rnd(o.intake, 10)), sg: dk >= 0 ? '+' : '−', d: nf(rnd(Math.abs(dk), 10)), s: signed(kgShow(o.slopeKgWk)) + ' ' + kgU(), e: nf(rnd(o.ed, 10)), v: nf(rnd(o.tdee, 10)) })}</p>`; }
     if (o.nPartial) lh += `<p class="muted xs">${t('fuel.partial', { n: o.nPartial })}</p>`;
     if (o.water) lh += `<p class="muted xs">${t('fuel.water.' + o.water, { d: df(S.plan.applied, dm) })}</p>`;
     lh += `<p class="muted xs">${t('fuel.learnWeight', { pct: nf((M.tdee.wObs || 0) * 100) })}</p>`;
