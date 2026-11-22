@@ -109,3 +109,12 @@ No direct connection: MyFitnessPal writes Dietary Energy and macros to Apple Hea
 - **Healthspan panel** (Physique): VO₂max band (Mandsager 2018 groups on the FRIEND percentile), grip T-score against the young-adult peak (Dodds 2014: men 51.9 ± 9.9 kg, women 31.4 ± 6.1 kg; weak below 27 / 16 kg), 10-second one-leg stance (Araujo 2022, studied at 51–75), waist ÷ height, resting heart rate (trend only). Never merged into one figure.
 - **Level-up sheet**: shown when a saved record reaches a higher tier than the previous best in that event; the only animation in the app, off under `prefers-reduced-motion`.
 - **Design**: tokens in `app.css` (ash/iron light, soot/ember dark; the hero plate is always dark). Text and controls meet WCAG AA contrast; every non-button control gets `role=button` and keyboard activation in `a11y()`; charts carry a text label.
+
+## Arena additions (November 2026)
+
+- **Grip strength** (strength domain, `kind: 'grip'`): ranked on Dodds et al. 2014 (49,964 British adults, general population). Median by age from the points that could be checked (men 51 kg to 45, 45 kg at 60, 39 kg at 70; women 31 kg to 45, 27 kg at 60), linear between them, held flat outside so no age gets an easier standard; spread 20 % of the median. Best of six tries (three per hand), as in the reference studies. When the full centile table (PMC4256164, Table 2) can be read, replace `GRIP_AGE` with its rows.
+- **Beep test** (VO₂max method `beep`): level and shuttle → final speed (8 + 0.5 × level) → Léger 1988 with age held at 18 for adults. Cooper 12-minute run stays as before.
+- **Half marathon and marathon** (`run21k`, `run42k`): race time → VDOT → FRIEND by age, like 5 km and 10 km. Every race now has its road world record as the floor of the sanity check (`wr`).
+- **Test day** card: the order of a full test session and which of the six areas has a result from the last 12 weeks.
+- Not added for lack of a readable reference distribution: Concept2 2,000 m (rankings exist but no published percentiles), power clean and front squat (no Strength Level tables at hand), agility tests (no adult population norms).
+- Checks: `node forge/test/arena.test.mjs`.

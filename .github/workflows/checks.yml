@@ -31,6 +31,7 @@ jobs:
           node forge/test/renpho.test.mjs
           node forge/test/links.test.mjs
           node forge/test/today.test.mjs
+          node forge/test/arena.test.mjs
           node forge/test/health.test.mjs /tmp/fflate/node_modules/fflate/umd/index.js
       - name: Cordée catalogue
         run: python3 tools/build.py --check
