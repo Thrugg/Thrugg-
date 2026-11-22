@@ -1,5 +1,5 @@
 /* Forge — calculation engine. Pure functions, no DOM, metric units. Tested in test/calc.test.mjs. */
-import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION, REPS, ERG, VJ, VJ_P, SLJ, SLJ_P, DOMAINS, DOMAIN_AGG, FFA, FFA_LEVELS, FFA_TIER_START, WMA, WA_POINTS, GL, GRIP } from './data.js';
+import { STRENGTH, SL_P, C2, FRIEND, FRIEND_P, BF_NHANES, BF_P, SPRINT, TIER_P, EVENTS, CATALOGUE, INTENSITIES, OCCUPATION, REPS, ERG, VJ, VJ_P, SLJ, SLJ_P, DOMAINS, DOMAIN_AGG, FFA, FFA_LEVELS, FFA_TIER_START, WMA, WA_POINTS, GL, GRIP, GRIP_AGE, GRIP_P, BEEP_SHUTTLES } from './data.js';
 
 export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 export const sum = a => a.reduce((s, x) => s + (x || 0), 0);
@@ -456,8 +456,26 @@ export function glPoints(sex, bw, lifted, kind = 'total') { const [A, B, C] = GL
 export const ageClass = age => age == null ? 'open' : age < 19 ? 'subjunior' : age < 24 ? 'junior' : age < 40 ? 'open' : age < 50 ? 'm1' : age < 60 ? 'm2' : age < 70 ? 'm3' : 'm4';
 /* Grip strength as a T-score against the young-adult peak (Dodds 2014), like bone density. */
 export function gripT(sex, kg) { const g = GRIP[sex === 'm' ? 'm' : 'f']; return kg > 0 ? { t: (kg - g.mean) / g.sd, band: kg < g.weak ? 'weak' : kg < g.low ? 'low' : 'ok', ...g } : null; }
+/* Grip median for a sex and age (see GRIP_AGE in data.js). */
+export function gripMedian(sex, age) {
+  const P = GRIP_AGE[sex === 'm' ? 'm' : 'f'], a = age || 30;
+  if (a <= P[0][0]) return P[0][1]; if (a >= P[P.length - 1][0]) return P[P.length - 1][1];
+  let i = 0; while (a > P[i + 1][0]) i++;
+  return P[i][1] + (a - P[i][0]) / (P[i + 1][0] - P[i][0]) * (P[i + 1][1] - P[i][1]);
+}
+/* Beep test: final speed from level and shuttles, then Léger 1988 with age held at 18 (adults). */
+export function beepSpeed(level, shuttle = 0) {
+  const L = Math.floor(+level || 0); if (L < 1) return null;
+  const per = BEEP_SHUTTLES[Math.min(L, BEEP_SHUTTLES.length) - 1], frac = clamp((+shuttle || 0) / per, 0, 1);
+  return 8 + 0.5 * (L + frac);
+}
+export const legerVo2 = (speed, age = 18) => speed > 0 ? 31.025 + 3.238 * speed - 3.248 * age + 0.1536 * age * speed : null;
 export function anchorsFor(id, { sex, bw, age }) {
   const ev = EVENTS[id], s = sex === 'm' ? 'm' : 'f';
+  if (ev.kind === 'grip') {
+    const m = gripMedian(s, age), sd = GRIP_AGE.cv * m;
+    return { A: GRIP_P.map(p => ({ p, v: m + invcdf(p) * sd })), enc: x => x, dec: v => v, unit: 'kg', median: m };
+  }
   if (ev.kind === 'lift') {
     const t = STRENGTH[id][s], row = interpRows(bw || (s === 'm' ? 80 : 60), t.bw, t.rows);
     const out = bw < t.bw[0] || bw > t.bw[t.bw.length - 1];
@@ -573,9 +591,10 @@ export function prValue(pr) {
   if (ev.kind === 'reps') return { value: +pr.reps, rankable: +pr.reps >= 1 };
   if (ev.kind === 'rowtime') return { value: +pr.meters, rankable: +pr.meters > 0 };
   if (ev.kind === 'vo2') {
-    const v = pr.method === 'cooper' ? (+pr.meters - 504.9) / 44.73 : +pr.value;
-    return { value: v, rankable: v > 5, note: pr.method === 'watch' ? 'watch' : pr.method === 'cycle' ? 'cycle' : pr.method === 'cooper' ? 'cooper' : null };
+    const v = pr.method === 'cooper' ? (+pr.meters - 504.9) / 44.73 : pr.method === 'beep' ? legerVo2(beepSpeed(pr.level, pr.shuttle)) : +pr.value;
+    return { value: v, rankable: v > 5, note: ['watch', 'cycle', 'cooper', 'beep'].includes(pr.method) ? pr.method : null };
   }
+  if (ev.kind === 'grip') return { value: +pr.kg, rankable: +pr.kg > 0 };
   return { rankable: false };
 }
 /* Sanity limits: a result better than anything ever recorded is a typing error (seconds for minutes, lb for kg…). */
@@ -589,12 +608,13 @@ export function plausible(pr, sex = 'm') {
     case 'erg': if (pr.machine === 'wattbike' && !(+pr.watts >= 60 && +pr.watts <= 2600 && +pr.dur >= 30 && +pr.dur <= 600)) return false;
       return v >= (pr.event === 'bike1000' ? 55 : 65) && v < 900;
     case 'rowtime': return v <= (m ? 460 : 400) && v >= 50;
-    case 'race': return v >= ev.dist * (m ? 0.151 : 0.168) && v < ev.dist * 0.9;
+    case 'race': return v >= (ev.wr ? 0.99 * ev.wr[m ? 'm' : 'f'] : ev.dist * (m ? 0.151 : 0.168)) && v < ev.dist * 0.9;
     case 'jump': return v >= 5 && v <= 125;
     case 'ljump': return v >= 30 && v <= 380;
     case 'track': return pr.event === 'wb6' ? v >= 100 && v <= 2700 : v >= 0.5 && v <= 12;
     case 'reps': return v <= 200;
     case 'vo2': return v >= 8 && v <= 97;
+    case 'grip': return v >= 5 && v <= (m ? 140 : 100);
   }
   return true;
 }

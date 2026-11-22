@@ -27,6 +27,8 @@ export const SOURCES = {
   wb6: { name: 'Herbert et al. 2015, J Strength Cond Res 29(7) (6-second peak power test on a Wattbike)', url: 'https://journals.lww.com/nsca-jscr/fulltext/2015/07000/reliability_of_a_cycle_ergometer_peak_power_test.36.aspx', pop: { en: 'The test is reliable, but nobody has measured it in the general adult population: tracked against yourself only', fr: 'Le test est fiable, mais personne ne l’a mesuré dans la population adulte générale : suivi face à toi-même uniquement' }, date: '2015', conf: 'medium' },
   smb: { name: 'Seated medicine-ball chest throw (reliability: Beckham et al. 2019; recruits: NSCA TSAC Report)', url: 'https://www.nsca.com/education/articles/tsac-report/the-seated-medicine-ball-throw-performed-by-law-enforcement-recruits-normative-data-and-training-implications/', pop: { en: 'Reference figures exist only for athletes, recruits and older adults: tracked against yourself only', fr: 'Il n’existe de références que pour des sportifs, des recrues et des seniors : suivi face à toi-même uniquement' }, date: '2019', conf: 'medium' },
   sayers: { name: 'Sayers et al. 1999, Med Sci Sports Exerc 31:572 (peak power from jump height and body mass)', url: 'https://pubmed.ncbi.nlm.nih.gov/10211854/', date: '1999', conf: 'medium' },
+  leger: { name: 'Léger et al. 1988, J Sports Sci 6:93 (20 m shuttle run: VO₂max = 31.025 + 3.238 × speed − 3.248 × age + 0.1536 × age × speed, age held at 18 for adults, r = 0.90 in 77 adults)', url: 'https://pubmed.ncbi.nlm.nih.gov/3184250/', date: '1988', conf: 'medium' },
+  cooper: { name: 'Cooper 1968, JAMA 203:201 (12-minute run: VO₂max = (metres − 504.9) ÷ 44.73)', url: 'https://www.topendsports.com/testing/tests/cooper.htm', date: '1968', conf: 'medium' },
   vdot: { name: 'Race time → VO₂max equivalent (Daniels & Gilbert VDOT), ranked on FRIEND 2022', url: 'https://pubmed.ncbi.nlm.nih.gov/34809986/', pop: { en: 'Your race time converted to the VO₂max it usually takes, then compared with measured VO₂max of adults your age', fr: 'Ton temps converti en VO₂max habituellement nécessaire, puis comparé aux VO₂max mesurées des adultes de ton âge' }, date: '2022', conf: 'medium' },
   kouri: { name: 'Kouri et al. 1995, Clin J Sport Med 5:223–228 (FFMI of drug-free vs steroid-using athletes)', date: '1995', conf: 'medium' }
 };
@@ -161,6 +163,14 @@ export const GL = { m: { total: [1199.72839, 1025.18162, 0.00921], bench: [320.9
 /* Grip strength, Dodds et al. 2014 (12 British studies, 49,964 people): young-adult peak mean and SD (kg, best of all trials),
    and the T-score cut-offs the authors propose for weak grip (−2 and −2.5 SD). */
 export const GRIP = { m: { mean: 51.9, sd: 9.9, low: 32, weak: 27 }, f: { mean: 31.4, sd: 6.1, low: 19, weak: 16 } };
+/* Grip for the Arena: median by age, from the points of Dodds 2014 that could be checked (men 51 kg from the peak to
+   45, 45 kg at 60, 39 kg at 70; women 31 kg to 45, 27 kg at 60), straight lines between them and held flat outside
+   (so a younger person meets the peak, an older one the last checked value: never an easier standard). The spread is
+   20 % of the median, as at the peak (9.9 / 51.9) and at 60 (10th–90th centile 33–56 kg in men, 18–34 kg in women). */
+export const GRIP_AGE = { m: [[45, 51], [60, 45], [70, 39]], f: [[45, 31], [60, 27]], cv: 0.20 };
+export const GRIP_P = [0.02, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.98];
+/* 20 m shuttle run (beep test): shuttles in each level of the standard protocol (8.5 km/h at level 1, +0.5 km/h a level). */
+export const BEEP_SHUTTLES = [7, 8, 8, 9, 9, 10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16];
 
 /* Tier ladder: lower bound of each tier as a percentile among people who do the event. */
 export const TIER_P = [0.05, 0.20, 0.50, 0.80, 0.95, 0.99, 0.999];
@@ -200,8 +210,12 @@ export const EVENTS = {
   pullups: { domain: 'upper', kind: 'reps', src: 'slr', q: { m: 0.10, f: 0.05 } },
   pushups: { domain: 'upper', kind: 'reps', src: 'slr', q: { m: 0.15, f: 0.10 } },
   vo2: { domain: 'aerobic', kind: 'vo2', src: 'friend', q: { m: 1, f: 1 } },
-  run5k: { domain: 'aerobic', kind: 'race', dist: 5000, src: 'vdot', q: { m: 1, f: 1 } },
-  run10k: { domain: 'aerobic', kind: 'race', dist: 10000, src: 'vdot', q: { m: 1, f: 1 } }
+  /* wr: road world records in seconds (men, women), the floor of the sanity check */
+  run5k: { domain: 'aerobic', kind: 'race', dist: 5000, src: 'vdot', q: { m: 1, f: 1 }, wr: { m: 757, f: 845 } },
+  run10k: { domain: 'aerobic', kind: 'race', dist: 10000, src: 'vdot', q: { m: 1, f: 1 }, wr: { m: 1574, f: 1734 } },
+  run21k: { domain: 'aerobic', kind: 'race', dist: 21097.5, src: 'vdot', q: { m: 1, f: 1 }, wr: { m: 3450, f: 3772 } },
+  run42k: { domain: 'aerobic', kind: 'race', dist: 42195, src: 'vdot', q: { m: 1, f: 1 }, wr: { m: 7235, f: 7796 } },
+  grip: { domain: 'strength', kind: 'grip', src: 'dodds', q: { m: 1, f: 1 } }
 };
 /* Performance domains on the radar (Leanness is a separate, secondary score). Aerobic events measure one quality,
    so that domain keeps the best result; the others average the best three. */
