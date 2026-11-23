@@ -1,0 +1,2 @@
+{"asOf":"2026-11-23","note":"Ready-made PCs on sale in Germany (m DE) or France (m FR), filled by the weekly refresh: one offer per line, {id, m, seller, name, url, price, date (YYYY-MM-DD), cpu, gpu (catalogue ids or text), ram (GB), ramMts, ssd (TB), psu (text), board (text), case (text), cooler (text), os (true when Windows is included), warrantyM}. Offers older than 21 days are hidden in the app.","items":[
+]}

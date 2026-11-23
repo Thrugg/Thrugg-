@@ -1,0 +1,32 @@
+# Collects Prisme's headlines every morning on GitHub's machines and publishes prisme/data/news.json.
+# Runs at 05:23 UTC daily and on demand (Actions tab → Prisme news → Run workflow).
+name: Prisme news
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: prisme-news
+  cancel-in-progress: false
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch the feeds
+        run: node tools/prisme_news.mjs
+      - name: Publish
+        run: |
+          if git diff --quiet prisme/data/news.json; then echo "no change"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add prisme/data/news.json
+          git commit -m "Prisme news: $(node -e "console.log(require('./prisme/data/news.json').items.length)") headlines"
+          git pull --rebase origin main
+          git push

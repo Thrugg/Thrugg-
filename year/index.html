@@ -134,6 +134,12 @@ select{font:inherit;padding:6px 10px;border-radius:10px;border:1px solid var(--l
       if (seen.length || driven > 0) out.push(card('Écurie', '../ecurie/', [seen.length ? fig(seen.length, seen.length === 1 ? 'car saved' : 'cars saved') : '', driven > 0 ? fig(nf.format(driven), 'kilometres in your car') : ''].filter(Boolean),
         mine ? `Your car: <b>${esc(mine.q && mine.q.name || '')}</b>` : ''));
     }
+    /* Prisme: gear bought this year and builds put together */
+    const pr = get('prisme.v1');
+    if (pr && Array.isArray(pr.gear)) {
+      const bought = pr.gear.filter(g => inY(g.bought, y)), builds = (pr.builds || []).filter(b => inY(b.at, y));
+      if (bought.length || builds.length) out.push(card('Prisme', '../prisme/', [bought.length ? fig(bought.length, bought.length === 1 ? 'device bought' : 'devices bought') : '', bought.length ? fig(money(bought.reduce((a, g) => a + (Number(g.price) || 0), 0), 'EUR'), 'spent on tech') : '', builds.length ? fig(builds.length, builds.length === 1 ? 'PC build saved' : 'PC builds saved') : ''].filter(Boolean), ''));
+    }
     /* Tandem */
     const ta = get('tandem.v1');
     if (ta && ta.days) {

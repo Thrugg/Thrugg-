@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prisme</title>
+<meta name="description" content="Tech advisor for Germany and France: build a PC that fits, find a fair ready-made one, pick the right monitor, TV, phone or headphones, and know when to buy.">
+<meta name="theme-color" content="#f2f3f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0c11" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Prisme">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preload" href="fonts/barlow-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="app.css">
+<script src="../cloud.js"></script>
+<script src="../ask.js"></script>
+</head>
+<body>
+<div id="notice" role="status" hidden></div>
+<header id="top"><a class="mark" href="../apps/" aria-label="All apps"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="9" fill="#14151c"/><path d="M20 8 31 29H9z" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><path d="M3 21h11" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M25 19.5 38 15" stroke="#ff4d6d" stroke-width="1.8"/><path d="M25.6 21 38 19.5" stroke="#ffb020" stroke-width="1.8"/><path d="M26 22.6 38 24" stroke="#3ddc97" stroke-width="1.8"/><path d="M26.3 24.2 38 28.5" stroke="#4aa8ff" stroke-width="1.8"/></svg><span>Prisme</span></a><span class="sub" id="sub">Tech advisor</span><button id="prof-btn" class="icon-btn" aria-label="Profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button></header>
+<div class="spectrum" aria-hidden="true"></div>
+<main id="main" class="wrap"></main>
+<nav id="tabs" aria-label="Sections"></nav>
+<dialog id="sheet" aria-modal="true"></dialog>
+<div id="toast" role="status"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
