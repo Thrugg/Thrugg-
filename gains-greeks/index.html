@@ -268,7 +268,7 @@ textarea.csv{width:100%;min-height:150px;border:1px solid var(--line);border-rad
 
   <!-- 06 IBKR -->
   <section class="view" id="v-ibkr" hidden>
-    <div class="vhead"><h1>IBKR statement import</h1><p>Paste or drop an Interactive Brokers Flex Query or Activity Statement CSV. Trades are bucketed into the baskets your tax residence uses, converted to euros, and can be pushed into the Tax desk. Nothing leaves your browser.</p></div>
+    <div class="vhead"><h1>IBKR statement import</h1><p>Drop an Interactive Brokers Flex Query or Activity Statement CSV and the whole app follows: realised results by basket, dividends and withholding, turnover and trades go to the Tax desk; funds you hold become capital invested, the rest of the account trading capital; the account value and its unrealised gain go to Move abroad; open options can be opened in the Options lab. The statement is read in your browser; only the summary is kept, synced to your own account if you sign in.</p></div>
     <div class="desk">
       <div class="stack" id="ib-in"></div>
       <div class="stack" id="ib-out"></div>
@@ -668,10 +668,10 @@ const DEF={
     cap:50000,gain:8000,hold:730,veh:'eqETF',div:600,wht:15,
     tCap:15000,opt:3200,swing:1500,trades:60,tHold:12,turnover:180000,margin:false,hedgeOnly:false,idx:false},
  m:{dest:'CH,DK,NO,PL,FR',V:60000,U:12000,g:6,y:1.5,N:10,before:false,stepDK:true,stepNO:false},
- o:null, ui:{cmpF:'ver',cmpS:'total',stF:'mine'}, ledger:{}
+ o:null, ui:{cmpF:'ver',cmpS:'total',stF:'mine'}, ledger:{}, ib:null
 };
 let state=JSON.parse(JSON.stringify(DEF));
-try{const s=JSON.parse(localStorage.getItem('gg.v1')||'null');if(s){for(const k of ['p','m','ui','ledger'])Object.assign(state[k],s[k]||{});if(s.o)state.o=s.o;if(s.fx&&s.fxv===2)Object.assign(FX,s.fx);}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('gg.v1')||'null');if(s){for(const k of ['p','m','ui','ledger'])Object.assign(state[k],s[k]||{});if(s.o)state.o=s.o;if(s.ib)state.ib=s.ib;if(s.fx&&s.fxv===2)Object.assign(FX,s.fx);}}catch(e){}
 function save(){try{localStorage.setItem('gg.v1',JSON.stringify({...state,fx:FX,fxv:2}));}catch(e){}}
 
 function getI(){const p=state.p,n=k=>+p[k]||0;return{res:p.res,broker:p.broker,filing:p.filing,income:n('income'),church:+p.church||0,allowUsed:n('allowUsed'),lossCF:n('lossCF'),lossCFSh:n('lossCFSh'),wealthOther:n('wealthOther'),
@@ -694,8 +694,8 @@ function chk(s,k,label,help){return `<label class="ck full"><input type="checkbo
 
 /* ---------- 01 TAX DESK ---------- */
 function renderDeskIn(){
- const p=state.p,de=p.res==='DE';
- $('#desk-in').innerHTML=`
+ const p=state.p,de=p.res==='DE',ib=state.ib;
+ $('#desk-in').innerHTML=`${ib?`<div class="card"><ul class="notes"><li class="ibkr">Results, capital and Move abroad come from your IBKR statement imported ${esc(ib.at||'')}${ib.period?`, covering ${esc(ib.period.label||`${ib.period.from} – ${ib.period.to}`)}`:''}. <a href="#ibkr">Import a newer one</a> to update them; anything you change here stays until then.</li></ul></div>`:''}
  <div class="card"><h2><span class="n">A</span>Profile</h2><div class="fgrid">
   ${num('p','income','Salary & other taxable income',{unit:'€/yr',full:1,help:'Gross. Sets the marginal rate in progressive countries.'})}
   ${num('p','wealthOther','Other net wealth',{unit:'€',help:'Cash, property equity. Drives wealth tax.'})}
@@ -1279,7 +1279,9 @@ function applyQuote(m,sym){
 }
 
 /* ---------- 06 IBKR ---------- */
-const IB={text:'',funds:'VWCE,VWRL,VWRA,IWDA,EUNL,SXR8,CSPX,VUAA,VUSA,EQQQ,SXRV,IUSQ,XDWD,SPYI,SPY,QQQ,VOO,VTI,VT,IWM,DIA,EEM,TLT,GLD,XLK,XLF,SMH,SCHD,ARKK,AGG,BND',res:null};
+/*IBKR-START*/
+const IB={text:'',funds:'VWCE,VWRL,VWRA,IWDA,EUNL,SXR8,CSPX,VUAA,VUSA,EQQQ,SXRV,IUSQ,XDWD,SPYI,SPY,QQQ,VOO,VTI,VT,IWM,DIA,EEM,TLT,GLD,XLK,XLF,SMH,SCHD,ARKK,AGG,BND',res:null,prev:null};
+if(typeof state!=='undefined'&&state.ib&&state.ib.funds)IB.funds=state.ib.funds;
 const IB_SAMPLE=`"AssetClass","Symbol","Description","CurrencyPrimary","FXRateToBase","TradeDate","Buy/Sell","Quantity","TradePrice","IBCommission","FifoPnlRealized","Put/Call","Strike","Multiplier"
 "STK","NVDA","NVIDIA CORP","USD","0.8621","20260212","SELL","-40","182.40","-1.00","1384.20","","","1"
 "STK","AMD","ADVANCED MICRO DEVICES","USD","0.8590","20260318","SELL","-60","141.10","-1.00","-412.50","","","1"
@@ -1295,60 +1297,129 @@ const IB_SAMPLE=`"AssetClass","Symbol","Description","CurrencyPrimary","FXRateTo
 "CurrencyPrimary","FXRateToBase","Date","Type","Description","Amount"
 "USD","0.8650","20260515","Dividends","MSFT CASH DIVIDEND USD 0.91","220.00"
 "USD","0.8650","20260515","Withholding Tax","MSFT US TAX","-33.00"
-"USD","0.8700","20260930","Broker Interest Received","USD CREDIT INT","64.00"`;
+"USD","0.8700","20260930","Broker Interest Received","USD CREDIT INT","64.00"
+
+"AssetClass","Symbol","UnderlyingSymbol","CurrencyPrimary","FXRateToBase","Quantity","MarkPrice","PositionValue","CostBasisMoney","FifoPnlUnrealized","Put/Call","Strike","Expiry","Multiplier","LevelOfDetail"
+"STK","VWCE","VWCE","EUR","1","420","148.20","62244.00","51030.00","11214.00","","","","1","SUMMARY"
+"STK","MSFT","MSFT","USD","0.8620","40","505.00","20200.00","16400.00","3800.00","","","","1","SUMMARY"
+"OPT","AAPL 261218C00260000","AAPL","USD","0.8620","-2","6.40","-1280.00","-1720.00","440.00","C","260","20261218","100","SUMMARY"
+
+"ReportDate","Cash","Stock","Options","Funds","Total"
+"20261120","9850.00","79656.40","-1103.36","0","88403.04"`;
 function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}else if(ch==='"')q=true;else if(ch===','){row.push(f);f='';}else if(ch==='\n'){row.push(f);rows.push(row);row=[];f='';}else if(ch!=='\r')f+=ch;}if(f!==''||row.length){row.push(f);rows.push(row);}return rows.filter(r=>r.some(x=>x.trim()!==''));}
-function ibParse(text){
- const rows=parseCSV(text),funds=new Set(IB.funds.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean));
- const out={trades:[],cash:[],fmt:null,warn:[]};let th=null,ch=null,mode=null;
+const ibNum=v=>{const x=+String(v==null?'':v).replace(/,/g,'');return isFinite(x)?x:0;};
+const ibDate=v=>{const m=String(v||'').match(/(\d{4})-?(\d{2})-?(\d{2})/);return m?`${m[1]}-${m[2]}-${m[3]}`:null;};
+const ibDays=(a,b)=>a&&b?Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5):null;
+/* option contract from an Activity Statement symbol such as "AAPL 17APR26 230 C" */
+const MON={JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
+function ibOptSym(sym){const m=String(sym||'').match(/^(\S+)\s+(\d{2})([A-Z]{3})(\d{2})\s+([\d.]+)\s+([CP])$/);return m?{und:m[1],expiry:`20${m[4]}-${MON[m[3]]}-${m[2]}`,strike:+m[5],right:m[6]}:null;}
+/* One IBKR export (Flex Query or Activity Statement, CSV) → realised results by basket, dividends, interest,
+   open positions, account value and the period covered. Every amount in euros (the account's base rate per line). */
+function ibParse(text,fundList=IB.funds){
+ const rows=parseCSV(text),funds=new Set(String(fundList||'').split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean));
+ const out={trades:[],cash:[],pos:[],nav:null,period:null,fmt:null,warn:[]};let th=null,ch=null,ph=null,eh=null,mode=null;
  const asFx={};
  for(const r of rows){if(r[0]==='Base Currency Exchange Rate'&&r[1]==='Data'){asFx[r[2]]=+r[3];}}
- let asH=null,divH=null,whtH=null,intH=null;
+ const fxOf=cur=>asFx[cur]||(cur==='EUR'?1:1/(FX[cur]||1));
+ let asH=null,divH=null,whtH=null,intH=null,opH=null,navH=null;
  for(const r of rows){
   const low=r.map(x=>x.trim());
-  if(low.includes('AssetClass')&&(low.includes('FifoPnlRealized')||low.includes('FifoPnlRealized'))){th=low;mode='flexT';out.fmt='Flex Query';continue;}
+  if(low.includes('AssetClass')&&low.includes('FifoPnlRealized')){th=low;mode='flexT';out.fmt='Flex Query';continue;}
+  if(low.includes('PositionValue')&&low.includes('Symbol')){ph=low;mode='flexP';out.fmt=out.fmt||'Flex Query';continue;}
+  if(low.includes('ReportDate')&&low.includes('Total')&&!low.includes('Symbol')){eh=low;mode='flexE';continue;}
   if(low.includes('Type')&&low.includes('Amount')&&!low.includes('AssetClass')&&r[0]!=='Trades'){ch=low;mode='flexC';continue;}
+  if(r[0]==='Statement'&&r[1]==='Data'&&r[2]==='Period'){out.period={label:r[3]};continue;}
   if(r[0]==='Trades'&&r[1]==='Header'){asH=low;out.fmt='Activity Statement';continue;}
   if(r[0]==='Dividends'&&r[1]==='Header'){divH=low;continue;}if(r[0]==='Withholding Tax'&&r[1]==='Header'){whtH=low;continue;}if(r[0]==='Interest'&&r[1]==='Header'){intH=low;continue;}
-  if(r[0]==='Trades'&&r[1]==='Data'&&asH&&r[2]==='Order'){const g=k=>r[asH.indexOf(k)];const cur=g('Currency'),fx=asFx[cur]||(cur==='EUR'?1:1/(FX[cur]||1));out.trades.push({cls:g('Asset Category'),sym:(g('Symbol')||'').toUpperCase(),cur,fx,pnl:+String(g('Realized P/L')).replace(/,/g,'')||0});continue;}
-  const cashRow=(H,type)=>{if(!H)return;const g=k=>r[H.indexOf(k)];const cur=g('Currency');if(!cur||/^Total/.test(cur))return;const fx=asFx[cur]||(cur==='EUR'?1:1/(FX[cur]||1));out.cash.push({type,cur,fx,amt:+String(g('Amount')).replace(/,/g,'')||0});};
+  if(r[0]==='Open Positions'&&r[1]==='Header'){opH=low;continue;}if(r[0]==='Net Asset Value'&&r[1]==='Header'){navH=low;continue;}
+  if(r[0]==='Trades'&&r[1]==='Data'&&asH&&r[2]==='Order'){const g=k=>r[asH.indexOf(k)];const cur=g('Currency'),fx=fxOf(cur);out.trades.push({cls:g('Asset Category'),sym:(g('Symbol')||'').toUpperCase(),cur,fx,pnl:ibNum(g('Realized P/L')),turn:Math.abs(ibNum(g('Proceeds')))*fx,date:ibDate(g('Date/Time'))});continue;}
+  const cashRow=(H,type)=>{if(!H)return;const g=k=>r[H.indexOf(k)];const cur=g('Currency');if(!cur||/^Total/.test(cur))return;out.cash.push({type,cur,fx:fxOf(cur),amt:ibNum(g('Amount'))});};
   if(r[0]==='Dividends'&&r[1]==='Data'){cashRow(divH,'Dividends');continue;}if(r[0]==='Withholding Tax'&&r[1]==='Data'){cashRow(whtH,'Withholding Tax');continue;}if(r[0]==='Interest'&&r[1]==='Data'){cashRow(intH,'Interest');continue;}
-  if(mode==='flexT'&&th&&r.length>=th.length-2){const g=k=>{const i=th.indexOf(k);return i<0?'':r[i];};const fx=+g('FXRateToBase')||(g('CurrencyPrimary')==='EUR'?1:1/(FX[g('CurrencyPrimary')]||1));out.trades.push({cls:g('AssetClass'),sym:(g('Symbol')||'').split(' ')[0].toUpperCase(),cur:g('CurrencyPrimary'),fx,pnl:+g('FifoPnlRealized')||0});continue;}
-  if(mode==='flexC'&&ch){const g=k=>{const i=ch.indexOf(k);return i<0?'':r[i];};const t=g('Type');const fx=+g('FXRateToBase')||1;let type=/Withholding/i.test(t)?'Withholding Tax':/Dividend|Lieu/i.test(t)?'Dividends':/Interest/i.test(t)?'Interest':null;if(type)out.cash.push({type,cur:g('CurrencyPrimary'),fx,amt:+g('Amount')||0});}
+  if(r[0]==='Open Positions'&&r[1]==='Data'&&opH){const g=k=>{const i=opH.indexOf(k);return i<0?'':r[i];};if(g('DataDiscriminator')&&g('DataDiscriminator')!=='Summary')continue;const cur=g('Currency'),fx=fxOf(cur),cat=g('Asset Category'),sym=(g('Symbol')||'').toUpperCase(),o=/Option/i.test(cat)?ibOptSym(sym):null;
+   out.pos.push({cls:/Option/i.test(cat)?'OPT':/Stock/i.test(cat)?'STK':/Future/i.test(cat)?'FUT':'OTHER',sym:o?o.und:sym,und:o?o.und:sym,qty:ibNum(g('Quantity')),mult:ibNum(g('Mult'))||1,mark:ibNum(g('Close Price')),value:ibNum(g('Value'))*fx,cost:ibNum(g('Cost Basis'))*fx,upl:ibNum(g('Unrealized P/L'))*fx,right:o?o.right:null,strike:o?o.strike:null,expiry:o?o.expiry:null,cur});continue;}
+  if(r[0]==='Net Asset Value'&&r[1]==='Data'&&navH&&r[2]==='Total'){out.nav=ibNum(r[navH.indexOf('Current Total')]);continue;}
+  if(mode==='flexT'&&th&&r.length>=th.length-2){const g=k=>{const i=th.indexOf(k);return i<0?'':r[i];};const fx=+g('FXRateToBase')||(g('CurrencyPrimary')==='EUR'?1:1/(FX[g('CurrencyPrimary')]||1));
+   const proceeds=g('Proceeds')!==''?Math.abs(ibNum(g('Proceeds'))):Math.abs(ibNum(g('Quantity'))*ibNum(g('TradePrice'))*(ibNum(g('Multiplier'))||1));
+   const date=ibDate(g('TradeDate')),open=ibDate(g('OpenDateTime')||g('HoldingPeriodDateTime'));
+   out.trades.push({cls:g('AssetClass'),sym:(g('Symbol')||'').split(' ')[0].toUpperCase(),cur:g('CurrencyPrimary'),fx,pnl:ibNum(g('FifoPnlRealized')),turn:proceeds*fx,date,held:open?ibDays(open,date):null});continue;}
+  if(mode==='flexP'&&ph&&r.length>=ph.length-2){const g=k=>{const i=ph.indexOf(k);return i<0?'':r[i];};if(g('LevelOfDetail')&&g('LevelOfDetail').toUpperCase()!=='SUMMARY')continue;const fx=+g('FXRateToBase')||(g('CurrencyPrimary')==='EUR'?1:1/(FX[g('CurrencyPrimary')]||1)),cls=g('AssetClass'),sym=(g('Symbol')||'').split(' ')[0].toUpperCase();
+   out.pos.push({cls,sym,und:(g('UnderlyingSymbol')||sym).toUpperCase(),qty:ibNum(g('Quantity')),mult:ibNum(g('Multiplier'))||1,mark:ibNum(g('MarkPrice')),value:ibNum(g('PositionValue'))*fx,cost:ibNum(g('CostBasisMoney'))*fx,upl:ibNum(g('FifoPnlUnrealized'))*fx,right:g('Put/Call')||null,strike:ibNum(g('Strike'))||null,expiry:ibDate(g('Expiry')),cur:g('CurrencyPrimary')});continue;}
+  if(mode==='flexE'&&eh&&r.length>=eh.length-1){const v=ibNum(r[eh.indexOf('Total')]);if(r[eh.indexOf('ReportDate')])out.nav=v;continue;}
+  if(mode==='flexC'&&ch){const g=k=>{const i=ch.indexOf(k);return i<0?'':r[i];};const t=g('Type');const fx=+g('FXRateToBase')||1;let type=/Withholding/i.test(t)?'Withholding Tax':/Dividend|Lieu/i.test(t)?'Dividends':/Interest/i.test(t)?'Interest':null;if(type)out.cash.push({type,cur:g('CurrencyPrimary'),fx,amt:ibNum(g('Amount'))});}
  }
  const b={stocks:{pos:0,neg:0,n:0},funds:{pos:0,neg:0,n:0},options:{pos:0,neg:0,n:0},futures:{pos:0,neg:0,n:0},fx:{pos:0,neg:0,n:0},other:{pos:0,neg:0,n:0}},bySym={};
- for(const t of out.trades){if(!t.pnl)continue;const e=t.pnl*t.fx;let k=t.cls==='STK'?(funds.has(t.sym)?'funds':'stocks'):t.cls==='OPT'||t.cls==='FOP'?'options':t.cls==='FUT'?'futures':t.cls==='CASH'?'fx':'other';
-  if(t.cls==='Stocks')k=funds.has(t.sym)?'funds':'stocks';if(t.cls==='Equity and Index Options')k='options';if(t.cls==='Futures')k='futures';if(t.cls==='Forex')k='fx';
-  b[k][e>=0?'pos':'neg']+=e;b[k].n++;const key=k+'|'+t.sym;bySym[key]=(bySym[key]||0)+e;}
+ const basket=(cls,sym)=>cls==='STK'||cls==='Stocks'?(funds.has(sym)?'funds':'stocks'):cls==='OPT'||cls==='FOP'||cls==='Equity and Index Options'?'options':cls==='FUT'||cls==='Futures'?'futures':cls==='CASH'||cls==='Forex'?'fx':'other';
+ let turnover=0,held=[],dates=[];
+ for(const t of out.trades){turnover+=t.turn||0;if(t.date)dates.push(t.date);if(!t.pnl)continue;if(t.held!=null&&t.held>=0)held.push(t.held);const e=t.pnl*t.fx,k=basket(t.cls,t.sym);b[k][e>=0?'pos':'neg']+=e;b[k].n++;const key=k+'|'+t.sym;bySym[key]=(bySym[key]||0)+e;}
  const cash={div:0,wht:0,int:0};for(const c of out.cash){const e=c.amt*c.fx;if(c.type==='Dividends')cash.div+=e;else if(c.type==='Withholding Tax')cash.wht+=e;else cash.int+=e;}
- if(!out.fmt)out.warn.push('No IBKR header found. Export a Flex Query (Trades + Cash Transactions) as CSV, or an Activity Statement CSV.');
- return{...out,b,cash,bySym};
+ /* open positions: funds are the long-term investing; the rest of the account (shares, options, cash) is trading capital */
+ let fundVal=0,posVal=0,upl=0;for(const q of out.pos){const isFund=(q.cls==='STK'||q.cls==='Stocks')&&funds.has(q.sym);if(isFund)fundVal+=q.value;posVal+=q.value;upl+=q.upl;q.fund=isFund;}
+ dates.sort();if(!out.period&&dates.length)out.period={from:dates[0],to:dates[dates.length-1]};
+ if(!out.fmt&&!out.pos.length)out.warn.push('No IBKR header found. Export a Flex Query (Trades, Cash Transactions, Open Positions) as CSV, or an Activity Statement CSV.');
+ if(out.pos.length&&out.nav==null)out.warn.push('No account value (Net Asset Value) in this export: trading capital counts only the open positions, not cash. Add the Equity Summary section to the Flex Query to include cash.');
+ return{...out,b,cash,bySym,nTrades:out.trades.length,nClosed:Object.values(b).reduce((a,x)=>a+x.n,0),turnover,tHold:held.length?Math.round(held.reduce((a,x)=>a+x,0)/held.length):null,fundVal,posVal,upl,acct:out.nav!=null?out.nav:posVal};
 }
+/* What the statement sets across the app. Only fields the statement actually holds are changed. */
+function ibApply(R,p,m){
+ const P={...p},M={...m},ch=[],set=(o,k,v,label,unit)=>{v=Math.round(v);if(o[k]!==v){ch.push({label,old:o[k],now:v,unit});o[k]=v;}};
+ const net=k=>R.b[k].pos+R.b[k].neg;
+ if(R.nTrades||R.cash.div||R.cash.int){
+  set(P,'swing',net('stocks'),'Net swing P&L (shares)','€');
+  set(P,'opt',net('options')+net('futures')+net('other'),'Net options P&L','€');
+  if(R.b.funds.n){set(P,'gain',net('funds'),'Realised gain (funds)','€');if(P.veh!=='eqETF'){ch.push({label:'Vehicle',old:P.veh,now:'eqETF'});P.veh='eqETF';}}
+  const inc=R.cash.div+Math.max(0,R.cash.int);
+  set(P,'div',inc,'Dividends received (with interest)','€');
+  if(R.cash.div>0)set(P,'wht',Math.abs(R.cash.wht)/inc*100,'Foreign withholding','%');
+  if(R.nClosed)set(P,'trades',R.nClosed,'Trades per year (closes)','#');
+  if(R.turnover>0)set(P,'turnover',R.turnover,'Annual turnover','€');
+  if(R.tHold!=null)set(P,'tHold',R.tHold,'Average holding','days');
+ }
+ if(R.pos.length){
+  set(P,'cap',R.fundVal,'Capital invested (funds)','€');
+  set(P,'tCap',Math.max(0,R.acct-R.fundVal),'Trading capital (rest of the account)','€');
+  set(M,'V',R.acct,'Move abroad: portfolio value','€');
+  set(M,'U',R.upl,'Move abroad: embedded unrealised gain','€');
+ }
+ return{p:P,m:M,changes:ch};
+}
+/* the parse result kept with the state (synced): no trade lines, no raw statement */
+const ibKeep=R=>({...R,trades:undefined,cash:R.cash,at:new Date().toISOString().slice(0,10)});
+/*IBKR-END*/
 function renderIBIn(){
  $('#ib-in').innerHTML=`<div class="card"><h2><span class="n">A</span>Statement</h2>
   <div class="drop" id="ib-drop">Drop a .csv here, or <label style="color:var(--petrol);cursor:pointer;text-decoration:underline">choose a file<input type="file" id="ib-file" accept=".csv,text/csv" hidden></label></div>
   <textarea class="csv" id="ib-text" placeholder="…or paste the CSV here" style="margin-top:10px">${esc(IB.text)}</textarea>
-  <div class="row" style="margin-top:10px"><button class="btn pri" id="ib-run">Analyse</button><button class="btn" id="ib-sample">Load sample statement</button></div></div>
- <div class="card"><h2><span class="n">B</span>Fund tickers</h2><label class="f"><span class="fl">Treated as investment funds (Teilfreistellung, KAP-INV)</span><textarea class="csv" id="ib-funds" style="min-height:70px">${esc(IB.funds)}</textarea><small>IBKR reports ETFs as STK. Add your fund tickers so they leave the share pot.</small></label></div>
+  <div class="row" style="margin-top:10px"><button class="btn pri" id="ib-run">Import and apply</button><button class="btn" id="ib-sample">Load sample statement</button></div>
+  <p class="sm muted" style="margin:8px 0 0">One import updates the whole app: Tax desk results and capital, Move abroad, and your open options for the Options lab. Each change is listed, with Undo.</p></div>
+ <div class="card"><h2><span class="n">B</span>Fund tickers</h2><label class="f"><span class="fl">Treated as investment funds (Teilfreistellung, KAP-INV)</span><textarea class="csv" id="ib-funds" style="min-height:70px">${esc(IB.funds)}</textarea><small>IBKR reports ETFs as STK. Add your fund tickers so they leave the share pot. Funds you hold count as capital invested; the rest of the account as trading capital.</small></label></div>
  <div class="card"><h2>How to export from IBKR</h2><ul class="notes">
-  <li>Performance &amp; Reports → Flex Queries → Activity Flex Query. Add the <b>Trades</b> section (AssetClass, Symbol, CurrencyPrimary, FXRateToBase, TradeDate, Quantity, FifoPnlRealized, Put/Call) and <b>Cash Transactions</b> (Type, Amount, FXRateToBase).</li>
+  <li>Performance &amp; Reports → Flex Queries → Activity Flex Query. Add the sections <b>Trades</b> (AssetClass, Symbol, CurrencyPrimary, FXRateToBase, TradeDate, Quantity, TradePrice, Multiplier, FifoPnlRealized, Put/Call, and OpenDateTime for holding periods), <b>Cash Transactions</b> (Type, Amount, FXRateToBase), <b>Open Positions</b> (Symbol, UnderlyingSymbol, Quantity, MarkPrice, PositionValue, CostBasisMoney, FifoPnlUnrealized, Put/Call, Strike, Expiry, Multiplier) and <b>Equity Summary in Base</b> (ReportDate, Total).</li>
+  <li>Or simply download the yearly <b>Activity Statement</b> as CSV: it already holds trades, dividends, open positions and the account value.</li>
   <li>Set the account base currency to EUR, so FXRateToBase converts each line at the IBKR rate for its date.</li>
-  <li>Period: the tax year (1 Jan – 31 Dec). Format: CSV. Run it and download.</li>
+  <li>Period: the tax year (1 Jan – 31 Dec), or the year so far. Format: CSV.</li>
   <li class="warn">Strict German practice converts the cost at the purchase date and the proceeds at the sale date. FIFO P&L × the closing-date rate leaves out that FX component on long holdings. Treat the result as a close estimate and check large positions.</li>
  </ul></div>`;
- const run=()=>{IB.text=$('#ib-text').value;IB.funds=$('#ib-funds').value;IB.res=ibParse(IB.text);renderIBOut();};
- $('#ib-run').onclick=run;$('#ib-sample').onclick=()=>{$('#ib-text').value=IB_SAMPLE;run();toast('Sample statement loaded');};
+ const run=()=>{IB.text=$('#ib-text').value;IB.funds=$('#ib-funds').value;const R=ibParse(IB.text);IB.res=R;
+  if(!R.fmt&&!R.pos.length){renderIBOut();return;}
+  const A=ibApply(R,state.p,state.m);IB.prev={p:{...state.p},m:{...state.m},ib:state.ib||null};IB.changes=A.changes;
+  state.p=A.p;state.m=A.m;state.ib={...ibKeep(R),funds:IB.funds};save();
+  if(built.desk)renderDeskIn();if(built.move)renderMoveIn();syncHeader();renderIBOut();
+  toast(A.changes.length?`Statement applied: ${A.changes.length} field${A.changes.length>1?'s':''} updated across the app`:'Statement read: nothing to change');};
+ $('#ib-run').onclick=run;$('#ib-sample').onclick=()=>{$('#ib-text').value=IB_SAMPLE;run();};
  $('#ib-file').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{$('#ib-text').value=rd.result;run();};rd.readAsText(f);};
  const dz=$('#ib-drop');['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('on');}));['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('on');}));
  dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{$('#ib-text').value=rd.result;run();};rd.readAsText(f);});
 }
+const ibPer=R=>R.period?(R.period.label||`${R.period.from} – ${R.period.to}`):'';
+const ibVal=(v,u)=>u==='€'?eur(v):u==='%'?`${v} %`:u?`${v} ${u}`:String(v);
 function renderIBOut(){
- const R=IB.res;
- if(!R){$('#ib-out').innerHTML=`<div class="card"><h2>Waiting for a statement</h2><p class="muted" style="margin:0">Load the sample statement to see the full output, including the German Anlage KAP mapping. Paste your own export when ready.</p></div>`;return;}
+ const R=IB.res||state.ib;
+ if(!R){$('#ib-out').innerHTML=`<div class="card"><h2>Waiting for a statement</h2><p class="muted" style="margin:0">Load the sample statement to see the full output, including the German Anlage KAP mapping. Import your own export when ready.</p></div>`;return;}
  const b=R.b,net=k=>b[k].pos+b[k].neg,c=R.cash,whtPct=c.div>0?Math.min(60,Math.abs(c.wht)/c.div*100):0;
  const tot=net('stocks')+net('funds')+net('options')+net('futures')+net('fx')+net('other');
  const syms=Object.entries(R.bySym).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,12);
  const res=state.p.res;
- const kap=res==='DE'?`<div class="card"><h2>Anlage KAP / KAP-INV mapping · Germany</h2><div class="tw"><table class="t"><tbody>
+ const kap=res==='DE'&&R.nTrades?`<div class="card"><h2>Anlage KAP / KAP-INV mapping · Germany</h2><div class="tw"><table class="t"><tbody>
   <tr><td>Foreign capital income, net (KAP, foreign income line)</td><td class="r">${eur(net('stocks')+net('options')+net('futures')+c.div+c.int+net('other'))}</td></tr>
   <tr><td class="muted">… of which share-sale gains</td><td class="r">${eur(b.stocks.pos)}</td></tr>
   <tr><td class="muted">… of which option premiums & derivative gains</td><td class="r">${eur(b.options.pos+b.futures.pos)}</td></tr>
@@ -1357,21 +1428,36 @@ function renderIBOut(){
   <tr><td>Creditable foreign tax</td><td class="r">${eur(Math.abs(c.wht))}</td></tr>
   <tr><td>Fund sale gains, before Teilfreistellung (KAP-INV)</td><td class="r">${eur(net('funds'))}</td></tr>
  </tbody></table></div><p class="sm muted" style="margin:8px 0 0">On recent forms these are lines 19–23 and 41 of Anlage KAP; check the numbering on the 2026 form. Add any Vorabpauschale for accumulating funds to KAP-INV yourself. Premiums on short options still open on 31 Dec are taxable now, but are missing from FIFO realised P&L.</p></div>`:'';
+ const ch=IB.changes||null;
+ const applied=ch?`<div class="card"><h2>Applied across the app</h2>${ch.length?`<div class="tw"><table class="t"><thead><tr><th>Field</th><th class="r">Before</th><th class="r">Now</th></tr></thead><tbody>${ch.map(x=>`<tr><td>${esc(x.label)}</td><td class="r muted">${x.old==null?'–':esc(ibVal(x.old,x.unit))}</td><td class="r"><b>${esc(ibVal(x.now,x.unit))}</b></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted" style="margin:0">Everything already matched this statement.</p>'}
+  <div class="row" style="margin-top:12px">${IB.prev?'<button class="btn" id="ib-undo">Undo this import</button>':''}<a class="btn" href="#desk">Open the Tax desk</a><a class="btn" href="#move">Open Move abroad</a></div></div>`
+  :`<div class="card"><p class="muted" style="margin:0">Imported ${esc(R.at||'')}${ibPer(R)?`, covering ${esc(ibPer(R))}`:''}. Its figures are in the Tax desk and Move abroad; import a newer statement to update them.</p></div>`;
+ const opts=(R.pos||[]).filter(q=>q.cls==='OPT'||q.cls==='FOP'),unds=[...new Set(opts.map(q=>q.und))];
+ const posCard=R.pos&&R.pos.length?`<div class="card"><h2>Open positions</h2><div class="tw"><table class="t"><thead><tr><th>Position</th><th class="r">Value</th><th class="r">Unrealised</th></tr></thead><tbody>${R.pos.map(q=>`<tr><td><span class="cc">${esc(q.cls==='OPT'?`${q.und} ${q.expiry||''} ${q.strike||''} ${q.right||''}`:q.sym)}</span><span class="muted sm">${q.fund?'fund':q.cls==='OPT'?'option':q.cls==='STK'?'share':esc(q.cls)} · ${esc(String(q.qty))}</span></td><td class="r">${eur(q.value)}</td><td class="r ${q.upl>=0?'pos':'neg'}">${eur(q.upl)}</td></tr>`).join('')}
+  <tr><td><b>Account value</b>${R.nav==null?' <span class="muted sm">(positions only, no cash)</span>':''}</td><td class="r"><b>${eur(R.acct)}</b></td><td class="r"><b>${eur(R.upl)}</b></td></tr></tbody></table></div>
+  ${unds.length?`<div class="row" style="margin-top:12px">${unds.map(u=>`<button class="btn" data-ibol="${esc(u)}">Open ${esc(u)} options in the Options lab</button>`).join('')}</div>`:''}</div>`:'';
  $('#ib-out').innerHTML=`
- ${R.warn.map(w=>`<div class="card"><ul class="notes"><li class="warn">${esc(w)}</li></ul></div>`).join('')}
- <div class="hero"><div class="lead"><div class="k">Realised P&L, € base</div><div class="v">${eur(tot)}</div><div class="s">${R.trades.length} trades · ${esc(R.fmt||'?')}</div></div>
+ ${(R.warn||[]).map(w=>`<div class="card"><ul class="notes"><li class="warn">${esc(w)}</li></ul></div>`).join('')}
+ ${applied}
+ <div class="hero"><div class="lead"><div class="k">Realised P&L, € base</div><div class="v">${eur(tot)}</div><div class="s">${R.nTrades} trades · ${esc(R.fmt||'?')}${ibPer(R)?' · '+esc(ibPer(R)):''}</div></div>
   <div><div class="k">Options & futures</div><div class="v">${eur(net('options')+net('futures'))}</div><div class="s">${b.options.n+b.futures.n} closes</div></div>
   <div><div class="k">Shares</div><div class="v">${eur(net('stocks'))}</div><div class="s">funds ${eur(net('funds'))}</div></div>
   <div><div class="k">Dividends</div><div class="v">${eur(c.div)}</div><div class="s">withheld ${eur(Math.abs(c.wht))} (${whtPct.toFixed(0)} %)</div></div></div>
- <div class="card"><h2>Baskets</h2><div class="tw"><table class="t"><thead><tr><th>Basket</th><th class="r">Gains</th><th class="r">Losses</th><th class="r">Net</th><th class="r">Lines</th></tr></thead><tbody>
+ ${posCard}
+ ${R.nTrades?`<div class="card"><h2>Baskets</h2><div class="tw"><table class="t"><thead><tr><th>Basket</th><th class="r">Gains</th><th class="r">Losses</th><th class="r">Net</th><th class="r">Lines</th></tr></thead><tbody>
   ${[['stocks','Shares (Aktientopf in DE)'],['funds','Funds / ETFs'],['options','Options'],['futures','Futures'],['fx','Forex'],['other','Other']].filter(([k])=>b[k].n).map(([k,l])=>`<tr><td>${l}</td><td class="r pos">${eur(b[k].pos)}</td><td class="r neg">${eur(b[k].neg)}</td><td class="r"><b>${eur(net(k))}</b></td><td class="r">${b[k].n}</td></tr>`).join('')}
-  <tr><td>Interest</td><td></td><td></td><td class="r">${eur(c.int)}</td><td></td></tr></tbody></table></div>
-  <div class="row" style="margin-top:12px"><button class="btn pri" id="ib-apply">Send to Tax desk</button><span class="sm muted">Shares → swing P&L, options + futures → options P&L, funds → investing gain, dividends + interest → dividends.</span></div></div>
+  <tr><td>Interest</td><td></td><td></td><td class="r">${eur(c.int)}</td><td></td></tr></tbody></table></div></div>`:''}
  ${kap}
- <div class="card"><h2>Largest contributors</h2><div class="tw"><table class="t"><tbody>${syms.map(([k,v])=>{const[bk,s]=k.split('|');return `<tr><td><span class="cc">${esc(s)}</span><span class="muted sm">${bk}</span></td><td class="r ${v>=0?'pos':'neg'}">${eur(v)}</td></tr>`;}).join('')}</tbody></table></div></div>`;
- $('#ib-apply').onclick=()=>{const p=state.p;p.swing=Math.round(net('stocks'));p.opt=Math.round(net('options')+net('futures')+net('other'));if(b.funds.n){p.gain=Math.round(net('funds'));p.veh='eqETF';}p.div=Math.round(c.div+Math.max(0,c.int));p.wht=Math.round(c.div>0?Math.abs(c.wht)/(c.div+Math.max(0,c.int))*100:p.wht);p.trades=R.trades.length||p.trades;save();renderDeskIn();location.hash='#desk';toast('Statement applied to the Tax desk');};
+ ${syms.length?`<div class="card"><h2>Largest contributors</h2><div class="tw"><table class="t"><tbody>${syms.map(([k,v])=>{const[bk,s]=k.split('|');return `<tr><td><span class="cc">${esc(s)}</span><span class="muted sm">${bk}</span></td><td class="r ${v>=0?'pos':'neg'}">${eur(v)}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}`;
+ const u=$('#ib-undo');if(u)u.onclick=()=>{const pv=IB.prev;if(!pv)return;state.p=pv.p;state.m=pv.m;state.ib=pv.ib;IB.prev=null;IB.changes=null;IB.res=null;save();if(built.desk)renderDeskIn();if(built.move)renderMoveIn();syncHeader();renderIBOut();toast('Import undone');};
+ document.querySelectorAll('[data-ibol]').forEach(btn=>btn.onclick=()=>{
+  const und=btn.dataset.ibol,legs=opts.filter(q=>q.und===und);
+  const o=state.o||(state.o=olDefault()),same=o.sym===und,td=new Date().toISOString().slice(0,10);
+  o.sym=und;if(!same)o.S=legs[0].strike||o.S;o.cur=legs[0].cur||o.cur;o.preset='custom';
+  o.legs=legs.map(q=>({side:q.qty>0?'buy':'sell',type:q.right==='P'?'put':'call',qty:Math.abs(q.qty),K:q.strike,dte:Math.max(1,ibDays(td,q.expiry)||30),iv:+o.iv||30,price:+(q.mark||0).toFixed(2)}));
+  save();built.options=0;location.hash='#options';toast(same?`${und} positions loaded`:`${und} positions loaded: set today's ${und} price`);
+ });
 }
-
 /* ---------- 07 RULES ---------- */
 let rulesQ='';
 function renderRules(){
