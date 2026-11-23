@@ -38,6 +38,11 @@
   const OPTION_IDS = ['exhaust', 'ceramic', 'carbon', 'colour', 'seats', 'diff', 'rearsteer', 'air', 'manual', 'acc', 'hud', 'lights', 'pano', 'sound', 'wheels', 'towbar', 'winter', 'warranty', 'history', 'owner', 'accident'];
   const nbool = { anyOf: [{ type: 'boolean' }, { type: 'null' }] };
 
+  /* Prisme: consumer tech for buyers in Germany or France */
+  const TECH_SYSTEM = 'You are a consumer-technology analyst for buyers in Germany and France: PC parts, ready-made gaming PCs, monitors, TVs, soundbars, phones, headphones, laptops and tablets. You know specifications, review results (Rtings, ComputerBase, PCGH, TechPowerUp, Les Numériques, Notebookcheck), current street prices at German and French shops (Geizhals, idealo, Alternate, Mindfactory, LDLC, Materiel.net, Fnac, Amazon) and the 2026 memory and graphics-card shortage. Name only products that really exist and only prices you found; never guess a price. Prices in euros including VAT.';
+  const TECH_CATS = ['gpu', 'cpu', 'monitor', 'tv', 'soundbar', 'phone', 'headphones', 'laptop', 'tablet'];
+  const mkt = m => (m === 'FR' ? 'FR' : 'DE');
+
   const TASKS = {
     /* Écurie: one exact car researched into a full record (specs, faults, costs, prices, what falls due) */
     car_lookup: {
@@ -87,6 +92,37 @@
   Map the equipment and condition you can see to these ids where they apply: ${OPTION_IDS.join(', ')} (warranty = a warranty or approved-used programme; history = full service history; owner = one previous owner; accident = repaired accident damage). List other notable equipment in "extras".`,
       schema: S({ readable: bool, name: str, year: nnum, first_reg: nstr, ps: nnum, km: nnum, price: nnum, fuel: nstr, gearbox: nstr, colour: nstr,
         option_ids: arr({ type: 'string', enum: OPTION_IDS }), extras: arr(str), seller: { type: 'string', enum: ['dealer', 'private', 'unknown'] }, accident_free: nbool, location: nstr, notes: str }),
+    },
+
+    /* Prisme: one product not in the catalogue, researched into a record the app can score */
+    tech_lookup: {
+      web: true, effort: 'medium', maxSearches: 5,
+      system: TECH_SYSTEM,
+      prompt: i => `Research this product for a buyer in ${mkt(i.market) === 'FR' ? 'France' : 'Germany'}. Today is ${new Date().toISOString().slice(0, 10)}.
+  Product as typed: ${JSON.stringify(clip(i.name, 120))}${i.cat ? `\n  Category: ${clip(i.cat, 20)}` : ''}
+  Identify the exact model (and the variant sold in Europe). If it does not exist, set found to false and explain in "note".
+  Find its current lowest price from reputable shops in Germany and in France (null if you found none), and summarise reviews into scores from 1 to 10 for the criteria of its category:
+  monitor: motion, hdr, text, bright, value · tv: picture, bright, gaming, motion, value · soundbar: movies, music, dialog, ease, value · phone: camera, battery, perf, display, longevity, value · headphones: anc, sound, comfort, calls, battery, value · laptop: perf, gaming, battery, display, build, value · tablet: perf, display, battery, pen, value. For gpu give perf4k as performance relative to an RTX 5080 (= 100) at 4K, and for cpu give game relative to a Ryzen 7 9800X3D (= 100) in games; leave other scores empty for those.
+  specs: the key specifications as short label and value pairs (for a monitor: size, resolution, refresh, panel, DisplayPort version; for a TV: panel, sizes, HDMI 2.1 ports; for a phone: screen, chip, update years).`,
+      schema: S({ found: bool, cat: { type: 'string', enum: TECH_CATS }, brand: str, name: str, year: nnum, price_de: nnum, price_fr: nnum,
+        scores: arr(S({ k: str, v: num })), perf4k: nnum, game: nnum, specs: arr(S({ k: str, v: str })), eco: { type: 'string', enum: ['apple', 'samsung', 'google', 'sonos', 'sony', 'lg', 'bose', 'none'] }, note: str, confidence: { type: 'string', enum: ['high', 'medium', 'low'] }, sources }),
+    },
+    /* Prisme: ready-made gaming PCs on sale now that meet the person's filters */
+    prebuilt_find: {
+      web: true, effort: 'medium', maxSearches: 6,
+      system: TECH_SYSTEM,
+      prompt: i => { const f = i.filters || {}; return `Find up to six ready-made gaming PCs on sale now in ${mkt(i.market) === 'FR' ? 'France (Materiel.net, LDLC, Cybertek, Grosbill, Infomax, Fnac, Amazon.fr, makers\' own French shops)' : 'Germany (Alternate, dubaro, MIFcom, Agando, MEMORY PC, Mindfactory, Caseking, MediaMarkt, Amazon.de, makers\' own German shops)'}. Today is ${new Date().toISOString().slice(0, 10)}.
+  Filters: budget at most ${Number(f.budget) || 'any'} euros; graphics card at least ${clip(f.gpuMin, 40) || 'any'}; ${f.x3d ? 'an AMD X3D processor; ' : ''}memory at least ${Number(f.ramMin) || 32} GB; storage at least ${Number(f.ssdMin) || 1} TB; ${f.os === false ? 'Windows not needed' : 'Windows included'}; use: ${clip(f.use, 20) || '4K gaming'}.
+  Only offers you actually found on a shop page, with the shop's link and its price today. For each, give the exact parts as the shop lists them: processor, graphics card, memory (size and speed, and whether it is one or two sticks), SSD size, power supply (brand and watts), mainboard chipset, case, cooler, whether Windows is included, and the warranty in months. Prefer well-reviewed sellers and named power-supply brands; skip offers that hide the power supply or memory configuration.`; },
+      schema: S({ items: arr(S({ seller: str, name: str, url: str, price: num, cpu: str, gpu: str, ram_gb: nnum, ram_mts: nnum, ram_sticks: nnum, ssd_tb: nnum, psu: nstr, board: nstr, case: nstr, cooler: nstr, os: nbool, warranty_m: nnum })), note: str, sources }),
+    },
+    /* Prisme: today's price of one product across shops */
+    tech_prices: {
+      web: true, effort: 'low', maxSearches: 4,
+      system: TECH_SYSTEM,
+      prompt: i => `Find today's prices for this product in ${mkt(i.market) === 'FR' ? 'France' : 'Germany'}: ${JSON.stringify(clip(i.name, 120))}. Today is ${new Date().toISOString().slice(0, 10)}.
+  Check the price comparison (${mkt(i.market) === 'FR' ? 'idealo.fr, LeDénicheur' : 'Geizhals, idealo'}) and up to four large shops. Give the lowest price with its shop and link, up to five offers, the lowest price of the last 90 days if the comparison shows it, and one sentence on whether now is a good moment (a sale, a coming successor, a shortage).`,
+      schema: S({ low: nnum, shop: nstr, url: nstr, offers: arr(S({ shop: str, price: num, url: str, stock: bool })), low90: nnum, advice: str, sources }),
     },
 
     /* Sillage SI-1: fragrances similar to one bottle */
