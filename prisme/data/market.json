@@ -119,14 +119,15 @@
     "gpu": {
       "every": 24,
       "last": "2025-01",
-      "next": "2027 (expected)",
-      "note": "Each generation has come about two years after the last."
+      "next": "not before 2027",
+      "note": "The RTX 50 Super refresh has been delayed repeatedly; a report says NVIDIA plans no new gaming cards in 2026 and the RTX 60 series later still. Waiting for a new generation is not a reason to hold off now.",
+      "src": "toms-gpu2026"
     },
     "cpu": {
       "every": 18,
-      "last": "2024-11",
-      "next": "2027 (AMD Zen 6, expected)",
-      "note": "AM5 boards are promised new processors until at least 2027."
+      "last": "2026-03",
+      "next": "AMD Zen 6 late 2026 to early 2027 (same AM5 socket); Intel Nova Lake on a new socket",
+      "note": "AM5 keeps taking new processors; Intel's LGA1851 and LGA1700 are at their last generation."
     },
     "monitor": {
       "every": 12,
@@ -497,9 +498,20 @@
     "techradar-tv": "https://www.techradar.com/televisions/i-tested-three-new-5-star-oled-tvs-from-lg-and-samsung-side-by-side-and-i-know-which-is-my-top-pick-for-black-friday-2026",
     "alza-98": "https://www.alza.at/EN/cheap-97-to-98-tvs-246-249-cm/18921144.htm",
     "whathifi-sb": "https://www.whathifi.com/best-buys/soundbars",
-    "techradar-sb": "https://www.techradar.com/au/news/audio/home-cinema-audio/tr-top-10-best-soundbars-1288008"
+    "techradar-sb": "https://www.techradar.com/au/news/audio/home-cinema-audio/tr-top-10-best-soundbars-1288008",
+    "pcgh-9850": "https://www.pcgameshardware.de/Ryzen-7-9850X3D-CPU-281833/Tests/Benchmark-Review-1490440/",
+    "toms-9850": "https://www.tomshardware.com/pc-components/cpus/amd-ryzen-7-9850x3d-vs-ryzen-7-9800x3d",
+    "toms-9950x3d2": "https://tomshardware.com/pc-components/cpus/amd-ryzen-9-9950x3d2-review",
+    "toms-270k": "https://tomshardware.com/pc-components/cpus/intel-core-ultra-7-270k-plus-review",
+    "toms-250k": "https://www.tomshardware.com/pc-components/cpus/intel-core-ultra-5-250k-plus-review",
+    "cb-cpu": "https://www.computerbase.de/artikel/prozessoren/rangliste.89909/",
+    "toms-gpu2026": "https://www.tomshardware.com/pc-components/gpus/report-claims-nvidia-will-not-be-releasing-any-new-rtx-gaming-gpus-in-2026-rtx-60-series-likely-debuting-in-2028"
   },
   "changelog": [
+    {
+      "date": "2026-11-24",
+      "summary": "PC parts broadened: 29 processors (Ryzen 7 9850X3D, Ryzen 9 9950X3D2, Core Ultra 7 270K Plus, Core Ultra 5 250K Plus, Ryzen 7000, Intel 14th gen), 18 graphics cards, 12 boards, 8 memory kits, 15 drives, 15 power supplies, 15 coolers, 24 cases; builder priority \"best value\" or \"maximum performance\"; a guide for every subject."
+    },
     {
       "date": "2026-11-24",
       "summary": "Broad catalogue: 303 products (77 monitors from 24\" to 57\", 29 TVs from 42\" to 115\", projectors, watches and consoles); filters for size, resolution, refresh rate, panel and brand. New prices are estimates until the weekly refresh checks them."

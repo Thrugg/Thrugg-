@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as E from '../js/engine.js';
 import { DICT } from '../js/i18n.js';
+import { GUIDE } from '../js/guide.js';
 import { parseFeed, merge } from '../../tools/prisme_news.mjs';
 
 const rd = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
@@ -51,7 +52,7 @@ test('builder: budget, size, platform and creator wishes change the parts sensib
   assert.ok(low.total <= 2500); assert.ok(low.parts.gpu.s.perf4k < 100);
   assert.notEqual(low.balance.state, 'cpuOverkill', 'no €430 processor behind a mid-range card at 4K');
   const sff = E.build({ use: 'aaa4k', budget: 3500, size: 'sff', market: 'DE' });
-  assert.equal(sff.parts.case.s.size, 'sff'); assert.equal(sff.parts.psu.s.form, 'sfx'); assert.ok(sff.parts.cooler.s.h <= 77);
+  assert.equal(sff.parts.case.s.size, 'sff'); assert.equal(sff.parts.psu.s.form, 'sfx'); assert.equal(sff.parts.board.s.form, 'itx');
   assert.deepEqual(sff.checks.filter(c => c.st === 'fail'), []);
   const intel = E.build({ use: 'allround', budget: 2500, platform: 'intel', market: 'DE' });
   assert.equal(intel.parts.cpu.s.socket, 'LGA1851'); assert.equal(intel.parts.board.s.socket, 'LGA1851');
@@ -229,7 +230,7 @@ test('news: RSS and Atom are read, duplicates and old items dropped, headlines a
 test('texts: every key the screens use exists in English and French, with the same placeholders', () => {
   const ui = rd('js/ui.js'), en = DICT.en, fr = DICT.fr;
   const keys = new Set([...ui.matchAll(/\bt\('([A-Za-z0-9_]+)'/g)].map(m => m[1]).filter(k => !k.endsWith('_')));
-  ['tBuild', 'tScreens', 'tChoose', 'tGear', 'tPulse'].forEach(k => keys.add(k));
+  ['tLearn', 'tBuild', 'tScreens', 'tChoose', 'tGear', 'tPulse'].forEach(k => keys.add(k));
   /* codes the engine returns, shown through a prefix */
   const codes = {
     use_: Object.keys(E.USES), p_: E.PARTS, res_: ['4k', '1440', '1080'], k_: ['aaa', 'rt', 'pt', 'esports'], bal_: ['good', 'cpuSlight', 'cpuLimits', 'cpuOverkill'],
@@ -243,7 +244,7 @@ test('texts: every key the screens use exists in English and French, with the sa
   };
   for (const [pre, list] of Object.entries(codes)) for (const c of list) keys.add(pre + c);
   /* every compatibility check with the states it can take */
-  const checks = { socket: ['pass', 'fail'], gpuLen: ['pass', 'warn', 'fail'], coolerFit: ['pass', 'fail'], radFit: ['pass', 'fail'], coolerCap: ['pass', 'warn', 'fail'], psuW: ['pass', 'warn', 'fail'], psuConn: ['pass', 'warn'], psuTier: ['pass', 'warn'], psuForm: ['pass', 'fail'], airflow: ['pass', 'warn'], vram: ['pass', 'warn'], vrm: ['pass', 'warn'], matx: ['warn'], itx: ['warn'] };
+  const checks = { socket: ['pass', 'fail'], gpuLen: ['pass', 'warn', 'fail'], coolerFit: ['pass', 'fail'], radFit: ['pass', 'fail'], coolerCap: ['pass', 'warn', 'fail'], psuW: ['pass', 'warn', 'fail'], psuConn: ['pass', 'warn'], psuTier: ['pass', 'warn'], psuForm: ['pass', 'fail'], airflow: ['pass', 'warn'], vram: ['pass', 'warn'], vrm: ['pass', 'warn'], boardForm: ['pass', 'fail'], itx: ['warn'] };
   for (const [k, sts] of Object.entries(checks)) for (const st of sts) keys.add(`c_${k}_${st}`);
   const ph = s => [...String(s).matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort().join(',');
   for (const k of keys) {
@@ -252,4 +253,33 @@ test('texts: every key the screens use exists in English and French, with the sa
     assert.equal(ph(fr[k]), ph(en[k]), 'placeholders differ: ' + k);
   }
   for (const k of Object.keys(fr)) assert.ok(en[k] != null, 'French-only key: ' + k);
+});
+
+test('guide: every topic is complete in English and French and links to a tool', () => {
+  const both = (o, where) => { assert.ok(o && o.en && o.fr && o.en.length > 1 && o.fr.length > 1, where); };
+  assert.ok(GUIDE.length >= 8);
+  const ids = new Set();
+  for (const g of GUIDE) {
+    assert.ok(!ids.has(g.id)); ids.add(g.id);
+    both(g.t, g.id + ' title'); both(g.sub, g.id + ' sub'); both(g.intro, g.id + ' intro');
+    assert.ok(g.sections.length >= 1 && g.goals.length >= 2 && g.traps.length >= 1 && g.terms.length >= 2, g.id + ' parts');
+    g.sections.forEach((sec, i) => { both(sec.h, `${g.id}.s${i}`); sec.p.forEach((p, j) => both(p, `${g.id}.s${i}.p${j}`)); });
+    g.goals.forEach((x, i) => { both(x.g, `${g.id}.g${i}`); both(x.f, `${g.id}.g${i}f`); });
+    g.traps.forEach((x, i) => both(x, `${g.id}.t${i}`));
+    g.terms.forEach(([a, b], i) => { both(a, `${g.id}.term${i}`); both(b, `${g.id}.def${i}`); });
+    assert.ok(['build', 'screens', 'choose', 'gear', 'pulse'].includes(g.go.tab), g.id + ' links to a tool');
+  }
+  for (const c of new Set(E.items().map(i => i.cat))) assert.ok(['pc', 'monitor', 'tv', 'audio', 'phone', 'laptop', 'other'].some(id => ids.has(id)), c);
+});
+
+test('builder: maximum performance spends the budget on stronger parts, best value keeps money back', () => {
+  const v = E.build({ use: 'aaa4k', budget: 3500, gpu: 'gpu-rtx5080', market: 'DE' }), m = E.build({ use: 'aaa4k', budget: 3500, gpu: 'gpu-rtx5080', aim: 'max', market: 'DE' });
+  assert.ok(m.total >= v.total && m.total <= 3500);
+  assert.ok(m.parts.cpu.s.game >= v.parts.cpu.s.game);
+  assert.equal(m.parts.cpu.id, 'cpu-9850x3d', 'the fastest gaming processor when the budget allows');
+  assert.deepEqual(m.checks.filter(c => c.st === 'fail'), []);
+  assert.ok(m.parts.psu.s.w >= 850, 'never below the card maker\'s recommendation');
+  const intel = E.build({ use: 'allround', budget: 2000, platform: 'intel', market: 'DE' });
+  assert.equal(intel.parts.cpu.s.socket, intel.parts.board.s.socket, 'LGA1700 and LGA1851 boards both available');
+  assert.ok(E.items('cpu').length >= 25 && E.items('gpu').length >= 15 && E.items('case').length >= 20);
 });

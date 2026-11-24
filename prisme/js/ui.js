@@ -4,6 +4,7 @@ import * as E from './engine.js';
 import { S, save, saveUi, uid, finances, readSafetyNet, setInbox, exportBackup, importBackup, reset, load } from './store.js';
 import { t, LANGS } from './i18n.js';
 import { readImage } from './ocr.js';
+import { GUIDE } from './guide.js';
 
 let NEWS = { items: [], at: null };
 const ui = { session: null, busy: '', ocr: '', all: '' };
@@ -49,6 +50,7 @@ function goalCard() {
   const p = S.pc;
   return `<section class="card"><h2>${esc(t('goal'))}</h2>
   ${chips('pc.use', Object.keys(E.USES).map(k => [k, t('use_' + k)]), p.use)}
+  ${fgroup(t('aimH'), chips('pc.aim', [['value', t('aim_value')], ['max', t('aim_max')]], p.aim || 'value'))}<p class="note">${esc(t('aimSub_' + (p.aim || 'value')))}</p>
   <div class="grid2">${field(t('budget'), numIn('pc.budget', '€', 50))}${field(t('gpuPick'), sel('pc.gpu', [['', t('auto')], ...allGpus()], p.gpu))}</div>
   <details class="more"${p.platform !== 'any' || p.size !== 'any' || p.look !== 'any' || p.noise !== 'balanced' ? ' open' : ''}><summary>${esc(t('morePrefs'))}</summary>
   <div class="grid2">
@@ -115,8 +117,8 @@ function specLine(it) {
   const s = it.s || {};
   switch (it.cat) {
     case 'gpu': return `${s.vram} GB · ${s.watts} W · ${s.len} mm · 4K ${s.perf4k}`;
-    case 'cpu': return `${s.cores} ${t('cores')} · ${s.socket} · ${t('games')} ${s.game}`;
-    case 'board': return `${s.socket}${s.wifi ? ' · Wi-Fi' : ''}${s.usb4 ? ' · USB4' : ''} · ${s.m2}× M.2`;
+    case 'cpu': return `${s.cores} ${t('cores')} · ${s.socket} · ${t('games')} ${s.game} · ${t('work')} ${s.multi}${s.x3d ? ' · X3D' : ''}`;
+    case 'board': return `${s.socket} · ${({ atx: 'ATX', matx: 'micro-ATX', itx: 'mini-ITX' })[s.form || 'atx']}${s.wifi ? ' · Wi-Fi' : ''}${s.usb4 ? ' · USB4' : ''} · ${s.m2}× M.2`;
     case 'ram': return `${s.gb} GB · ${s.mts} MT/s · CL${s.cl}`;
     case 'ssd': return `${s.tb} TB · PCIe ${s.gen}.0${s.dram ? ' · DRAM' : ''} · ${s.tbw} TBW`;
     case 'psu': return `${s.w} W · ${s.eff}${s.atx31 ? ' · ATX 3.1' : ''}${s.native ? ' · 12V-2x6' : ''}${s.form === 'sfx' ? ' · SFX' : ''}`;
@@ -332,6 +334,7 @@ function sheetDetail(id) {
    ${crit && it.r ? `<div class="bars">${crit.map(k => `<div><span>${esc(t('cr_' + k))}</span><i style="width:${it.r[k] * 10}%"></i><b>${it.r[k]}</b></div>`).join('')}</div>` : ''}
    <p>${verdictPill(tm.verdict)} ${tm.reasons.map(r => esc(reasonText(r))).join(' ')}</p>${pr && pr.note ? `<p class="note">${esc(pr.note)}</p>` : ''}
    ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}
+   ${GUIDE_FOR[it.cat] ? `<button class="link" data-act="guideOpen" data-id="${GUIDE_FOR[it.cat]}">${esc(t('guideLink'))} →</button>` : ''}
    <div class="row"><button class="btn" data-act="watchAdd" data-id="${it.id}">${esc(t('addWatch'))}</button><button class="btn" data-act="gearNew" data-id="${it.id}">${esc(t('iOwnIt'))}</button><button class="btn" data-act="askPrice" data-id="${it.id}">${esc(t('pricesClaude'))}</button></div>
    ${shopLinks(full(it).replace(/\(.*?\)/g, ''))}${srcLinks(it)}`;
 }
@@ -405,6 +408,30 @@ function viewMarket() {
   <section class="card"><h2>${esc(t('dataH'))}</h2><p class="note">${esc(t('dataSub', { d: fmtD(m.asOf), n: E.items().length }))}</p><ul class="notes">${(m.changelog || []).map(c => `<li><b>${esc(fmtD(c.date))}</b> ${esc(c.summary)}</li>`).join('')}</ul></section>`;
 }
 
+/* ---------- GUIDE ---------- */
+const gx = o => (o && (o[S.prof.lang] || o.en)) || '';
+const GUIDE_FOR = { gpu: 'pc', cpu: 'pc', board: 'pc', ram: 'pc', ssd: 'pc', psu: 'pc', cooler: 'pc', case: 'pc', monitor: 'monitor', tv: 'tv', soundbar: 'audio', headphones: 'audio', phone: 'phone', laptop: 'laptop', tablet: 'laptop', watch: 'other', console: 'other', projector: 'other' };
+function guideHits(q) {
+  const n = String(q || '').trim().toLowerCase(); if (n.length < 2) return [];
+  const out = [];
+  for (const g of GUIDE) for (const [term, def] of g.terms) if ((gx(term) + ' ' + gx(def)).toLowerCase().includes(n)) out.push({ g, term, def });
+  return out.slice(0, 20);
+}
+const guideResults = () => { const h = guideHits(ui.gq); return ui.gq && ui.gq.trim().length >= 2 ? (h.length ? `<dl class="terms">${h.map(x => `<dt>${esc(gx(x.term))} <button class="link" data-act="guideOpen" data-id="${x.g.id}">${esc(gx(x.g.t))} →</button></dt><dd>${esc(gx(x.def))}</dd>`).join('')}</dl>` : `<p class="note">${esc(t('gNoHit'))}</p>`) : ''; };
+function viewLearn() {
+  const g = GUIDE.find(x => x.id === S.ui.guide);
+  if (!g) return `<section class="card hero"><h2>${esc(t('learnH'))}</h2><p class="note">${esc(t('learnSub'))}</p>
+    <label class="field"><span class="box"><input type="search" id="gq" value="${esc(ui.gq || '')}" placeholder="${esc(t('gSearch'))}" autocomplete="off"></span></label><div id="gres">${guideResults()}</div></section>
+   <div class="gtopics">${GUIDE.map((x, i) => `<button class="gtopic" data-act="guideOpen" data-id="${x.id}"><span class="gn">${String(i + 1).padStart(2, '0')}</span><b>${esc(gx(x.t))}</b><small>${esc(gx(x.sub))}</small></button>`).join('')}</div>`;
+  return `<button class="link" data-act="guideOpen" data-id="">${esc(t('backTopics'))}</button>
+  <section class="card hero"><h2 class="gt">${esc(gx(g.t))}</h2><p class="lead">${esc(gx(g.intro))}</p><button class="btn pri" data-act="guideGo" data-id="${g.id}">${esc(t('tryIt'))}</button></section>
+  ${g.sections.map(sec => `<section class="card gsec"><h2>${esc(gx(sec.h))}</h2>${sec.p.map(x => `<p>${esc(gx(x))}</p>`).join('')}</section>`).join('')}
+  <section class="card"><h2>${esc(t('goalsH'))}</h2><ul class="goals">${g.goals.map(x => `<li><b>${esc(gx(x.g))}</b><span>${esc(gx(x.f))}</span></li>`).join('')}</ul></section>
+  <section class="card"><h2>${esc(t('trapsH'))}</h2><ul class="notes">${g.traps.map(x => `<li>${esc(gx(x))}</li>`).join('')}</ul></section>
+  <section class="card"><h2>${esc(t('termsH'))}</h2><dl class="terms">${g.terms.map(([a, b]) => `<dt>${esc(gx(a))}</dt><dd>${esc(gx(b))}</dd>`).join('')}</dl></section>
+  <div class="row">${GUIDE.filter(x => x.id !== g.id).map(x => `<button class="chip" data-act="guideOpen" data-id="${x.id}">${esc(gx(x.t))}</button>`).join('')}</div>`;
+}
+
 /* ---------- PROFILE ---------- */
 function sheetProfile() {
   const p = S.prof, sn = readSafetyNet(p.market), on = window.Cloud && window.Cloud.configured();
@@ -420,12 +447,12 @@ function sheetProfile() {
 }
 
 /* ---------- shell ---------- */
-const TABS = [['build', 'tBuild', 'M4 6h16v10H4zM8 20h8M12 16v4'], ['screens', 'tScreens', 'M3 5h18v12H3zM8 21h8'], ['choose', 'tChoose', 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z'], ['gear', 'tGear', 'M4 7h16v13H4zM9 7V4h6v3'], ['pulse', 'tPulse', 'M3 12h4l3-7 4 14 3-7h4']];
+const TABS = [['learn', 'tLearn', 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7M8 11h5'], ['build', 'tBuild', 'M4 6h16v10H4zM8 20h8M12 16v4'], ['screens', 'tScreens', 'M3 5h18v12H3zM8 21h8'], ['choose', 'tChoose', 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z'], ['gear', 'tGear', 'M4 7h16v13H4zM9 7V4h6v3'], ['pulse', 'tPulse', 'M3 12h4l3-7 4 14 3-7h4']];
 export function render() {
   document.documentElement.lang = S.prof.lang;
   $('#sub').textContent = t('tagline') + ' · ' + mk();
   const tab = S.ui.tab;
-  $('#main').innerHTML = tab === 'build' ? viewBuild() : tab === 'screens' ? viewScreens() : tab === 'choose' ? viewChoose() : tab === 'gear' ? viewGear() : viewPulse();
+  $('#main').innerHTML = tab === 'learn' ? viewLearn() : tab === 'build' ? viewBuild() : tab === 'screens' ? viewScreens() : tab === 'choose' ? viewChoose() : tab === 'gear' ? viewGear() : viewPulse();
   $('#tabs').innerHTML = TABS.map(([k, l, d]) => `<button class="${tab === k ? 'on' : ''}" data-act="go" data-v="${k}" aria-current="${tab === k ? 'page' : 'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span>${esc(t(l))}</span></button>`).join('');
   $('#prof-btn').setAttribute('aria-label', t('profile'));
 }
@@ -498,6 +525,8 @@ export function init() {
       if (num) { cur.sort((x, y) => x - y); delete parent.size; }
       put(S, path, cur); ui.all = ''; save(); render();
     }
+    else if (a === 'guideOpen') { S.ui.tab = 'learn'; S.ui.guide = id || ''; sheetFn = null; closeSheet(); saveUi(); render(); window.scrollTo(0, 0); }
+    else if (a === 'guideGo') { const g = GUIDE.find(x => x.id === id); if (g) { S.ui.tab = g.go.tab; if (g.go.screen) S.ui.screen = g.go.screen; if (g.go.cat) S.choose.cat = g.go.cat; if (g.go.tab === 'build') S.ui.build = 'custom'; saveUi(); render(); window.scrollTo(0, 0); } }
     else if (a === 'showAll') { ui.all = el.dataset.k; render(); }
     else if (a === 'clearF') {
       const k = el.dataset.k;
@@ -560,6 +589,7 @@ export function init() {
     save(); closeSheet(); S.ui.tab = 'gear'; S.ui.gear = 'mine'; render();
   });
   /* choosing a product in the gear form fills its name */
+  document.addEventListener('input', e => { if (e.target.id === 'gq') { ui.gq = e.target.value; const r = $('#gres'); if (r) r.innerHTML = guideResults(); return; } }, true);
   document.addEventListener('input', e => { const el = e.target; if (el.name === 'catId' && el.form) { const it = E.byId(el.value); if (it) el.form.name.value = full(it); } if (el.name === 'cat' && el.form) { const g = { id: el.form.dataset.id, _new: true, cat: el.value, name: el.form.name.value, bought: el.form.bought.value, price: el.form.price.value, market: el.form.market.value }; openSheet(sheetGear(g)); } });
   $('#prof-btn').addEventListener('click', () => { sheetFn = sheetProfile; openSheet(sheetProfile()); });
   $('#sheet').addEventListener('close', () => { sheetFn = null; });

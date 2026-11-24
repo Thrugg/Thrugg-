@@ -91,7 +91,8 @@ export const USES = {
 export const PARTS = ['gpu', 'cpu', 'board', 'ram', 'ssd', 'psu', 'cooler', 'case'];
 export function psuNeed(gpu, cpu) {
   const need = num(gpu && gpu.s.watts) + num(cpu && cpu.s.peak) + 75;
-  return { need, rec: Math.ceil(need * 1.2 / 50) * 50 };
+  /* 20 % headroom for power spikes, and never below what the card's maker recommends (850 W for an RTX 5080) */
+  return { need, rec: Math.max(Math.ceil(need * 1.2 / 50) * 50, num(gpu && gpu.s.psu)) };
 }
 const byPrice = (list, mk) => list.filter(i => price(i, mk) > 0).sort((a, b) => price(a, mk) - price(b, mk));
 const cheapest = (list, mk, ok) => byPrice(list, mk).find(ok) || null;
@@ -112,6 +113,7 @@ function caseOk(k, gpu, cool, psu, o, relax) {
   if (cool && cool.s.type === 'air' && num(cool.s.h) > num(k.s.coolerMax)) return false;
   if (cool && cool.s.type === 'aio' && num(cool.s.rad) > num(k.s.rad)) return false;
   if (psu && k.s.size === 'sff' && psu.s.form !== 'sfx') return false;
+  if (o._board && (k.s.size === 'sff' ? o._board.s.form !== 'itx' : k.s.form === 'matx' && o._board.s.form === 'atx')) return false;
   if (relax) return true;
   if (o.look === 'white' && !k.s.white) return false;
   if (o.noise === 'quiet' && num(k.s.quiet) < 7) return false;
@@ -122,10 +124,12 @@ function caseOk(k, gpu, cool, psu, o, relax) {
 function assemble(gpu, o, relax, lock = {}) {
   const mk = o.market || 'DE', u = USES[o.use] || USES.allround, P = { gpu };
   const pickL = (cat, ok) => lock[cat] && byId(lock[cat]) && byId(lock[cat]).cat === cat ? byId(lock[cat]) : cheapest(items(cat), mk, ok);
-  const cool = c => o.size !== 'sff' || num(c.s.peak) <= 125;          // a small case takes a low-profile cooler
+  const cool = c => o.size !== 'sff' || num(c.s.peak) <= 200;          // a small case cools up to about 200 W
   P.cpu = pickL('cpu', c => cpuOk(c, gpu, o, relax) && cool(c)) || pickL('cpu', c => cpuOk(c, gpu, o, true) && cool(c)) || pickL('cpu', cool) || byPrice(items('cpu'), mk)[0];
   const tierNeed = o.use === 'creator' && !relax ? 3 : Math.max(1, num(P.cpu.s.tier) - 1);
-  P.board = pickL('board', b => b.s.socket === P.cpu.s.socket && num(b.s.tier) >= tierNeed && (!o.wifi || b.s.wifi)) || pickL('board', b => b.s.socket === P.cpu.s.socket);
+  /* board size follows the case size: mini-ITX for very small cases, micro-ATX or smaller for small ones */
+  const formOk = b => o.size === 'sff' ? b.s.form === 'itx' : o.size === 'small' ? b.s.form !== 'atx' : b.s.form !== 'itx';
+  P.board = pickL('board', b => b.s.socket === P.cpu.s.socket && num(b.s.tier) >= tierNeed && (!o.wifi || b.s.wifi) && formOk(b)) || pickL('board', b => b.s.socket === P.cpu.s.socket && formOk(b)) || pickL('board', b => b.s.socket === P.cpu.s.socket);
   const ramGb = o.ram || u.ram;
   P.ram = pickL('ram', r => num(r.s.gb) >= ramGb && (relax || num(r.s.mts) >= 6000)) || pickL('ram', r => num(r.s.gb) >= Math.min(32, ramGb));
   const tb = o.storage || 2;
@@ -134,10 +138,36 @@ function assemble(gpu, o, relax, lock = {}) {
   P.psu = pickL('psu', p => (sff ? p.s.form === 'sfx' : p.s.form !== 'sfx') && num(p.s.w) >= rec && (gpu.s.conn !== '12v2x6' || p.s.native) && (relax || !hiGpu || p.s.tier === 'A'))
     || pickL('psu', p => (sff ? p.s.form === 'sfx' : true) && num(p.s.w) >= rec) || byPrice(items('psu'), mk).slice(-1)[0];
   const heat = num(P.cpu.s.peak);
-  const coolOk = c => num(c.s.cap) >= heat && (relax || o.noise !== 'quiet' || num(c.s.quiet) >= 8) && (sff ? c.s.type === 'air' && num(c.s.h) <= 77 : num(c.s.h || 0) > 100 || c.s.type === 'aio');
+  /* small cases: an air cooler up to 155 mm or a radiator up to 280 mm (the case pick then checks it really fits) */
+  const coolOk = c => num(c.s.cap) >= heat && (relax || o.noise !== 'quiet' || num(c.s.quiet) >= 8) && (sff ? (c.s.type === 'air' ? num(c.s.h) <= 155 : num(c.s.rad) <= 280) : num(c.s.h || 0) > 100 || c.s.type === 'aio');
   P.cooler = pickL('cooler', coolOk) || pickL('cooler', c => num(c.s.cap) >= heat * 0.85) || byPrice(items('cooler'), mk)[0];
   const sameSize = k => o.size === 'sff' ? k.s.size === 'sff' : o.size === 'small' ? k.s.size !== 'full' : ['mid', 'full'].includes(k.s.size);
+  o = { ...o, _board: P.board };
   P.case = pickL('case', k => caseOk(k, gpu, P.cooler, P.psu, o, relax)) || pickL('case', k => caseOk(k, gpu, P.cooler, P.psu, o, true)) || byPrice(items('case').filter(sameSize), mk).slice(-1)[0] || byPrice(items('case'), mk).slice(-1)[0];
+  return P;
+}
+/* "Maximum performance": spend what is left, slot by slot in order of what it does for the use, on the strongest part
+   that still fits the budget and the rest of the build (the parts that depend on it are re-picked). */
+const DEPENDS = { gpu: ['psu', 'case'], cpu: ['board', 'cooler', 'psu', 'case'], ram: [], ssd: [], cooler: ['case'], board: [], psu: [], case: [] };
+function maximise(P, o, budget, relaxed, anchor, lock) {
+  const mk = o.market || 'DE', u = USES[o.use] || USES.allround, creator = o.use === 'creator', tb = o.storage || 2;
+  const M = {
+    gpu: it => num(it.s[u.metric]), cpu: it => creator ? num(it.s.multi) : num(it.s.game),
+    ram: it => Math.min(num(it.s.gb), creator ? 96 : Math.max(32, o.ram || 32)) * 1000 + num(it.s.mts) / 10 - num(it.s.cl),
+    ssd: it => Math.min(num(it.s.tb), tb) * 100 + num(it.s.gen) * 10 + (it.s.dram ? 1 : 0),
+    cooler: it => num(it.s.cap) + num(it.s.quiet) * 10, board: it => num(it.s.tier) * 10 + (it.s.usb4 ? 1 : 0),
+    psu: it => (it.s.tier === 'A' ? 1000 : 0) + ({ Titanium: 3, Platinum: 2 }[it.s.eff] || 1) * 100 + num(it.s.w) / 100, case: it => num(it.s.airflow) * 10 + num(it.s.quiet)
+  };
+  const fits = Q => total(Q, mk) <= budget && !compat(Q, o).some(c => c.st === 'fail');
+  for (let pass = 0; pass < 2; pass++) for (const k of ['gpu', 'cpu', 'ram', 'ssd', 'cooler', 'board', 'psu', 'case']) {
+    if (lock[k] || (k === 'gpu' && anchor)) continue;
+    const better = items(k).filter(c => price(c, mk) > 0 && M[k](c) > M[k](P[k])).sort((a, b) => M[k](b) - M[k](a) || price(a, mk) - price(b, mk));
+    for (const c of better) {
+      const keep = Object.fromEntries(PARTS.filter(x => x !== k && !DEPENDS[k].includes(x)).map(x => [x, P[x].id]));
+      const Q = assemble(k === 'gpu' ? c : P.gpu, o, relaxed, { ...lock, ...keep, [k]: c.id });
+      if (fits(Q)) { P = Q; break; }
+    }
+  }
   return P;
 }
 export const total = (P, mk = 'DE') => PARTS.reduce((a, k) => a + (P[k] ? price(P[k], mk) : 0), 0);
@@ -178,6 +208,7 @@ export function build(o) {
     const q = byPrice(items('cooler'), mk).filter(c => num(c.s.quiet) > num(P.cooler.s.quiet) && num(c.s.cap) >= num(P.cpu.s.peak) && price(c, mk) - price(P.cooler, mk) <= Math.min(left, 110) && caseOk(P.case, P.gpu, c, P.psu, o, true));
     if (q.length) P.cooler = q[q.length - 1];
   }
+  if (o.aim === 'max') P = maximise(P, o, budget, relaxed, anchor, lock);
   const t = total(P, mk);
   return { parts: P, total: t, budget, over: t > budget, relaxed, left: budget - t, checks: compat(P, o), balance: balance(P.gpu, P.cpu, u.res, u.kind), fps: fps(P.gpu, P.cpu, u.res, u.kind, 'quality', 'off'), use: o.use || 'allround' };
 }
@@ -202,7 +233,7 @@ export function compat(P, o = {}) {
   if (gpu && cs) { const heat = num(gpu.s.watts) + num(cpu && cpu.s.peak); if (heat > 450) add('airflow', num(cs.s.airflow) >= 8 ? 'pass' : 'warn', { heat }); }
   if (gpu && u.res === '4k') add('vram', num(gpu.s.vram) >= 16 ? 'pass' : 'warn', { vram: gpu.s.vram });
   if (cpu && board) add('vrm', num(cpu.s.tier) >= 3 && num(board.s.tier) < 2 ? 'warn' : 'pass', {});
-  if (cs && cs.id === 'case-a3matx') add('matx', 'warn', {});
+  if (cs && P.board) { const bf = P.board.s.form || 'atx', ok = cs.s.size === 'sff' ? bf === 'itx' : cs.s.form === 'matx' ? bf !== 'atx' : true; add('boardForm', ok ? 'pass' : 'fail', { board: bf, case: cs.s.size === 'sff' ? 'itx' : cs.s.form || 'atx' }); }
   if (cs && cs.s.size === 'sff') add('itx', 'warn', {});
   return C;
 }
