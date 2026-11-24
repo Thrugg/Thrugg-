@@ -8,7 +8,7 @@ export const uid = () => Math.random().toString(36).slice(2, 9);
 const DEF = () => ({
   v: 1,
   prof: { market: 'DE', lang: 'en', finSrc: 'auto', fin: { net: 0, other: 0, essential: 0, savings: 0, plan: 0 } },
-  pc: { use: 'aaa4k', budget: 3500, gpu: '', platform: 'any', brand: 'any', size: 'any', look: 'any', noise: 'balanced', storage: 2, ram: 0, wifi: true, lock: {} },
+  pc: { use: 'aaa4k', budget: 3500, gpu: '', platform: 'any', brand: 'any', size: 'any', look: 'any', noise: 'balanced', storage: 2, ram: 0, wifi: true, lock: {}, aim: 'value' },
   view: { up: 'quality', fg: 'off', kind: 'aaa' },
   pre: { budget: 3500, gpuMin: 'gpu-rtx5070ti', x3d: false, ramMin: 32, ssdMin: 2, os: true, use: 'aaa4k' },
   offer: { text: '', fields: null, name: '', url: '' },

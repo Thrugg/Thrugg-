@@ -215,3 +215,24 @@ details.card.uses > summary h2 { margin: 0; }
 details.card.uses > summary::after { content: '+'; font: 600 20px var(--f-mono); color: var(--muted); }
 details.card.uses[open] > summary::after { content: '−'; }
 details.card.uses[open] > summary { margin-bottom: 8px; }
+
+/* guide */
+.gtopics { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 12px 0; }
+@media (min-width: 560px) { .gtopics { grid-template-columns: 1fr 1fr; } }
+.gtopic { text-align: left; border: 1px solid var(--line-2); background: var(--panel); border-radius: var(--r); padding: 14px 16px; cursor: pointer; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.gtopic::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--spec); }
+.gtopic b { display: block; font-size: 17px; margin-top: 2px; }
+.gtopic small { display: block; color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+.gn { font: 600 12px var(--f-mono); color: var(--muted); }
+.gt { font-size: 22px; }
+.lead { font-size: 16px; color: var(--ink-2); margin: 0 0 12px; }
+.gsec p { margin: 0 0 10px; color: var(--ink-2); }
+.gsec p:last-child { margin-bottom: 0; }
+.goals { list-style: none; margin: 0; padding: 0; }
+.goals li { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line-2); font-size: 14.5px; }
+.goals li:first-child { border-top: 0; }
+.goals span { color: var(--ink-2); }
+.terms { margin: 4px 0 0; }
+.terms dt { font-weight: 700; margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.terms dd { margin: 2px 0 0; color: var(--ink-2); font-size: 14.5px; }
+#tabs button { font-size: 11px; }
