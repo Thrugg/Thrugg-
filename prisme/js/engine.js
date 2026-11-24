@@ -10,7 +10,7 @@ export function setData(cat, market, prebuilts) {
   PRE = (prebuilts && prebuilts.items) || [];
 }
 export const items = cat => cat ? ITEMS.filter(i => i.cat === cat) : ITEMS;
-export const byId = id => BY[id] || null;
+export const byId = id => BY[id] || (typeof id === 'string' && id.includes('@') ? tvAsMonitor(BY[id.split('@')[0]], Number(id.split('@')[1])) : null);
 export const market = () => MKT;
 export const prebuilts = () => PRE;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -45,6 +45,22 @@ export const UP = { off: 1, quality: 1.45, balanced: 1.65, performance: 1.9 };
 export const FG = { off: 1, x2: 1.75, x4: 3.1 };
 export const resOf = (w) => w >= 3800 ? '4k' : w >= 2500 ? '1440' : '1080';
 const gIdx = (g, res, kind) => kind === 'rt' || kind === 'pt' ? num(g.s.rt) : res === '4k' ? num(g.s.perf4k) : num(g.s.perf1440) * (res === '1080' ? 1 : 1);
+const PIX = { '4k': 3840 * 2160, '1440': 2560 * 1440, '1080': 1920 * 1080 };
+/* Frame rates for any mode (an ultrawide, 5K2K, the 57-inch's 7680×2160): from the nearest reference resolution,
+   scaled by pixel count (power 0.85: twice the pixels costs a little less than half the frames). */
+export function fpsAt(gpu, cpu, w, h, kind = 'aaa', up = 'off', fg = 'off') {
+  const px = w * h, res = px >= 6e6 ? '4k' : px >= 3e6 ? '1440' : '1080';
+  const f = fps(gpu, cpu, res, kind, up, fg); if (!f) return null;
+  const k = Math.pow(PIX[res] / px, 0.85), cap = cpu ? CAP[kind] * num(cpu.s.game) / 100 : Infinity;
+  const native = f.native * k, gpuSide = native * (f.upUsed ? UP[up] : 1), base = Math.min(gpuSide, cap), mult = f.base > 0 ? f.shown / f.base : 1;
+  return { ...f, native: Math.round(native), base: Math.round(base), shown: Math.round(base * mult), cpuBound: cap < gpuSide, fgLowBase: f.fgUsed && base < 55 };
+}
+/* The cheapest graphics card in the catalogue that reaches a frame rate in big games at a monitor's native
+   resolution with Quality upscaling, or null when none does. */
+export function gpuNeed(mon, cpu, target = 90, mk = 'DE') {
+  const ok = items('gpu').filter(g => price(g, mk) > 0 && fpsAt(g, cpu, mon.s.w, mon.s.h, 'aaa', 'quality').base >= target).sort((a, b) => price(a, mk) - price(b, mk));
+  return ok[0] || null;
+}
 export function fps(gpu, cpu, res = '4k', kind = 'aaa', up = 'off', fg = 'off') {
   if (!gpu) return null;
   const gNative = REF[res][kind] * gIdx(gpu, res, kind) / 100;
@@ -282,7 +298,7 @@ export function needGbps(w, h, hz, bpc = 10) { const vTot = h / (1 - 460e-6 * hz
 export function signal(mon, gpu) {
   if (!mon) return null;
   const need = needGbps(mon.s.w, mon.s.h, mon.s.hz);
-  const dp = Math.min(LINKS[mon.s.dp] || LINKS.dp14, LINKS[gpu ? gpu.s.dp : 'dp14'] || LINKS.dp14), hd = mon.s.hdmi21 ? LINKS.hdmi21 : 0;
+  const dp = mon.s.dp === 'none' ? 0 : Math.min(LINKS[mon.s.dp] || LINKS.dp14, LINKS[gpu ? gpu.s.dp : 'dp14'] || LINKS.dp14), hd = mon.s.hdmi21 ? LINKS.hdmi21 : 0;
   /* DisplayPort first (what a PC uses); HDMI only when it carries the mode where DisplayPort cannot */
   const via = need <= dp ? 'DP' : need <= hd ? 'HDMI' : need <= dp * 3 ? 'DP' : 'HDMI', link = via === 'DP' ? dp : hd;
   return { need: Math.round(need * 10) / 10, link, via, mode: need <= link ? 'native' : need <= link * 3 ? 'dsc' : 'no' };
@@ -296,8 +312,46 @@ const MON_W = { aaa: { motion: 2, hdr: 2, text: 0.5 }, comp: { motion: 3 }, work
 export const CRIT = {
   monitor: ['motion', 'hdr', 'text', 'bright', 'value'], tv: ['picture', 'bright', 'gaming', 'motion', 'value'],
   soundbar: ['movies', 'music', 'dialog', 'ease', 'value'], phone: ['camera', 'battery', 'perf', 'display', 'longevity', 'value'],
-  headphones: ['anc', 'sound', 'comfort', 'calls', 'battery', 'value'], laptop: ['perf', 'gaming', 'battery', 'display', 'build', 'value'], tablet: ['perf', 'display', 'battery', 'pen', 'value']
+  headphones: ['anc', 'sound', 'comfort', 'calls', 'battery', 'value'], laptop: ['perf', 'gaming', 'battery', 'display', 'build', 'value'], tablet: ['perf', 'display', 'battery', 'pen', 'value'],
+  projector: ['picture', 'bright', 'gaming', 'ease', 'value'], watch: ['health', 'sport', 'battery', 'smart', 'value'], console: ['library', 'perf', 'portable', 'value']
 };
+/* ---------- screen filters ---------- */
+/* Resolution classes for filtering: 16:9 ladders, ultrawides by height, super-ultrawide and dual 4K. */
+export const RES_CLASSES = ['1080p', '1440p', 'uw1440', 'uw1600', '4k', '5k2k', '5k6k', 'suw1440', 'duhd'];
+export function resClass(w, h) {
+  const r = w / h;
+  if (w >= 7000) return 'duhd';
+  if (r > 3) return 'suw1440';
+  if (h === 1600) return 'uw1600';
+  if (r > 2.1) return w >= 5000 ? '5k2k' : 'uw1440';
+  if (w >= 5000) return '5k6k';
+  if (w >= 3800) return '4k';
+  if (w >= 2500) return '1440p';
+  return '1080p';
+}
+export const panelGroup = p => /oled/.test(p) ? 'oled' : p;
+/* f: { sizes [], res [], hzMin, panels [] (oled, miniled, ips, va, tn, led), brands [], shape any|flat|curved } */
+export function screenFilter(it, f = {}) {
+  const s = it.s || {};
+  if (f.sizes && f.sizes.length && s.size && !f.sizes.map(Number).includes(Number(s.size))) return false;
+  if (f.res && f.res.length && s.w && !f.res.includes(resClass(s.w, s.h))) return false;
+  if (f.hzMin && s.hz && s.hz < f.hzMin) return false;
+  if (f.panels && f.panels.length && s.panel && !f.panels.includes(panelGroup(s.panel))) return false;
+  if (f.brands && f.brands.length && !f.brands.includes(it.brand)) return false;
+  if (f.shape === 'flat' && s.curved) return false;
+  if (f.shape === 'curved' && !s.curved) return false;
+  return true;
+}
+/* A TV that works as a monitor (120 Hz or more over HDMI 2.1) at one of its sizes from 42 to 65 inches, scored as a
+   monitor: no DisplayPort, text a little softer than a monitor's at the same size. */
+export function tvAsMonitor(tv, size) {
+  if (!tv || tv.cat !== 'tv' || !(num(tv.s.hz) >= 120 && num(tv.s.hdmi21) >= 1)) return null;
+  const v = tv.p && tv.p.de && tv.p.de[String(size)]; if (!v || size < 42 || size > 65) return null;
+  return { id: tv.id + '@' + size, cat: 'monitor', brand: tv.brand, name: `${tv.name.replace(new RegExp('^' + tv.brand + ' '), '')} ${size}" (TV)`, yr: tv.yr, p: { de: v, ...(tv.p.fr && tv.p.fr[String(size)] ? { fr: tv.p.fr[String(size)] } : {}) }, pd: tv.pd, conf: tv.conf, src: tv.src,
+    s: { size, w: 3840, h: 2160, hz: tv.s.hz, panel: tv.s.panel, dp: 'none', hdmi21: true, dv: tv.s.dv, bw: 0, curved: false, tv: true },
+    r: { motion: tv.r.motion, hdr: tv.r.picture, text: 6, bright: tv.r.bright, value: tv.r.value }, note: 'A TV used as a monitor: HDMI 2.1 only, auto-dimming on static content, needs a deep desk.' };
+}
+export const tvMonitors = () => ITEMS.filter(i => i.cat === 'tv').flatMap(tv => Object.keys((tv.p && tv.p.de) || {}).map(sz => tvAsMonitor(tv, Number(sz))).filter(Boolean));
 const wAvg = (r, W) => { let s = 0, n = 0; for (const [k, w] of Object.entries(W)) if (w > 0 && r[k] != null) { s += w * r[k]; n += w; } return n ? s / n : 5; };
 /* Monitor score 0-100 for this person: the reviews weighted by their uses, then what fits their desk, room, card
    and budget. ctx: { uses: {aaa, comp, work, movies, creative} 0-3, staticH, room, dist, gpu, budget, market } */
@@ -310,7 +364,7 @@ export function monitorScore(m, ctx = {}) {
   if (br.level === 'high') { score -= br.covered ? 6 : 12; why.push({ k: 'burnHigh', covered: br.covered }); } else if (br.level === 'medium') { score -= 3; why.push({ k: 'burnMed', covered: br.covered }); }
   const sig = signal(m, ctx.gpu); if (sig.mode === 'no') { score -= 20; why.push({ k: 'sigNo' }); } else if (sig.mode === 'dsc') why.push({ k: 'sigDsc', via: sig.via }); else why.push({ k: 'sigNative', via: sig.via });
   if (ctx.gpu) {
-    const res = resOf(m.s.w), f = fps(ctx.gpu, ctx.cpu || null, res, (ctx.uses && ctx.uses.comp > (ctx.uses.aaa || 0)) ? 'esports' : 'aaa', 'quality', 'off');
+    const res = resOf(m.s.w), f = fpsAt(ctx.gpu, ctx.cpu || null, m.s.w, m.s.h, (ctx.uses && ctx.uses.comp > (ctx.uses.aaa || 0)) ? 'esports' : 'aaa', 'quality', 'off');
     if (f.base < 60) { score -= 8; why.push({ k: 'gpuShort', fps: f.base, res }); } else why.push({ k: 'gpuFps', fps: f.base, hz: m.s.hz, res });
   }
   if (ctx.dist) {
@@ -360,6 +414,10 @@ export function scoreProduct(it, prefs = {}, ctx = {}) {
   if (eco && eco !== 'none' && (ctx.eco || []).includes(eco)) { score += 5; why.push({ k: 'eco', eco }); }
   if (ctx.type && it.s && it.s.type && it.s.type !== ctx.type) score -= 45;          // the other style sinks to the bottom
   if (ctx.os && it.s && it.s.os && ctx.os !== 'any' && it.s.os !== ctx.os) score -= 45;
+  /* an Apple Watch needs an iPhone; Wear OS watches need Android */
+  const own = ctx.eco || [], hasApple = own.includes('apple'), hasAndroid = own.some(e => ['samsung', 'google'].includes(e));
+  if (it.s && it.s.needs === 'iphone' && hasAndroid && !hasApple) { score -= 40; why.push({ k: 'needsIphone' }); }
+  if (it.s && it.s.needs === 'android' && hasApple && !hasAndroid) { score -= 40; why.push({ k: 'needsAndroid' }); }
   const p = price(it, mk); if (ctx.budget && p > ctx.budget) { score -= 15; why.push({ k: 'over', by: p - ctx.budget }); }
   return { score: Math.round(clamp(score, 0, 100)), price: p, why };
 }

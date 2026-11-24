@@ -13,7 +13,7 @@ E.setData(CAT, MKT, PRE);
 const D = s => new Date(s + 'T12:00:00Z');
 
 test('catalogue: unique ids, one item per line, prices, specs, known sources and categories', () => {
-  const ids = new Set(), cats = new Set(['gpu', 'cpu', 'board', 'ram', 'ssd', 'psu', 'cooler', 'case', 'monitor', 'tv', 'soundbar', 'phone', 'headphones', 'laptop', 'tablet']);
+  const ids = new Set(), cats = new Set(['gpu', 'cpu', 'board', 'ram', 'ssd', 'psu', 'cooler', 'case', 'monitor', 'tv', 'soundbar', 'phone', 'headphones', 'laptop', 'tablet', 'projector', 'watch', 'console']);
   for (const it of CAT.items) {
     assert.ok(!ids.has(it.id), 'duplicate ' + it.id); ids.add(it.id);
     assert.ok(cats.has(it.cat), it.id + ' category');
@@ -33,7 +33,7 @@ test('catalogue: unique ids, one item per line, prices, specs, known sources and
 test('France: own price when given, else the German one adjusted for VAT and marked as derived', () => {
   const g = E.byId('gpu-rtx5080'), p = E.priceOf(g, 'FR');
   assert.ok(p.derived); assert.ok(p.v > 1800 && p.v < 1900);
-  const tv = E.byId('tv-lg-c6'); assert.deepEqual(E.sizesOf(tv, 'DE'), [48, 55, 65, 77]); assert.equal(E.price(tv, 'DE', 65), 2299);
+  const tv = E.byId('tv-lg-c6'); assert.deepEqual(E.sizesOf(tv, 'DE'), [42, 48, 55, 65, 77, 83]); assert.equal(E.price(tv, 'DE', 65), 2299);
 });
 
 test('builder: the owner\'s case, an RTX 5080 4K PC for €3,500, is balanced and passes every check', () => {
@@ -112,15 +112,49 @@ test('TVs: the size follows the seat distance and the budget', () => {
 });
 
 test('size filters: monitors and TVs only in the chosen sizes, with the right size picked', () => {
-  assert.deepEqual(E.sizeOptions('monitor'), [27, 32, 34, 45, 49]);
-  assert.deepEqual(E.sizeOptions('tv'), [48, 55, 65, 75, 77, 85]);
-  const g6 = E.byId('tv-lg-g6'), c6 = E.byId('tv-lg-c6');
-  assert.ok(E.tvScore(g6, { sizes: [48], market: 'DE' }).excluded, 'the G6 is not sold in 48"');
+  const ms = E.sizeOptions('monitor'), ts = E.sizeOptions('tv');
+  assert.ok(ms.length >= 14 && ms[0] <= 24 && ms.includes(57) && ms.includes(55) && ms.includes(43), 'monitors from 24" to 57": ' + ms);
+  assert.ok(ts.includes(42) && ts.includes(98) && ts.includes(100) && ts.includes(115), 'TVs from 42" to 115": ' + ts);
+  const g5 = E.byId('tv-lg-g5'), c6 = E.byId('tv-lg-c6');
+  assert.ok(E.tvScore(g5, { sizes: [48], market: 'DE' }).excluded, 'the G5 is not sold in 48"');
   const r = E.tvScore(c6, { sizes: [55, 65], dist: 300, budget: 5000, market: 'DE' });
   assert.equal(r.size, 65); assert.ok(!r.why.some(w => w.k === 'small'), 'no "too small" note when the person chose the sizes');
-  assert.equal(E.tvScore(c6, { sizes: [], dist: 300, budget: 5000, market: 'DE' }).size, 77);
+  assert.equal(E.tvScore(c6, { sizes: [], dist: 300, budget: 5000, market: 'DE' }).size, 83, 'about 78" wanted at 3 m: 83" is the next size up within reach');
   const [lo, hi] = E.monSizesFor(75); assert.ok(lo < 27 && hi >= 32 && hi < 45);
   assert.equal(E.resOf(5120), '4k'); assert.equal(E.signal(E.byId('mon-g95sd'), E.byId('gpu-rtx5080')).mode, 'dsc');
+});
+
+test('breadth and filters: every size, resolution class and the big screens, filtered as asked', () => {
+  const n = c => E.items(c).length;
+  assert.ok(n('monitor') >= 70 && n('tv') >= 25 && n('phone') >= 25 && n('headphones') >= 20 && n('soundbar') >= 20 && n('laptop') >= 20, 'a broad catalogue');
+  for (const c of ['projector', 'watch', 'console']) assert.ok(n(c) >= 6, c);
+  assert.ok(E.byId('mon-g95nc') && E.byId('mon-ark2'), 'the 57" Neo G9 and the 55" Ark are listed');
+  assert.equal(E.resClass(7680, 2160), 'duhd'); assert.equal(E.resClass(5120, 1440), 'suw1440'); assert.equal(E.resClass(3440, 1440), 'uw1440'); assert.equal(E.resClass(5120, 2160), '5k2k'); assert.equal(E.resClass(6016, 3384), '5k6k'); assert.equal(E.resClass(3840, 1600), 'uw1600');
+  for (const c of E.RES_CLASSES) assert.ok(E.items('monitor').some(m => E.resClass(m.s.w, m.s.h) === c), 'a monitor in ' + c);
+  const big = E.items('monitor').filter(m => E.screenFilter(m, { sizes: [55, 57], res: ['4k', 'duhd'] }));
+  assert.deepEqual(big.map(m => m.id).sort(), ['mon-558m1ry', 'mon-ark2', 'mon-g95nc', 'mon-z57']);
+  assert.ok(E.items('monitor').filter(m => E.screenFilter(m, { panels: ['oled'], hzMin: 240, shape: 'curved' })).every(m => /oled/.test(m.s.panel) && m.s.hz >= 240 && m.s.curved));
+  const tvm = E.tvMonitors(); assert.ok(tvm.length > 20 && tvm.every(m => m.s.size >= 42 && m.s.size <= 65 && m.s.hz >= 120));
+  const c5 = E.byId('tv-lg-c5@48'); assert.equal(c5.cat, 'monitor'); assert.equal(E.signal(c5, E.byId('gpu-rtx5080')).via, 'HDMI');
+  assert.equal(E.byId('tv-tcl-q6c@65'), null, 'a 60 Hz TV is not offered as a monitor');
+});
+
+test('graphics needs: frames follow the real pixel count, and each monitor names the card it needs', () => {
+  const g = E.byId('gpu-rtx5080'), c = E.byId('cpu-9800x3d');
+  const uhd = E.fpsAt(g, c, 3840, 2160, 'aaa', 'quality').base, duhd = E.fpsAt(g, c, 7680, 2160, 'aaa', 'quality').base, uw = E.fpsAt(g, c, 3440, 1440, 'aaa', 'quality').base;
+  assert.ok(duhd < uhd * 0.62 && duhd > uhd * 0.5, 'the 57-inch has twice the pixels of 4K'); assert.ok(uw > uhd);
+  assert.equal(E.gpuNeed(E.byId('mon-g95nc'), c, 90), null, 'nothing reaches 90 fps at 7680×2160');
+  const need4k = E.gpuNeed(E.byId('mon-321urx'), c, 90), need1440 = E.gpuNeed(E.byId('mon-27gs95qe'), c, 90);
+  assert.ok(E.price(need4k, 'DE') > E.price(need1440, 'DE'), '4K needs a dearer card than 1440p');
+  assert.equal(E.signal(E.byId('mon-g95nc'), E.byId('gpu-rx9070xt')).mode, 'dsc', 'UHBR13.5 carries 7680×2160 at 240 Hz with DSC');
+  assert.equal(E.signal(E.byId('mon-g95nc'), { s: { dp: 'dp14' } }).mode, 'no', 'a DisplayPort 1.4 card cannot (120 Hz at most)');
+});
+
+test('watches need the right phone', () => {
+  const aw = E.byId('wa-aws11'), gw = E.byId('wa-gw8');
+  assert.ok(E.scoreProduct(aw, {}, { eco: ['samsung'] }).why.some(w => w.k === 'needsIphone'));
+  assert.ok(E.scoreProduct(gw, {}, { eco: ['apple'] }).why.some(w => w.k === 'needsAndroid'));
+  assert.equal(E.scoreProduct(E.byId('wa-fenix8'), {}, { eco: ['apple'] }).why.length, 0);
 });
 
 test('offers: a pasted spec list is read and scored; cut corners are flagged', () => {
@@ -176,7 +210,7 @@ test('afford: months of free cash and the safety net level', () => {
 
 test('product scoring: what matters, budget and ecosystem', () => {
   const cam = E.items('phone').map(it => ({ id: it.id, s: E.scoreProduct(it, { camera: 3, battery: 1, perf: 0, display: 0, longevity: 0, value: 0 }, { budget: 2000, market: 'DE' }).score })).sort((a, b) => b.s - a.s);
-  assert.equal(cam[0].id, 'ph-s26ultra');
+  assert.equal(E.byId(cam[0].id).r.camera, 10, 'a top camera phone first');
   const withApple = E.scoreProduct(E.byId('hp-airpodspro3'), {}, { eco: ['apple'], market: 'DE' }).score, without = E.scoreProduct(E.byId('hp-airpodspro3'), {}, { market: 'DE' }).score;
   assert.equal(withApple - without, 5);
   assert.ok(E.scoreProduct(E.byId('hp-xm6'), {}, { type: 'in', market: 'DE' }).score < 50, 'over-ear filtered down when in-ear is asked');
@@ -201,9 +235,9 @@ test('texts: every key the screens use exists in English and French, with the sa
     use_: Object.keys(E.USES), p_: E.PARTS, res_: ['4k', '1440', '1080'], k_: ['aaa', 'rt', 'pt', 'esports'], bal_: ['good', 'cpuSlight', 'cpuLimits', 'cpuOverkill'],
     v_: ['buy', 'wait', 'watch', 'a_easy', 'a_ok', 'a_stretch', 'a_heavy', 'a_no'], aff_: ['easy', 'ok', 'stretch', 'heavy', 'no'], lv_: ['basic', 'good', 'vgood', 'excellent', 'below'],
     f_: ['psuLow', 'psuUnknown', 'ramSmall', 'ramSingle', 'ramSlow', 'ssdSmall', 'qlc', 'boardLow', 'cpuLimits'], ov_: ['good', 'fair', 'high'], m_: ['gpu', 'cpu', 'price'],
-    r_: ['burnHigh', 'burnMed', 'sigNo', 'sigDsc', 'sigNative', 'gpuShort', 'gpuFps', 'soft', 'retina', 'sharp', 'wide', 'over', 'small', 'hdmiFew', 'eco', 'target', 'saleNow', 'saleSoon', 'launchSoon', 'shortage', 'pricey', 'calm'],
+    r_: ['needsIphone', 'needsAndroid', 'burnHigh', 'burnMed', 'sigNo', 'sigDsc', 'sigNative', 'gpuShort', 'gpuFps', 'soft', 'retina', 'sharp', 'wide', 'over', 'small', 'hdmiFew', 'eco', 'target', 'saleNow', 'saleSoon', 'launchSoon', 'shortage', 'pricey', 'calm'],
     sale_: MKT.sales.map(s => s.id), cat_: [...new Set([...CAT.items.map(i => i.cat), ...Object.keys(MKT.pressure), 'pc', 'other'])], pl_: ['calm', 'firm', 'high', 'shortage'],
-    panel_: [...new Set(E.items('monitor').concat(E.items('tv')).map(i => i.s.panel))], sig_: ['native', 'dsc', 'no'], burn_: ['none', 'low', 'medium', 'high'],
+    panel_: [...new Set(E.items('monitor').concat(E.items('tv')).map(i => i.s.panel))], rc_: E.RES_CLASSES, pg_: ['oled', 'miniled', 'ips', 'va', 'tn', 'led'], ty_: [...new Set(['headphones', 'console', 'projector'].flatMap(c => E.items(c).map(i => i.s.type)))], sb_: ['compact', 'standard', 'large', 'fold', 'l13', 'l15', 'l17', 'tmini', 't11', 't12'], sig_: ['native', 'dsc', 'no'], burn_: ['none', 'low', 'medium', 'high'],
     cr_: [...new Set(Object.values(E.CRIT).flat())], eco_: ['apple', 'samsung', 'google', 'sonos', 'sony', 'lg', 'bose'], mu_: ['aaa', 'comp', 'work', 'movies', 'creative'], tu_: ['movies', 'sport', 'gaming', 'tv'],
     mk_: ['DE', 'FR'], rights_: ['DE', 'FR'], t_: ['display', 'audio', 'laptop', 'deal'], ocr_: ['prep', 'read'], w_: ['presume', 'legal', 'maker', 'none'], up_: ['quality', 'balanced', 'performance']
   };
