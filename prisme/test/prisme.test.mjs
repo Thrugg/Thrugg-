@@ -21,6 +21,7 @@ test('catalogue: unique ids, one item per line, prices, specs, known sources and
     const sz = E.sizesOf(it, 'DE')[0]; assert.ok(E.price(it, 'DE', sz) > 0 && E.price(it, 'FR', sz) > 0, it.id + ' price');
     assert.match(it.pd, /^\d{4}-\d{2}$/, it.id); assert.ok(['H', 'M', 'L'].includes(it.conf), it.id);
     for (const k of it.src) assert.ok(MKT.sources[k], `${it.id}: unknown source ${k}`);
+    if (it.cat === 'monitor') assert.ok(it.s.size > 0 && it.s.w > 0 && it.s.h > 0 && it.s.hz > 0, it.id + ' size and mode');
     if (E.CRIT[it.cat]) for (const k of E.CRIT[it.cat]) assert.ok(it.r[k] >= 1 && it.r[k] <= 10, `${it.id}.r.${k}`);
   }
   const lines = rd('data/catalog.json').split('\n').filter(l => l.startsWith('{"id"'));
@@ -108,6 +109,18 @@ test('TVs: the size follows the seat distance and the budget', () => {
   assert.equal(r.size, 77);
   const r2 = E.tvScore(E.byId('tv-lg-c6'), { dist: 300, budget: 2400, market: 'DE', uses: { movies: 3 } });
   assert.equal(r2.size, 65); assert.ok(r2.why.some(w => w.k === 'small'));
+});
+
+test('size filters: monitors and TVs only in the chosen sizes, with the right size picked', () => {
+  assert.deepEqual(E.sizeOptions('monitor'), [27, 32, 34, 45, 49]);
+  assert.deepEqual(E.sizeOptions('tv'), [48, 55, 65, 75, 77, 85]);
+  const g6 = E.byId('tv-lg-g6'), c6 = E.byId('tv-lg-c6');
+  assert.ok(E.tvScore(g6, { sizes: [48], market: 'DE' }).excluded, 'the G6 is not sold in 48"');
+  const r = E.tvScore(c6, { sizes: [55, 65], dist: 300, budget: 5000, market: 'DE' });
+  assert.equal(r.size, 65); assert.ok(!r.why.some(w => w.k === 'small'), 'no "too small" note when the person chose the sizes');
+  assert.equal(E.tvScore(c6, { sizes: [], dist: 300, budget: 5000, market: 'DE' }).size, 77);
+  const [lo, hi] = E.monSizesFor(75); assert.ok(lo < 27 && hi >= 32 && hi < 45);
+  assert.equal(E.resOf(5120), '4k'); assert.equal(E.signal(E.byId('mon-g95sd'), E.byId('gpu-rtx5080')).mode, 'dsc');
 });
 
 test('offers: a pasted spec list is read and scored; cut corners are flagged', () => {

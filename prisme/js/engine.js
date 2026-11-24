@@ -323,16 +323,27 @@ export function monitorScore(m, ctx = {}) {
 }
 /* TV size for a seat distance: about 32° of view, between SMPTE's 30° for mixed viewing and THX's 40° for films. */
 export function tvSizeFor(distCm, fov = 32) { const wIn = 2 * (distCm / 2.54) * Math.tan(fov / 2 * Math.PI / 180); return Math.round(wIn / 0.8716); }
+/* Monitor sizes that sit comfortably at a desk distance: 30° to 55° of view (wider means turning your head). */
+export const monSizesFor = distCm => [tvSizeFor(distCm, 30), tvSizeFor(distCm, 55)];
+/* Every size the catalogue offers in a category (monitors by their size, TVs by the sizes they are sold in). */
+export function sizeOptions(cat, mk = 'DE') {
+  const s = new Set();
+  for (const it of items(cat)) { if (cat === 'tv') sizesOf(it, mk).forEach(x => s.add(x)); else if (it.s && it.s.size) s.add(Number(it.s.size)); }
+  return [...s].sort((a, b) => a - b);
+}
 const TV_W = { movies: { picture: 3, bright: 0.5 }, sport: { motion: 3, bright: 1 }, gaming: { gaming: 3 }, tv: { bright: 1, value: 1 } };
 export function tvScore(tv, ctx = {}) {
   const W = { value: 1 }, mk = ctx.market || 'DE', why = [];
   for (const [u, lvl] of Object.entries(ctx.uses || { movies: 2 })) for (const [k, w] of Object.entries(TV_W[u] || {})) W[k] = (W[k] || 0) + w * num(lvl);
   if (ctx.room === 'bright') W.bright = (W.bright || 0) + 3;
   let score = wAvg(tv.r, W) * 10;
-  const want = ctx.dist ? tvSizeFor(ctx.dist) : 65, sizes = sizesOf(tv, mk);
+  /* the sizes the person allows (none chosen = every size); a TV sold in none of them drops out of the list */
+  const pick = Array.isArray(ctx.sizes) && ctx.sizes.length ? ctx.sizes.map(Number) : null;
+  const want = ctx.dist ? tvSizeFor(ctx.dist) : 65, sizes = sizesOf(tv, mk).filter(s => !pick || pick.includes(s));
+  if (!sizes.length) return { score: null, excluded: true, size: null, want, price: 0, why: [] };
   let size = sizes.filter(s => s <= want + 6 && (!ctx.budget || price(tv, mk, s) <= ctx.budget)).pop();
   if (size == null) { size = sizes[0]; if (ctx.budget && price(tv, mk, size) > ctx.budget) { score -= 15; why.push({ k: 'over', by: price(tv, mk, size) - ctx.budget }); } }
-  if (size != null && size < want - 12) { score -= 5; why.push({ k: 'small', want }); }
+  if (size != null && size < want - 12 && !pick) { score -= 5; why.push({ k: 'small', want }); }
   if (tv.s.panel !== 'miniled' && num(ctx.staticH) >= 5) { score -= 5; why.push({ k: 'burnMed' }); }
   if (ctx.uses && ctx.uses.gaming >= 2 && num(tv.s.hdmi21) < 3) why.push({ k: 'hdmiFew', n: tv.s.hdmi21 });
   return { score: Math.round(clamp(score, 0, 100)), size, want, price: size != null ? price(tv, mk, size) : 0, why };

@@ -111,6 +111,7 @@
     "toms-prebuilt": "https://www.tomshardware.com/desktops/gaming-pcs/hp-takes-usd2200-off-a-ryzen-7-9800x3d-and-rtx-5080-prebuilt-at-usd2-799-sale-slashes-44-percent-off-an-omen-system-thats-ready-to-game-however-you-want"
   },
   "changelog": [
+    { "date": "2026-11-24", "summary": "Size filters for monitors and TVs; added 34\" and 49\" ultrawide, 45\" 5K2K and a 27\" 480 Hz monitor (estimated prices until the weekly refresh)." },
     { "date": "2026-11-23", "summary": "First catalogue: 113 products; graphics card, memory and processor prices checked against November reports, the rest estimates for the weekly refresh." }
   ]
 }
