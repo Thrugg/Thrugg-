@@ -6,7 +6,7 @@ import { t, LANGS } from './i18n.js';
 import { readImage } from './ocr.js';
 
 let NEWS = { items: [], at: null };
-const ui = { session: null, busy: '', ocr: '' };
+const ui = { session: null, busy: '', ocr: '', all: '' };
 export const setNews = n => { NEWS = n || NEWS; };
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -24,7 +24,7 @@ function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList
 const chips = (path, opts, cur) => `<div class="chips" role="group">${opts.map(([v, l]) => `<button class="chip${String(cur) === String(v) ? ' on' : ''}" data-act="set" data-k="${path}" data-v="${esc(v)}" aria-pressed="${String(cur) === String(v)}">${esc(l)}</button>`).join('')}</div>`;
 const seg = (path, opts, cur) => `<div class="seg" role="tablist">${opts.map(([v, l]) => `<button role="tab" class="${cur === v ? 'on' : ''}" data-act="ui" data-k="${path}" data-v="${v}" aria-selected="${cur === v}">${esc(l)}</button>`).join('')}</div>`;
 const field = (label, inner, hint) => `<label class="field"><span class="fl">${esc(label)}</span>${inner}${hint ? `<small>${esc(hint)}</small>` : ''}</label>`;
-const numIn = (path, unit, step = 1, min = 0) => `<span class="box"><input type="number" inputmode="decimal" min="${min}" step="${step}" data-set="${path}" data-type="num" value="${esc(get(S, path) ?? '')}">${unit ? `<span class="unit">${esc(unit)}</span>` : ''}</span>`;
+const numIn = (path, unit, step = 1, min = 0) => `<span class="box"><input type="number" inputmode="decimal" min="${min}" step="${step}" data-set="${path}" data-type="num" value="${esc(/budget$/.test(path) && !get(S, path) ? '' : get(S, path) ?? '')}">${unit ? `<span class="unit">${esc(unit)}</span>` : ''}</span>`;
 const sel = (path, opts, cur) => `<span class="box"><select data-set="${path}">${opts.map(([v, l]) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></span>`;
 const level = (path, label) => { const v = Number(get(S, path)) || 0; return `<div class="lvl"><span>${esc(label)}</span><div class="dots">${[0, 1, 2, 3].map(i => `<button class="dot${i <= v && v > 0 && i > 0 ? ' on' : ''}${i === 0 ? ' zero' : ''}" data-act="set" data-k="${path}" data-v="${i}" aria-label="${esc(label)} ${i}">${i === 0 ? '–' : ''}</button>`).join('')}</div></div>`; };
 const ring = (v, size = 54) => { const r = size / 2 - 5, c = 2 * Math.PI * r, f = Math.max(0, Math.min(100, v)) / 100; const col = v >= 75 ? 'var(--good)' : v >= 55 ? 'var(--ok)' : 'var(--bad)'; return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-label="${v}/100"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="5"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c * f} ${c}" transform="rotate(-90 ${size / 2} ${size / 2})"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle">${v}</text></svg>`; };
@@ -122,13 +122,16 @@ function specLine(it) {
     case 'psu': return `${s.w} W · ${s.eff}${s.atx31 ? ' · ATX 3.1' : ''}${s.native ? ' · 12V-2x6' : ''}${s.form === 'sfx' ? ' · SFX' : ''}`;
     case 'cooler': return s.type === 'aio' ? `AIO ${s.rad} mm · ${s.cap} W` : `${s.h} mm · ${s.cap} W`;
     case 'case': return `GPU ≤ ${s.gpuMax} mm · ${t('cooler')} ≤ ${s.coolerMax} mm · ${s.vol} L`;
-    case 'monitor': return `${s.size}" ${s.w / s.h > 2.1 ? `${s.w}×${s.h}` : s.w >= 3800 ? '4K' : s.w >= 2500 ? '1440p' : '1080p'} ${s.hz} Hz · ${t('panel_' + s.panel)} · ${s.dp === 'dp14' ? 'DP 1.4' : 'DP 2.1 ' + s.dp.toUpperCase()}${s.dual ? ' · ' + s.dual : ''}`;
+    case 'monitor': return `${s.size}" ${s.w / s.h > 2.1 ? `${s.w}×${s.h}` : s.w >= 3800 ? '4K' : s.w >= 2500 ? '1440p' : '1080p'} ${s.hz} Hz · ${t('panel_' + s.panel)} · ${s.dp === 'none' ? t('hdmiOnly') : s.dp === 'dp14' ? 'DP 1.4' : 'DP 2.1 ' + s.dp.toUpperCase()}${s.dual ? ' · ' + s.dual : ''}`;
     case 'tv': return `${t('panel_' + s.panel)} · ${s.hz} Hz · ${s.hdmi21}× HDMI 2.1${s.dv ? ' · Dolby Vision' : ''} · ${s.os}`;
     case 'soundbar': return `${s.ch}${s.sub ? ' · ' + t('withSub') : ''}${s.rears ? ' · ' + t('withRears') : ''}`;
-    case 'phone': return `${s.os} · ${s.screen}" · ${t('updYears', { n: s.upd })}`;
-    case 'headphones': return s.type === 'over' ? t('overEar') : t('inEar');
+    case 'phone': return `${s.os} · ${s.screen}"${s.fold ? ' · ' + t('sb_fold') : ''} · ${t('updYears', { n: s.upd })}`;
+    case 'headphones': return t('ty_' + s.type);
     case 'laptop': return `${s.os} · ${s.gpu} · ${s.screen}" · ${s.kg} kg`;
     case 'tablet': return `${s.os} · ${s.screen}"`;
+    case 'projector': return `${t('ty_' + s.type)} · ${n0(s.lumens)} lm · ${s.res} · ${t('upTo', { n: s.maxIn })}`;
+    case 'watch': return `${s.os}${s.needs === 'iphone' ? ' · ' + t('needsIphoneShort') : s.needs === 'android' ? ' · ' + t('needsAndroidShort') : ''}`;
+    case 'console': return t('ty_' + s.type);
     default: return '';
   }
 }
@@ -193,45 +196,81 @@ function saleBanner() { const s = E.nextSale(today(), mk()); return s && (s.ongo
 function viewScreens() {
   return `${saleBanner()}${seg('screen', [['monitor', t('sMonitor')], ['tv', t('sTv')], ['calc', t('sCalc')]], S.ui.screen)}${S.ui.screen === 'monitor' ? viewMonitor() : S.ui.screen === 'tv' ? viewTv() : viewCalc()}`;
 }
-function viewMonitor() {
-  const M = S.mon, { gpu, cpu } = screenGpu();
-  const ctx = { uses: M.uses, staticH: M.staticH, room: M.room, dist: M.dist, gpu, cpu, budget: M.budget, market: mk() };
-  const want = sizesOf(M), list = E.items('monitor').filter(m => !want.length || !m.s.size || want.includes(Number(m.s.size))).map(m => ({ m, r: E.monitorScore(m, ctx) })).sort((a, b) => b.r.score - a.r.score);
-  const [lo, hi] = E.monSizesFor(M.dist || 75);
-  return `${sizeCard('mon', 'monitor', want, t('monSizeHint', { d: M.dist || 75, a: lo, b: hi }))}
-  <section class="card"><h2>${esc(t('monUses'))}</h2>
-   ${['aaa', 'comp', 'work', 'movies', 'creative'].map(k => level('mon.uses.' + k, t('mu_' + k))).join('')}
-   <div class="grid2">${field(t('budget'), numIn('mon.budget', '€', 50))}${field(t('distance'), numIn('mon.dist', 'cm', 5))}
-   ${field(t('staticH'), numIn('mon.staticH', 'h', 0.5), t('staticHint'))}${field(t('room'), sel('mon.room', [['dark', t('roomDark')], ['mixed', t('roomMixed')], ['bright', t('roomBright')]], M.room))}
-   ${field(t('gpuFor'), sel('mon.gpuFrom', [['build', t('fromBuild')], ['none', t('noGpu')], ...E.items('gpu').map(g => [g.id, g.name])], M.gpuFrom))}</div></section>
-  <section class="card"><h2>${esc(want.length ? t('rankedSizes', { s: want.map(x => x + '"').join(', ') }) : t('ranked'))}</h2>${list.length ? `<ul class="prods">${list.map(({ m, r }, i) => prodRow(m, r, i, specLine(m))).join('')}</ul>` : `<p class="note">${esc(t('noSize'))}</p>`}
-   <button class="btn" data-act="lookup" data-cat="monitor"${ui.busy === 'lookup' ? ' disabled' : ''}>${esc(t('notListed'))}</button></section>`;
+/* ---------- filters shared by the screen and choose lists ---------- */
+const arr = (o, k) => Array.isArray(o && o[k]) ? o[k] : [];
+const fmtSize = s => (Number.isInteger(Number(s)) ? Number(s) : Number(s).toFixed(1)) + '"';
+/* multi-choice chips: "All" clears the list, every other chip toggles its value in it */
+const toggles = (path, opts, cur, allLabel) => `<div class="chips" role="group"><button class="chip${cur.length ? '' : ' on'}" data-act="toggle" data-k="${path}" data-v="" aria-pressed="${!cur.length}">${esc(allLabel || t('all'))}</button>${opts.map(([v, l]) => { const on = cur.map(String).includes(String(v)); return `<button class="chip${on ? ' on' : ''}" data-act="toggle" data-k="${path}" data-v="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
+const fgroup = (label, inner) => `<div class="fg"><span class="fl">${esc(label)}</span>${inner}</div>`;
+const brandsOf = list => [...new Set(list.map(i => i.brand))].sort((a, b) => a.localeCompare(b)).map(b => [b, b]);
+const sortOpts = withSize => [['score', t('sortScore')], ['priceUp', t('sortPriceUp')], ['priceDown', t('sortPriceDown')], ...(withSize ? [['sizeDown', t('sortSizeDown')]] : [])];
+function sortRows(rows, how) {
+  const by = { score: (a, b) => b.r.score - a.r.score, priceUp: (a, b) => (a.price || 9e9) - (b.price || 9e9), priceDown: (a, b) => b.price - a.price, sizeDown: (a, b) => (b.size || 0) - (a.size || 0) || b.r.score - a.r.score };
+  return rows.sort(by[how] || by.score);
+}
+/* a ranked list with a count; the first 30 show, the rest behind "Show all" */
+function resultsCard(key, rows, render, lookupCat) {
+  const all = ui.all === key, shown = all ? rows : rows.slice(0, 30);
+  return `<section class="card"><h2>${esc(rows.length === 1 ? t('nMatch1') : t('nMatch', { n: rows.length }))}</h2>
+   ${rows.length ? `<ul class="prods">${shown.map(render).join('')}</ul>${rows.length > shown.length ? `<button class="btn" data-act="showAll" data-k="${key}">${esc(t('showAll', { n: rows.length }))}</button>` : ''}` : `<p class="note">${esc(t('noMatch'))}</p><button class="btn" data-act="clearF" data-k="${key}">${esc(t('clearF'))}</button>`}
+   <div class="row"><button class="btn" data-act="lookup" data-cat="${lookupCat}"${ui.busy === 'lookup' ? ' disabled' : ''}>${esc(t('notListed'))}</button></div></section>`;
 }
 /* sizes the person chose for a screen type; [] = any. An older single choice ("size": 32) still counts. */
 function sizesOf(o) { if (Array.isArray(o.sizes) && o.sizes.length) return o.sizes.map(Number); return o.size && o.size !== 'any' ? [Number(o.size)] : []; }
-function sizeCard(key, cat, picked, hint) {
-  const opts = E.sizeOptions(cat, mk());
-  return `<section class="card"><h2>${esc(t('sizesH'))}</h2><div class="chips" role="group"><button class="chip${picked.length ? '' : ' on'}" data-act="sizes" data-k="${key}" data-v="" aria-pressed="${!picked.length}">${esc(t('allSizes'))}</button>${opts.map(s => `<button class="chip${picked.includes(s) ? ' on' : ''}" data-act="sizes" data-k="${key}" data-v="${s}" aria-pressed="${picked.includes(s)}">${s}"</button>`).join('')}</div>
-   <p class="note">${esc(t('sizesSub'))} ${esc(hint)}</p></section>`;
+
+function viewMonitor() {
+  const M = S.mon, { gpu, cpu } = screenGpu();
+  const ctx = { uses: M.uses, staticH: M.staticH, room: M.room, dist: M.dist, gpu, cpu, budget: Number(M.budget) || 0, market: mk() };
+  const pool = [...E.items('monitor'), ...(M.withTv ? E.tvMonitors() : [])];
+  const f = { sizes: sizesOf(M), res: arr(M, 'res'), hzMin: Number(M.hzMin) || 0, panels: arr(M, 'panels'), brands: arr(M, 'brands'), shape: M.shape || 'any' };
+  let rows = pool.filter(m => E.screenFilter(m, f)).map(m => ({ it: m, r: E.monitorScore(m, ctx), size: m.s.size, price: E.price(m, mk()) }));
+  if (M.gpuOk && gpu) rows = rows.filter(x => E.fpsAt(gpu, cpu, x.it.s.w, x.it.s.h, 'aaa', 'quality').base >= 60);
+  rows = sortRows(rows, M.sort);
+  const sizes = [...new Set(pool.map(m => Number(m.s.size)))].sort((a, b) => a - b), classes = E.RES_CLASSES.filter(c => pool.some(m => E.resClass(m.s.w, m.s.h) === c));
+  const [lo, hi] = E.monSizesFor(M.dist || 75), nf = f.res.length + f.panels.length + f.brands.length + (f.hzMin ? 1 : 0) + (f.shape !== 'any' ? 1 : 0) + (M.gpuOk ? 1 : 0);
+  return `<section class="card"><h2>${esc(t('filtersH'))}</h2>
+   ${fgroup(t('sizesH'), toggles('mon.sizes', sizes.map(s => [s, fmtSize(s)]), f.sizes, t('allSizes')))}<p class="note">${esc(t('monSizeHint', { d: M.dist || 75, a: lo, b: hi }))}</p>
+   ${fgroup(t('resH'), toggles('mon.res', classes.map(c => [c, t('rc_' + c)]), f.res))}
+   ${fgroup(t('hzH'), chips('mon.hzMin', [[0, t('anyHz')], [120, '120+ Hz'], [144, '144+ Hz'], [240, '240+ Hz'], [360, '360+ Hz']], f.hzMin))}
+   ${fgroup(t('panelH'), toggles('mon.panels', ['oled', 'miniled', 'ips', 'va', 'tn'].map(p => [p, t('pg_' + p)]), f.panels))}
+   ${fgroup(t('shapeH'), chips('mon.shape', [['any', t('any')], ['flat', t('flat')], ['curved', t('curved')]], f.shape))}
+   ${fgroup(t('moreH'), chips('mon.withTv', [[false, t('monOnly')], [true, t('withTv')]], !!M.withTv) + (gpu ? chips('mon.gpuOk', [[false, t('anyCard')], [true, t('gpuOk', { g: gpu.name })]], !!M.gpuOk) : ''))}
+   <details class="more"${f.brands.length ? ' open' : ''}><summary>${esc(t('brandH'))}${f.brands.length ? ` (${f.brands.length})` : ''}</summary>${toggles('mon.brands', brandsOf(pool), f.brands)}</details>
+   <div class="grid2">${field(t('budgetOpt'), numIn('mon.budget', '€', 50))}${field(t('sortH'), sel('mon.sort', sortOpts(true), M.sort || 'score'))}</div>
+   ${nf || f.sizes.length ? `<button class="link" data-act="clearF" data-k="monitor">${esc(t('clearF'))}</button>` : ''}</section>
+  <details class="card uses"${S.ui.usesOpen ? ' open' : ''}><summary><h2>${esc(t('monUses'))}</h2></summary>
+   ${['aaa', 'comp', 'work', 'movies', 'creative'].map(k => level('mon.uses.' + k, t('mu_' + k))).join('')}
+   <div class="grid2">${field(t('distance'), numIn('mon.dist', 'cm', 5))}${field(t('staticH'), numIn('mon.staticH', 'h', 0.5), t('staticHint'))}
+   ${field(t('room'), sel('mon.room', [['dark', t('roomDark')], ['mixed', t('roomMixed')], ['bright', t('roomBright')]], M.room))}${field(t('gpuFor'), sel('mon.gpuFrom', [['build', t('fromBuild')], ['none', t('noGpu')], ...E.items('gpu').map(g => [g.id, g.name])], M.gpuFrom))}</div></details>
+  ${resultsCard('monitor', rows, (x, i) => { const need = E.gpuNeed(x.it, cpu, 90, mk()); return prodRow(x.it, x.r, i, `${specLine(x.it)} · ${need ? t('needLine', { g: need.name.replace(/GeForce |Radeon /, '') }) : t('needNoneShort')}`); }, 'monitor')}`;
 }
-/* other sizes a TV comes in within the choice, so the person sees the whole range they allowed */
-const tvSizesLine = (tv, picked) => { const s = E.sizesOf(tv, mk()).filter(x => !picked.length || picked.includes(x)); return s.length > 1 ? `${s.map(x => x + '"').join('/')} · ` : ''; };
 function prodRow(it, r, i, line, priceText) {
   const tm = E.timing(it, today(), mk()), lasting = tm.reasons.some(r => r.k === 'launchSoon' || r.k === 'shortage');   // the coming sale shows once, above the list
   return `<li data-act="detail" data-id="${it.id}"><div class="ot">${ring(r.score, 46)}<span class="nm"><b>${i + 1}. ${esc(full(it))}</b><small>${esc(line)}</small>${r.why && r.why.length ? `<small class="why">${r.why.slice(0, 3).map(w => esc(reasonText(w))).join(' · ')}</small>` : ''}</span><span class="pr">${priceText || eur(r.price)}${conf(it)}${tm.verdict !== 'buy' && lasting ? `<small class="tm ${tm.verdict}">${esc(t('v_' + tm.verdict))}</small>` : ''}</span></div></li>`;
 }
+/* other sizes a TV comes in within the choice, so the person sees the whole range they allowed */
+const tvSizesLine = (tv, picked) => { const s = E.sizesOf(tv, mk()).filter(x => !picked.length || picked.includes(x)); return s.length > 1 ? `${s.map(x => x + '"').join('/')} · ` : ''; };
 function viewTv() {
-  const T = S.tv, ctx = { uses: T.uses, staticH: T.staticH, room: T.room, dist: T.dist, budget: T.budget, market: mk() };
-  const picked = sizesOf(T); ctx.sizes = picked;
-  const list = E.items('tv').map(tv => ({ tv, r: E.tvScore(tv, ctx) })).filter(x => !x.r.excluded).sort((a, b) => b.r.score - a.r.score), want = E.tvSizeFor(T.dist);
-  return `${sizeCard('tv', 'tv', picked, t('tvWant', { s: want, d: T.dist }))}
-  <section class="card"><h2>${esc(t('tvUses'))}</h2>
+  const T = S.tv, picked = sizesOf(T), want = E.tvSizeFor(T.dist);
+  const ctx = { uses: T.uses, staticH: T.staticH, room: T.room, dist: T.dist, budget: Number(T.budget) || 0, market: mk(), sizes: picked };
+  const f = { panels: arr(T, 'panels'), brands: arr(T, 'brands'), hzMin: Number(T.hzMin) || 0 }, pool = E.items('tv');
+  let rows = pool.filter(tv => E.screenFilter(tv, f) && (!T.hdmiMin || tv.s.hdmi21 >= T.hdmiMin) && (!T.dv || tv.s.dv)).map(tv => { const r = E.tvScore(tv, ctx); return { it: tv, r, size: r.size, price: r.price }; }).filter(x => !x.r.excluded);
+  rows = sortRows(rows, T.sort);
+  const sizes = E.sizeOptions('tv', mk()), nf = f.panels.length + f.brands.length + (f.hzMin ? 1 : 0) + (T.hdmiMin ? 1 : 0) + (T.dv ? 1 : 0);
+  return `<section class="card"><h2>${esc(t('filtersH'))}</h2>
+   ${fgroup(t('sizesH'), toggles('tv.sizes', sizes.map(s => [s, fmtSize(s)]), picked, t('allSizes')))}<p class="note">${esc(t('tvWant', { s: want, d: T.dist }))}</p>
+   ${fgroup(t('panelH'), toggles('tv.panels', ['oled', 'miniled', 'led'].map(p => [p, t('pg_' + p)]), f.panels))}
+   ${fgroup(t('hzH'), chips('tv.hzMin', [[0, t('anyHz')], [120, '120+ Hz'], [144, '144+ Hz']], f.hzMin))}
+   ${fgroup(t('hdmiH'), chips('tv.hdmiMin', [[0, t('any')], [2, '2+'], [4, '4']], Number(T.hdmiMin) || 0))}
+   ${fgroup(t('dvH'), chips('tv.dv', [[false, t('any')], [true, t('dvReq')]], !!T.dv))}
+   <details class="more"${f.brands.length ? ' open' : ''}><summary>${esc(t('brandH'))}${f.brands.length ? ` (${f.brands.length})` : ''}</summary>${toggles('tv.brands', brandsOf(pool), f.brands)}</details>
+   <div class="grid2">${field(t('budgetOpt'), numIn('tv.budget', '€', 50))}${field(t('sortH'), sel('tv.sort', sortOpts(true), T.sort || 'score'))}</div>
+   ${nf || picked.length ? `<button class="link" data-act="clearF" data-k="tv">${esc(t('clearF'))}</button>` : ''}</section>
+  <details class="card uses"${S.ui.usesOpen ? ' open' : ''}><summary><h2>${esc(t('tvUses'))}</h2></summary>
    ${['movies', 'sport', 'gaming', 'tv'].map(k => level('tv.uses.' + k, t('tu_' + k))).join('')}
-   <div class="grid2">${field(t('budget'), numIn('tv.budget', '€', 50))}${field(t('seatDist'), numIn('tv.dist', 'cm', 10))}
-   ${field(t('room'), sel('tv.room', [['dark', t('roomDark')], ['mixed', t('roomMixed')], ['bright', t('roomBright')]], T.room))}${field(t('tickerH'), numIn('tv.staticH', 'h', 0.5), t('tickerHint'))}</div>
-   </section>
-  <section class="card"><h2>${esc(picked.length ? t('rankedSizes', { s: picked.map(x => x + '"').join(', ') }) : t('ranked'))}</h2>${list.length ? `<ul class="prods">${list.map(({ tv, r }, i) => prodRow(tv, r, i, `${r.size ? r.size + '" · ' : ''}${tvSizesLine(tv, picked)}${specLine(tv)}`, eur(r.price))).join('')}</ul>` : `<p class="note">${esc(t('noSize'))}</p>`}
-   <button class="btn" data-act="lookup" data-cat="tv"${ui.busy === 'lookup' ? ' disabled' : ''}>${esc(t('notListed'))}</button></section>`;
+   <div class="grid2">${field(t('seatDist'), numIn('tv.dist', 'cm', 10))}${field(t('room'), sel('tv.room', [['dark', t('roomDark')], ['mixed', t('roomMixed')], ['bright', t('roomBright')]], T.room))}
+   ${field(t('tickerH'), numIn('tv.staticH', 'h', 0.5), t('tickerHint'))}</div></details>
+  ${resultsCard('tv', rows, (x, i) => prodRow(x.it, x.r, i, `${x.r.size ? x.r.size + '" · ' : ''}${tvSizesLine(x.it, picked)}${specLine(x.it)}`, eur(x.r.price)), 'tv')}`;
 }
 function viewCalc() {
   const c = S.calc || (S.calc = { size: 32, res: '3840x2160', hz: 240, dist: 75 }), [w, h] = c.res.split('x').map(Number);
@@ -246,20 +285,34 @@ function viewCalc() {
 }
 
 /* ---------- CHOOSE ---------- */
-const CHOOSE = ['phone', 'headphones', 'soundbar', 'laptop', 'tablet'];
+const CHOOSE = ['phone', 'headphones', 'soundbar', 'laptop', 'tablet', 'watch', 'console', 'projector'];
+/* size bands, types and systems each category can be filtered by */
+const BANDS = {
+  phone: [['compact', it => it.s.screen <= 6.2 && !it.s.fold], ['standard', it => it.s.screen > 6.2 && it.s.screen < 6.7 && !it.s.fold], ['large', it => it.s.screen >= 6.7 && !it.s.fold], ['fold', it => !!it.s.fold]],
+  laptop: [['l13', it => it.s.screen <= 14.2], ['l15', it => it.s.screen > 14.2 && it.s.screen < 17], ['l17', it => it.s.screen >= 17]],
+  tablet: [['tmini', it => it.s.screen <= 9], ['t11', it => it.s.screen > 9 && it.s.screen < 12], ['t12', it => it.s.screen >= 12]]
+};
+const TYPES = { headphones: ['over', 'in', 'gaming'], console: ['home', 'handheld', 'hybrid'], projector: ['ust', 'standard', 'portable'] };
+const SYSTEMS = { phone: ['iOS', 'Android'], laptop: ['macOS', 'Windows'], tablet: ['iPadOS', 'Android', 'Windows'], watch: ['watchOS', 'Wear OS', 'Garmin', 'HarmonyOS', 'Withings'] };
 function viewChoose() {
-  const C = S.choose, cat = C.cat, crit = E.CRIT[cat], prefs = C.prefs[cat] || (C.prefs[cat] = Object.fromEntries(crit.map(k => [k, k === 'value' ? 1 : 2])));
-  const eco = E.ecosystems(S.gear), budget = C.budget[cat] || 1000;
-  const ctx = { budget, market: mk(), eco, type: cat === 'headphones' && C.type !== 'any' ? C.type : null, os: (cat === 'phone' || cat === 'laptop' || cat === 'tablet') ? C.os : null };
-  const list = E.items(cat).map(it => ({ it, r: E.scoreProduct(it, prefs, ctx) })).sort((a, b) => b.r.score - a.r.score);
-  const osOpts = cat === 'phone' ? [['any', t('any')], ['iOS', 'iPhone'], ['Android', 'Android']] : cat === 'laptop' ? [['any', t('any')], ['macOS', 'Mac'], ['Windows', 'Windows']] : [['any', t('any')], ['iPadOS', 'iPad'], ['Android', 'Android']];
+  const C = S.choose, cat = CHOOSE.includes(C.cat) ? C.cat : 'phone', crit = E.CRIT[cat], prefs = C.prefs[cat] || (C.prefs[cat] = Object.fromEntries(crit.map(k => [k, k === 'value' ? 1 : 2])));
+  const F = (C.f = C.f || {})[cat] || (C.f[cat] = {}), eco = E.ecosystems(S.gear), budget = Number((C.budget || {})[cat]) || 0, pool = E.items(cat);
+  const bands = arr(F, 'size'), types = arr(F, 'type'), systems = arr(F, 'os'), brands = arr(F, 'brands');
+  let rows = pool.filter(it => (!bands.length || (BANDS[cat] || []).some(([k, fn]) => bands.includes(k) && fn(it))) && (!types.length || types.includes(it.s.type)) && (!systems.length || systems.includes(it.s.os)) && (!brands.length || brands.includes(it.brand)))
+    .map(it => ({ it, r: E.scoreProduct(it, prefs, { budget, market: mk(), eco }), price: E.price(it, mk()), size: it.s.screen || it.s.maxIn || 0 }));
+  rows = sortRows(rows, F.sort || 'score');
+  const nf = bands.length + types.length + systems.length + brands.length;
   return `${saleBanner()}<div class="catbar">${CHOOSE.map(c => `<button class="chip${c === cat ? ' on' : ''}" data-act="set" data-k="choose.cat" data-v="${c}">${esc(t('cat_' + c))}</button>`).join('')}<button class="chip ghost" data-act="go" data-v="screens">${esc(t('cat_monitor'))} / TV →</button><button class="chip ghost" data-act="go" data-v="build">PC →</button></div>
-  <section class="card"><h2>${esc(t('whatMatters'))}</h2>${crit.map(k => level(`choose.prefs.${cat}.${k}`, t('cr_' + k))).join('')}
-   <div class="grid2">${field(t('budget'), `<span class="box"><input type="number" min="0" step="50" data-set="choose.budget.${cat}" data-type="num" value="${budget}"><span class="unit">€</span></span>`)}
-   ${cat === 'headphones' ? field(t('style'), sel('choose.type', [['any', t('any')], ['over', t('overEar')], ['in', t('inEar')]], C.type)) : cat !== 'soundbar' ? field(t('system'), sel('choose.os', osOpts, C.os)) : ''}</div>
-   ${eco.length ? `<p class="note">${esc(t('ecoNote', { e: eco.map(e => t('eco_' + e)).join(', ') }))}</p>` : ''}</section>
-  <section class="card"><h2>${esc(t('ranked'))}</h2><ul class="prods">${list.map(({ it, r }, i) => prodRow(it, r, i, specLine(it))).join('')}</ul>
-   <button class="btn" data-act="lookup" data-cat="${cat}"${ui.busy === 'lookup' ? ' disabled' : ''}>${esc(t('notListed'))}</button></section>`;
+  <section class="card"><h2>${esc(t('filtersH'))}</h2>
+   ${BANDS[cat] ? fgroup(t('sizeH'), toggles(`choose.f.${cat}.size`, BANDS[cat].map(([k]) => [k, t('sb_' + k)]), bands)) : ''}
+   ${TYPES[cat] ? fgroup(t('typeH'), toggles(`choose.f.${cat}.type`, TYPES[cat].map(k => [k, t('ty_' + k)]), types)) : ''}
+   ${SYSTEMS[cat] ? fgroup(t('system'), toggles(`choose.f.${cat}.os`, SYSTEMS[cat].map(k => [k, k]), systems)) : ''}
+   <details class="more"${brands.length ? ' open' : ''}><summary>${esc(t('brandH'))}${brands.length ? ` (${brands.length})` : ''}</summary>${toggles(`choose.f.${cat}.brands`, brandsOf(pool), brands)}</details>
+   <div class="grid2">${field(t('budgetOpt'), `<span class="box"><input type="number" min="0" step="50" data-set="choose.budget.${cat}" data-type="num" value="${budget || ''}"><span class="unit">€</span></span>`)}${field(t('sortH'), sel(`choose.f.${cat}.sort`, sortOpts(cat === 'phone' || cat === 'laptop' || cat === 'tablet' || cat === 'projector'), F.sort || 'score'))}</div>
+   ${nf ? `<button class="link" data-act="clearF" data-k="choose">${esc(t('clearF'))}</button>` : ''}</section>
+  <details class="card uses"${S.ui.usesOpen ? ' open' : ''}><summary><h2>${esc(t('whatMatters'))}</h2></summary>${crit.map(k => level(`choose.prefs.${cat}.${k}`, t('cr_' + k))).join('')}
+   ${eco.length ? `<p class="note">${esc(t('ecoNote', { e: eco.map(e => t('eco_' + e)).join(', ') }))}</p>` : ''}</details>
+  ${resultsCard('choose', rows, (x, i) => prodRow(x.it, x.r, i, specLine(x.it)), cat)}`;
 }
 function sheetDetail(id) {
   const it = E.byId(id); if (!it) return '';
@@ -267,9 +320,9 @@ function sheetDetail(id) {
   let extra = '';
   if (it.cat === 'monitor') {
     const { gpu, cpu } = screenGpu(), sig = E.signal(it, gpu), pp = E.ppi(it.s.size, it.s.w, it.s.h), d = E.ppd(pp, S.mon.dist), fv = E.fovH(it.s.size, it.s.w, it.s.h, S.mon.dist), br = E.burnRisk(it.s.panel, S.mon.staticH, it.s.bw);
-    const res = E.resOf(it.s.w), fq = gpu ? E.fps(gpu, cpu, res, 'aaa', 'quality', 'off') : null, f4 = gpu ? E.fps(gpu, cpu, res, 'aaa', 'quality', gpu.s.mfg ? 'x4' : 'x2') : null;
+    const fq = gpu ? E.fpsAt(gpu, cpu, it.s.w, it.s.h, 'aaa', 'quality', 'off') : null, f4 = gpu ? E.fpsAt(gpu, cpu, it.s.w, it.s.h, 'aaa', 'quality', gpu.s.mfg ? 'x4' : 'x2') : null, need = E.gpuNeed(it, cpu, 90, mk());
     extra = `<ul class="mini"><li><span>${esc(t('signal'))}</span><b>${esc(t('sig_' + sig.mode))} (${sig.need} / ${sig.link} Gbit/s, ${sig.via})</b></li><li><span>PPI · ${esc(t('ppd'))}</span><b>${Math.round(pp)} · ${Math.round(d)}</b></li><li><span>${esc(t('fov'))}</span><b>${Math.round(fv)}° ${esc(t('atDist', { d: S.mon.dist }))}</b></li>
-     ${gpu ? `<li><span>${esc(gpu.name)}</span><b>${esc(t('fpsAt', { a: fq.base, b: f4.shown, hz: it.s.hz }))}</b></li>` : ''}<li><span>${esc(t('burn'))}</span><b>${esc(t('burn_' + br.level))}${it.s.bw ? ' · ' + esc(t('burnCover', { y: it.s.bw })) : ''}</b></li></ul>
+     ${gpu ? `<li><span>${esc(gpu.name)}</span><b>${esc(t('fpsAt', { a: fq.base, b: f4.shown, hz: it.s.hz }))}</b></li>` : ''}<li><span>${esc(t('cardNeed'))}</span><b>${esc(need ? t('needFor', { f: 90, g: need.name }) : t('needNone', { f: 90 }))}</b></li><li><span>${esc(t('burn'))}</span><b>${esc(t('burn_' + br.level))}${it.s.bw ? ' · ' + esc(t('burnCover', { y: it.s.bw })) : ''}</b></li></ul>
      ${sig.mode === 'dsc' ? `<p class="note">${esc(t('dscNote'))}</p>` : ''}`;
   }
   const crit = E.CRIT[it.cat];
@@ -299,7 +352,7 @@ function viewMine() {
   <section class="card"><h2>${esc(t('rightsH'))}</h2><p class="note">${esc(t('rights_' + mk()))}</p></section>`;
 }
 function sheetGear(g) {
-  const cats = ['gpu', 'cpu', 'pc', 'monitor', 'tv', 'soundbar', 'phone', 'headphones', 'laptop', 'tablet', 'other'];
+  const cats = ['gpu', 'cpu', 'pc', 'monitor', 'tv', 'soundbar', 'phone', 'headphones', 'laptop', 'tablet', 'watch', 'console', 'projector', 'other'];
   const opts = E.items(g.cat === 'pc' ? 'none' : g.cat).map(i => [i.id, full(i)]);
   return `<h2>${esc(g._new ? t('addGear') : t('edit'))}</h2><form class="stack" data-form="gear" data-id="${g.id}">
    ${field(t('category'), `<span class="box"><select name="cat">${cats.map(c => `<option value="${c}"${g.cat === c ? ' selected' : ''}>${esc(t('cat_' + c))}</option>`).join('')}</select></span>`)}
@@ -437,6 +490,22 @@ export function init() {
     if (a === 'go') { S.ui.tab = el.dataset.v; saveUi(); render(); window.scrollTo(0, 0); }
     else if (a === 'ui') { S.ui[el.dataset.k] = el.dataset.v; saveUi(); render(); }
     else if (a === 'set') { setPath(el.dataset.k, el.dataset.v); save(); rerender(); }
+    else if (a === 'toggle') {
+      const path = el.dataset.k, v = el.dataset.v, num = /\.(sizes)$/.test(path), parent = get(S, path.split('.').slice(0, -1).join('.'));
+      let cur = /\.sizes$/.test(path) ? sizesOf(parent) : (get(S, path) || []).slice();
+      const val = num ? Number(v) : v;
+      cur = v === '' ? [] : cur.map(String).includes(String(val)) ? cur.filter(x => String(x) !== String(val)) : [...cur, val];
+      if (num) { cur.sort((x, y) => x - y); delete parent.size; }
+      put(S, path, cur); ui.all = ''; save(); render();
+    }
+    else if (a === 'showAll') { ui.all = el.dataset.k; render(); }
+    else if (a === 'clearF') {
+      const k = el.dataset.k;
+      if (k === 'monitor') Object.assign(S.mon, { sizes: [], res: [], hzMin: 0, panels: [], brands: [], shape: 'any', withTv: false, gpuOk: false }), delete S.mon.size;
+      else if (k === 'tv') Object.assign(S.tv, { sizes: [], panels: [], brands: [], hzMin: 0, hdmiMin: 0, dv: false });
+      else if (k === 'choose' && S.choose.f) S.choose.f[S.choose.cat] = { sort: (S.choose.f[S.choose.cat] || {}).sort || 'score' };
+      ui.all = ''; save(); render();
+    }
     else if (a === 'sizes') { const o = S[el.dataset.k], v = el.dataset.v; let cur = sizesOf(o); cur = v === '' ? [] : cur.includes(Number(v)) ? cur.filter(x => x !== Number(v)) : [...cur, Number(v)].sort((x, y) => x - y); o.sizes = cur; delete o.size; save(); render(); }
     else if (a === 'profile') { sheetFn = sheetProfile; openSheet(sheetProfile()); }
     else if (a === 'close') { sheetFn = null; closeSheet(); }
@@ -494,6 +563,7 @@ export function init() {
   document.addEventListener('input', e => { const el = e.target; if (el.name === 'catId' && el.form) { const it = E.byId(el.value); if (it) el.form.name.value = full(it); } if (el.name === 'cat' && el.form) { const g = { id: el.form.dataset.id, _new: true, cat: el.value, name: el.form.name.value, bought: el.form.bought.value, price: el.form.price.value, market: el.form.market.value }; openSheet(sheetGear(g)); } });
   $('#prof-btn').addEventListener('click', () => { sheetFn = sheetProfile; openSheet(sheetProfile()); });
   $('#sheet').addEventListener('close', () => { sheetFn = null; });
+  document.addEventListener('toggle', e => { if (e.target.matches && e.target.matches('details.uses')) { S.ui.usesOpen = e.target.open; saveUi(); } }, true);
   $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
   render(); refreshSession();
 }

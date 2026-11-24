@@ -204,3 +204,14 @@ dialog#sheet::backdrop { background: rgba(10, 11, 16, .45); }
 .grid2 > *, .field, .box { min-width: 0; }
 .box select { width: 100%; text-overflow: ellipsis; }
 .wrap { overflow-wrap: anywhere; }
+
+/* filters */
+.fg { margin-top: 12px; }
+.fg:first-of-type { margin-top: 4px; }
+.fg .chips { margin-top: 2px; }
+details.card.uses > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+details.card.uses > summary::-webkit-details-marker { display: none; }
+details.card.uses > summary h2 { margin: 0; }
+details.card.uses > summary::after { content: '+'; font: 600 20px var(--f-mono); color: var(--muted); }
+details.card.uses[open] > summary::after { content: '−'; }
+details.card.uses[open] > summary { margin-bottom: 8px; }

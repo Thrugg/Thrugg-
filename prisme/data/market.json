@@ -1,84 +1,463 @@
 {
   "asOf": "2026-11-23",
   "frFactor": 1.03,
-  "vat": { "DE": 19, "FR": 20 },
+  "vat": {
+    "DE": 19,
+    "FR": 20
+  },
   "warranty": {
-    "DE": { "legal": 24, "presume": 12, "returnDays": 14 },
-    "FR": { "legal": 24, "presume": 24, "presumeUsed": 12, "returnDays": 14 }
+    "DE": {
+      "legal": 24,
+      "presume": 12,
+      "returnDays": 14
+    },
+    "FR": {
+      "legal": 24,
+      "presume": 24,
+      "presumeUsed": 12,
+      "returnDays": 14
+    }
   },
   "windows": 120,
-  "assembly": { "lo": 0.06, "hi": 0.15 },
+  "assembly": {
+    "lo": 0.06,
+    "hi": 0.15
+  },
   "pressure": {
-    "gpu": { "level": 3, "since": "2026-01", "note": "Graphics cards sell 35-250 % above their launch prices since the 2026 memory shortage (RTX 5080 about €1,800 against €1,169 at launch; RX 9070 XT about €950 against €689).", "src": "pcgh-gpu" },
-    "ram": { "level": 3, "since": "2025-10", "note": "32 GB of DDR5-6000 CL30 costs €475-600 against about €114 in September 2025; retailers expect another rise in January.", "src": "pcgh-ram2" },
-    "ssd": { "level": 2, "since": "2026-03", "note": "Flash memory prices rose with DRAM; guide prices for drives are estimates until the weekly refresh confirms them.", "src": "" },
-    "cpu": { "level": 0, "since": "", "note": "Processors are at or below launch prices (Ryzen 7 9800X3D about €400-440 against €529).", "src": "pcgh-9800" },
-    "monitor": { "level": 0, "since": "", "note": "New 32-inch 4K QD-OLED monitors launched at €749-1,349 this autumn, pushing older models down.", "src": "tweakers-qd" },
-    "tv": { "level": 0, "since": "", "note": "2026 TVs are discounted for Black Friday; 2027 models arrive from March to May.", "src": "rtings-oled" },
-    "phone": { "level": 1, "since": "", "note": "Memory costs push new phones up slightly; last year's models drop when the new ones launch.", "src": "" },
-    "laptop": { "level": 1, "since": "", "note": "Memory-heavy configurations cost more than a year ago.", "src": "" },
-    "soundbar": { "level": 0, "since": "", "note": "", "src": "" },
-    "headphones": { "level": 0, "since": "", "note": "", "src": "" },
-    "tablet": { "level": 1, "since": "", "note": "", "src": "" },
-    "prebuilt": { "level": 1, "since": "", "note": "Big makers bought memory and graphics cards on long contracts: a ready-made PC can cost less than the same parts bought one by one while the shortage lasts.", "src": "toms-prebuilt" }
+    "gpu": {
+      "level": 3,
+      "since": "2026-01",
+      "note": "Graphics cards sell 35-250 % above their launch prices since the 2026 memory shortage (RTX 5080 about €1,800 against €1,169 at launch; RX 9070 XT about €950 against €689).",
+      "src": "pcgh-gpu"
+    },
+    "ram": {
+      "level": 3,
+      "since": "2025-10",
+      "note": "32 GB of DDR5-6000 CL30 costs €475-600 against about €114 in September 2025; retailers expect another rise in January.",
+      "src": "pcgh-ram2"
+    },
+    "ssd": {
+      "level": 2,
+      "since": "2026-03",
+      "note": "Flash memory prices rose with DRAM; guide prices for drives are estimates until the weekly refresh confirms them.",
+      "src": ""
+    },
+    "cpu": {
+      "level": 0,
+      "since": "",
+      "note": "Processors are at or below launch prices (Ryzen 7 9800X3D about €400-440 against €529).",
+      "src": "pcgh-9800"
+    },
+    "monitor": {
+      "level": 0,
+      "since": "",
+      "note": "New 32-inch 4K QD-OLED monitors launched at €749-1,349 this autumn, pushing older models down.",
+      "src": "tweakers-qd"
+    },
+    "tv": {
+      "level": 0,
+      "since": "",
+      "note": "2026 TVs are discounted for Black Friday; 2027 models arrive from March to May.",
+      "src": "rtings-oled"
+    },
+    "phone": {
+      "level": 1,
+      "since": "",
+      "note": "Memory costs push new phones up slightly; last year's models drop when the new ones launch.",
+      "src": ""
+    },
+    "laptop": {
+      "level": 1,
+      "since": "",
+      "note": "Memory-heavy configurations cost more than a year ago.",
+      "src": ""
+    },
+    "soundbar": {
+      "level": 0,
+      "since": "",
+      "note": "",
+      "src": ""
+    },
+    "headphones": {
+      "level": 0,
+      "since": "",
+      "note": "",
+      "src": ""
+    },
+    "tablet": {
+      "level": 1,
+      "since": "",
+      "note": "",
+      "src": ""
+    },
+    "prebuilt": {
+      "level": 1,
+      "since": "",
+      "note": "Big makers bought memory and graphics cards on long contracts: a ready-made PC can cost less than the same parts bought one by one while the shortage lasts.",
+      "src": "toms-prebuilt"
+    },
+    "projector": {
+      "level": 0,
+      "since": "",
+      "note": "",
+      "src": ""
+    },
+    "watch": {
+      "level": 0,
+      "since": "",
+      "note": "New watches launch in September (Apple, Garmin) and July (Samsung).",
+      "src": ""
+    },
+    "console": {
+      "level": 1,
+      "since": "",
+      "note": "Console prices rose in 2025 and stayed up.",
+      "src": ""
+    }
   },
   "cycles": {
-    "gpu": { "every": 24, "last": "2025-01", "next": "2027 (expected)", "note": "Each generation has come about two years after the last." },
-    "cpu": { "every": 18, "last": "2024-11", "next": "2027 (AMD Zen 6, expected)", "note": "AM5 boards are promised new processors until at least 2027." },
-    "monitor": { "every": 12, "last": "2026-01", "next": "CES, January", "note": "New panels are announced at CES in January and ship in spring." },
-    "tv": { "every": 12, "last": "2026-03", "next": "March to May", "note": "Last year's TV costs 25-40 % less within months of the new range." },
-    "phone": { "every": 12, "launch": { "Apple": 9, "Samsung": 2, "Google": 8, "OnePlus": 11, "Nothing": 7 }, "note": "Buying in the two months before the next model is the worst timing." },
-    "laptop": { "every": 12, "launch": { "Apple": 10 }, "note": "" },
-    "tablet": { "every": 18, "launch": { "Apple": 10, "Samsung": 9 }, "note": "" },
-    "soundbar": { "every": 24, "note": "" },
-    "headphones": { "every": 24, "launch": { "Sony": 5, "Apple": 9 }, "note": "" }
+    "gpu": {
+      "every": 24,
+      "last": "2025-01",
+      "next": "2027 (expected)",
+      "note": "Each generation has come about two years after the last."
+    },
+    "cpu": {
+      "every": 18,
+      "last": "2024-11",
+      "next": "2027 (AMD Zen 6, expected)",
+      "note": "AM5 boards are promised new processors until at least 2027."
+    },
+    "monitor": {
+      "every": 12,
+      "last": "2026-01",
+      "next": "CES, January",
+      "note": "New panels are announced at CES in January and ship in spring."
+    },
+    "tv": {
+      "every": 12,
+      "last": "2026-03",
+      "next": "March to May",
+      "note": "Last year's TV costs 25-40 % less within months of the new range."
+    },
+    "phone": {
+      "every": 12,
+      "launch": {
+        "Apple": 9,
+        "Samsung": 2,
+        "Google": 8,
+        "OnePlus": 11,
+        "Nothing": 7
+      },
+      "note": "Buying in the two months before the next model is the worst timing."
+    },
+    "laptop": {
+      "every": 12,
+      "launch": {
+        "Apple": 10
+      },
+      "note": ""
+    },
+    "tablet": {
+      "every": 18,
+      "launch": {
+        "Apple": 10,
+        "Samsung": 9
+      },
+      "note": ""
+    },
+    "soundbar": {
+      "every": 24,
+      "note": ""
+    },
+    "headphones": {
+      "every": 24,
+      "launch": {
+        "Sony": 5,
+        "Apple": 9
+      },
+      "note": ""
+    },
+    "watch": {
+      "every": 12,
+      "launch": {
+        "Apple": 9,
+        "Samsung": 7,
+        "Google": 8
+      },
+      "note": ""
+    },
+    "console": {
+      "every": 72,
+      "note": "A console generation lasts six to seven years."
+    },
+    "projector": {
+      "every": 24,
+      "note": ""
+    }
   },
   "sales": [
-    { "id": "bf", "rule": "blackfriday", "days": 4, "markets": ["DE", "FR"] },
-    { "id": "prime", "rule": "month", "month": 7, "day": 8, "days": 4, "markets": ["DE", "FR"] },
-    { "id": "singles", "rule": "fixed", "month": 11, "day": 11, "days": 1, "markets": ["DE", "FR"] },
-    { "id": "soldesHiver", "rule": "nthwed", "month": 1, "n": 2, "days": 28, "markets": ["FR"] },
-    { "id": "soldesEte", "rule": "lastwed", "month": 6, "days": 28, "markets": ["FR"] },
-    { "id": "afterxmas", "rule": "fixed", "month": 12, "day": 26, "days": 7, "markets": ["DE"] }
+    {
+      "id": "bf",
+      "rule": "blackfriday",
+      "days": 4,
+      "markets": [
+        "DE",
+        "FR"
+      ]
+    },
+    {
+      "id": "prime",
+      "rule": "month",
+      "month": 7,
+      "day": 8,
+      "days": 4,
+      "markets": [
+        "DE",
+        "FR"
+      ]
+    },
+    {
+      "id": "singles",
+      "rule": "fixed",
+      "month": 11,
+      "day": 11,
+      "days": 1,
+      "markets": [
+        "DE",
+        "FR"
+      ]
+    },
+    {
+      "id": "soldesHiver",
+      "rule": "nthwed",
+      "month": 1,
+      "n": 2,
+      "days": 28,
+      "markets": [
+        "FR"
+      ]
+    },
+    {
+      "id": "soldesEte",
+      "rule": "lastwed",
+      "month": 6,
+      "days": 28,
+      "markets": [
+        "FR"
+      ]
+    },
+    {
+      "id": "afterxmas",
+      "rule": "fixed",
+      "month": 12,
+      "day": 26,
+      "days": 7,
+      "markets": [
+        "DE"
+      ]
+    }
   ],
   "depreciation": {
-    "gpu": [0.2, 0.15], "cpu": [0.2, 0.15], "board": [0.3, 0.2], "ram": [0.2, 0.15], "ssd": [0.3, 0.2], "psu": [0.3, 0.15], "cooler": [0.3, 0.2], "case": [0.35, 0.2],
-    "pc": [0.25, 0.18], "monitor": [0.25, 0.15], "tv": [0.35, 0.2], "soundbar": [0.3, 0.15], "phone": [0.35, 0.2], "headphones": [0.35, 0.2], "laptop": [0.3, 0.2], "tablet": [0.3, 0.18], "other": [0.3, 0.2]
+    "gpu": [
+      0.2,
+      0.15
+    ],
+    "cpu": [
+      0.2,
+      0.15
+    ],
+    "board": [
+      0.3,
+      0.2
+    ],
+    "ram": [
+      0.2,
+      0.15
+    ],
+    "ssd": [
+      0.3,
+      0.2
+    ],
+    "psu": [
+      0.3,
+      0.15
+    ],
+    "cooler": [
+      0.3,
+      0.2
+    ],
+    "case": [
+      0.35,
+      0.2
+    ],
+    "pc": [
+      0.25,
+      0.18
+    ],
+    "monitor": [
+      0.25,
+      0.15
+    ],
+    "tv": [
+      0.35,
+      0.2
+    ],
+    "soundbar": [
+      0.3,
+      0.15
+    ],
+    "phone": [
+      0.35,
+      0.2
+    ],
+    "headphones": [
+      0.35,
+      0.2
+    ],
+    "laptop": [
+      0.3,
+      0.2
+    ],
+    "tablet": [
+      0.3,
+      0.18
+    ],
+    "other": [
+      0.3,
+      0.2
+    ],
+    "watch": [
+      0.35,
+      0.2
+    ],
+    "console": [
+      0.2,
+      0.12
+    ],
+    "projector": [
+      0.3,
+      0.18
+    ]
   },
   "shops": {
     "DE": [
-      { "n": "Geizhals", "k": "compare", "u": "https://geizhals.de/?fs={q}" },
-      { "n": "idealo", "k": "compare", "u": "https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q}" },
-      { "n": "Alternate", "k": "shop", "u": "https://www.alternate.de/listing.xhtml?q={q}" },
-      { "n": "Mindfactory", "k": "shop", "u": "https://www.mindfactory.de/search_result.php?search_query={q}" },
-      { "n": "MediaMarkt", "k": "shop", "u": "https://www.mediamarkt.de/de/search.html?query={q}" },
-      { "n": "Amazon.de", "k": "shop", "u": "https://www.amazon.de/s?k={q}" }
+      {
+        "n": "Geizhals",
+        "k": "compare",
+        "u": "https://geizhals.de/?fs={q}"
+      },
+      {
+        "n": "idealo",
+        "k": "compare",
+        "u": "https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q}"
+      },
+      {
+        "n": "Alternate",
+        "k": "shop",
+        "u": "https://www.alternate.de/listing.xhtml?q={q}"
+      },
+      {
+        "n": "Mindfactory",
+        "k": "shop",
+        "u": "https://www.mindfactory.de/search_result.php?search_query={q}"
+      },
+      {
+        "n": "MediaMarkt",
+        "k": "shop",
+        "u": "https://www.mediamarkt.de/de/search.html?query={q}"
+      },
+      {
+        "n": "Amazon.de",
+        "k": "shop",
+        "u": "https://www.amazon.de/s?k={q}"
+      }
     ],
     "FR": [
-      { "n": "idealo.fr", "k": "compare", "u": "https://www.idealo.fr/prechcat.html?q={q}" },
-      { "n": "LeDénicheur", "k": "compare", "u": "https://ledenicheur.fr/search?search={q}" },
-      { "n": "LDLC", "k": "shop", "u": "https://www.ldlc.com/recherche/{q}/" },
-      { "n": "Materiel.net", "k": "shop", "u": "https://www.materiel.net/recherche/{q}/" },
-      { "n": "Fnac", "k": "shop", "u": "https://www.fnac.com/SearchResult/ResultList.aspx?Search={q}" },
-      { "n": "Amazon.fr", "k": "shop", "u": "https://www.amazon.fr/s?k={q}" }
+      {
+        "n": "idealo.fr",
+        "k": "compare",
+        "u": "https://www.idealo.fr/prechcat.html?q={q}"
+      },
+      {
+        "n": "LeDénicheur",
+        "k": "compare",
+        "u": "https://ledenicheur.fr/search?search={q}"
+      },
+      {
+        "n": "LDLC",
+        "k": "shop",
+        "u": "https://www.ldlc.com/recherche/{q}/"
+      },
+      {
+        "n": "Materiel.net",
+        "k": "shop",
+        "u": "https://www.materiel.net/recherche/{q}/"
+      },
+      {
+        "n": "Fnac",
+        "k": "shop",
+        "u": "https://www.fnac.com/SearchResult/ResultList.aspx?Search={q}"
+      },
+      {
+        "n": "Amazon.fr",
+        "k": "shop",
+        "u": "https://www.amazon.fr/s?k={q}"
+      }
     ]
   },
   "prebuiltSellers": {
     "DE": [
-      { "n": "Alternate", "u": "https://www.alternate.de/listing.xhtml?q={q}" },
-      { "n": "Geizhals (Komplett-PCs)", "u": "https://geizhals.de/?fs={q}" },
-      { "n": "dubaro", "u": "https://www.dubaro.de/" },
-      { "n": "MIFcom", "u": "https://www.mifcom.de/" },
-      { "n": "Agando", "u": "https://www.agando.de/" },
-      { "n": "MEMORY PC", "u": "https://www.memorypc.de/" }
+      {
+        "n": "Alternate",
+        "u": "https://www.alternate.de/listing.xhtml?q={q}"
+      },
+      {
+        "n": "Geizhals (Komplett-PCs)",
+        "u": "https://geizhals.de/?fs={q}"
+      },
+      {
+        "n": "dubaro",
+        "u": "https://www.dubaro.de/"
+      },
+      {
+        "n": "MIFcom",
+        "u": "https://www.mifcom.de/"
+      },
+      {
+        "n": "Agando",
+        "u": "https://www.agando.de/"
+      },
+      {
+        "n": "MEMORY PC",
+        "u": "https://www.memorypc.de/"
+      }
     ],
     "FR": [
-      { "n": "Materiel.net", "u": "https://www.materiel.net/recherche/{q}/" },
-      { "n": "LDLC", "u": "https://www.ldlc.com/recherche/{q}/" },
-      { "n": "idealo.fr", "u": "https://www.idealo.fr/prechcat.html?q={q}" },
-      { "n": "Cybertek", "u": "https://www.cybertek.fr/" },
-      { "n": "Grosbill", "u": "https://www.grosbill.com/" },
-      { "n": "Infomax", "u": "https://www.infomaxparis.com/" }
+      {
+        "n": "Materiel.net",
+        "u": "https://www.materiel.net/recherche/{q}/"
+      },
+      {
+        "n": "LDLC",
+        "u": "https://www.ldlc.com/recherche/{q}/"
+      },
+      {
+        "n": "idealo.fr",
+        "u": "https://www.idealo.fr/prechcat.html?q={q}"
+      },
+      {
+        "n": "Cybertek",
+        "u": "https://www.cybertek.fr/"
+      },
+      {
+        "n": "Grosbill",
+        "u": "https://www.grosbill.com/"
+      },
+      {
+        "n": "Infomax",
+        "u": "https://www.infomaxparis.com/"
+      }
     ]
   },
   "sources": {
@@ -108,10 +487,26 @@
     "engadget-lt": "https://engadget.com/computing/laptops/best-laptops-120008636.html",
     "nbc-lt": "https://www.notebookcheck.net/The-best-multimedia-laptops.98608.0.html",
     "bgr-lt": "https://bgr.com/2099211/laptops-more-powerful-m5-macbook-pro",
-    "toms-prebuilt": "https://www.tomshardware.com/desktops/gaming-pcs/hp-takes-usd2200-off-a-ryzen-7-9800x3d-and-rtx-5080-prebuilt-at-usd2-799-sale-slashes-44-percent-off-an-omen-system-thats-ready-to-game-however-you-want"
+    "toms-prebuilt": "https://www.tomshardware.com/desktops/gaming-pcs/hp-takes-usd2200-off-a-ryzen-7-9800x3d-and-rtx-5080-prebuilt-at-usd2-799-sale-slashes-44-percent-off-an-omen-system-thats-ready-to-game-however-you-want",
+    "g95nc": "https://www.testbericht.de/produkte/samsung-odyssey-neo-g9-ls57cg952nuxen",
+    "ark": "https://borncity.com/news/samsung-odyssey-ark-premium-monitor-stuerzt-um-52-prozent-im-preis/",
+    "pcgamer-uw": "https://www.pcgamer.com/best-ultrawide-monitor-for-gaming/",
+    "pcguide-uw": "https://www.pcguide.com/monitor/guide/best-ultrawide/",
+    "pcworld-uw": "https://www.pcworld.com/article/1470449/best-ultrawide-monitors.html",
+    "techradar-uw": "https://www.techradar.com/news/ultrawide-monitor",
+    "techradar-tv": "https://www.techradar.com/televisions/i-tested-three-new-5-star-oled-tvs-from-lg-and-samsung-side-by-side-and-i-know-which-is-my-top-pick-for-black-friday-2026",
+    "alza-98": "https://www.alza.at/EN/cheap-97-to-98-tvs-246-249-cm/18921144.htm",
+    "whathifi-sb": "https://www.whathifi.com/best-buys/soundbars",
+    "techradar-sb": "https://www.techradar.com/au/news/audio/home-cinema-audio/tr-top-10-best-soundbars-1288008"
   },
   "changelog": [
-    { "date": "2026-11-24", "summary": "Size filters for monitors and TVs; added 34\" and 49\" ultrawide, 45\" 5K2K and a 27\" 480 Hz monitor (estimated prices until the weekly refresh)." },
-    { "date": "2026-11-23", "summary": "First catalogue: 113 products; graphics card, memory and processor prices checked against November reports, the rest estimates for the weekly refresh." }
+    {
+      "date": "2026-11-24",
+      "summary": "Broad catalogue: 303 products (77 monitors from 24\" to 57\", 29 TVs from 42\" to 115\", projectors, watches and consoles); filters for size, resolution, refresh rate, panel and brand. New prices are estimates until the weekly refresh checks them."
+    },
+    {
+      "date": "2026-11-23",
+      "summary": "First catalogue: 113 products; graphics card, memory and processor prices checked against November reports, the rest estimates for the weekly refresh."
+    }
   ]
 }

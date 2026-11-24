@@ -14,9 +14,9 @@ const DEF = () => ({
   offer: { text: '', fields: null, name: '', url: '' },
   offers: [],                                  // offers the person checked and kept: { id, name, url, price, at, fields }
   found: null,                                 // the last offers Claude found: { at, filters, items }
-  mon: { uses: { aaa: 3, comp: 1, work: 1, movies: 1, creative: 0 }, staticH: 3, room: 'mixed', dist: 75, budget: 1200, gpuFrom: 'build', sizes: [] },
-  tv: { uses: { movies: 3, sport: 1, gaming: 2, tv: 1 }, staticH: 1, room: 'mixed', dist: 300, budget: 2500, sizes: [] },
-  choose: { cat: 'phone', prefs: {}, budget: { phone: 1200, headphones: 450, soundbar: 1000, laptop: 2500, tablet: 1000 }, type: 'any', os: 'any' },
+  mon: { uses: { aaa: 3, comp: 1, work: 1, movies: 1, creative: 0 }, staticH: 3, room: 'mixed', dist: 75, budget: 0, gpuFrom: 'build', sizes: [], res: [], hzMin: 0, panels: [], brands: [], shape: 'any', withTv: false, gpuOk: false, sort: 'score' },
+  tv: { uses: { movies: 3, sport: 1, gaming: 2, tv: 1 }, staticH: 1, room: 'mixed', dist: 300, budget: 0, sizes: [], panels: [], brands: [], hzMin: 0, hdmiMin: 0, dv: false, sort: 'score' },
+  choose: { cat: 'phone', prefs: {}, budget: {}, f: {} },                      // f: per category { size [], type [], os [], brands [], sort }
   gear: [],                                    // { id, cat, catId, name, bought, price, market, makerM, used, note }
   watch: [],                                   // { id, catId, name, cat, target, log: [{ d, p, shop }], added }
   builds: [],                                  // { id, name, at, parts: { slot: id }, total, market }
@@ -33,6 +33,16 @@ export function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) { const x = JSON.parse(raw); if (x && x.v === 1) { S = merge(DEF(), x); fresh = false; } }
+    /* budgets used to start at 1,200 € (monitors), 2,500 € (TVs) and a figure per category, which pushed big screens
+       down the list; an untouched old default now means "no limit" */
+    if (!S.wide) {
+      if (S.mon.budget === 1200) S.mon.budget = 0;
+      S.mon.sizes = []; delete S.mon.size; S.tv.sizes = [];          // every size again: the earlier version offered only a few
+      if (S.tv.budget === 2500) S.tv.budget = 0;
+      const old = { phone: 1200, headphones: 450, soundbar: 1000, laptop: 2500, tablet: 1000 };
+      for (const [k, v] of Object.entries(old)) if (S.choose.budget && S.choose.budget[k] === v) delete S.choose.budget[k];
+      S.wide = 1;
+    }
     else { S = DEF(); fresh = true; }
   } catch (e) { S = DEF(); }
   try { const shared = localStorage.getItem(INBOX_KEY); if (S.inbox && !shared) localStorage.setItem(INBOX_KEY, S.inbox); else if (!S.inbox && shared) S.inbox = shared; } catch (e) { }
