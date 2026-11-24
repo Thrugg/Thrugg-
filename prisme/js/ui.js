@@ -122,7 +122,7 @@ function specLine(it) {
     case 'psu': return `${s.w} W · ${s.eff}${s.atx31 ? ' · ATX 3.1' : ''}${s.native ? ' · 12V-2x6' : ''}${s.form === 'sfx' ? ' · SFX' : ''}`;
     case 'cooler': return s.type === 'aio' ? `AIO ${s.rad} mm · ${s.cap} W` : `${s.h} mm · ${s.cap} W`;
     case 'case': return `GPU ≤ ${s.gpuMax} mm · ${t('cooler')} ≤ ${s.coolerMax} mm · ${s.vol} L`;
-    case 'monitor': return `${s.size}" ${s.w >= 3800 ? '4K' : s.w >= 2500 ? '1440p' : '1080p'} ${s.hz} Hz · ${t('panel_' + s.panel)} · ${s.dp === 'dp14' ? 'DP 1.4' : 'DP 2.1 ' + s.dp.toUpperCase()}${s.dual ? ' · ' + s.dual : ''}`;
+    case 'monitor': return `${s.size}" ${s.w / s.h > 2.1 ? `${s.w}×${s.h}` : s.w >= 3800 ? '4K' : s.w >= 2500 ? '1440p' : '1080p'} ${s.hz} Hz · ${t('panel_' + s.panel)} · ${s.dp === 'dp14' ? 'DP 1.4' : 'DP 2.1 ' + s.dp.toUpperCase()}${s.dual ? ' · ' + s.dual : ''}`;
     case 'tv': return `${t('panel_' + s.panel)} · ${s.hz} Hz · ${s.hdmi21}× HDMI 2.1${s.dv ? ' · Dolby Vision' : ''} · ${s.os}`;
     case 'soundbar': return `${s.ch}${s.sub ? ' · ' + t('withSub') : ''}${s.rears ? ' · ' + t('withRears') : ''}`;
     case 'phone': return `${s.os} · ${s.screen}" · ${t('updYears', { n: s.upd })}`;
@@ -196,27 +196,42 @@ function viewScreens() {
 function viewMonitor() {
   const M = S.mon, { gpu, cpu } = screenGpu();
   const ctx = { uses: M.uses, staticH: M.staticH, room: M.room, dist: M.dist, gpu, cpu, budget: M.budget, market: mk() };
-  const list = E.items('monitor').filter(m => M.size === 'any' || String(m.s.size) === String(M.size)).map(m => ({ m, r: E.monitorScore(m, ctx) })).sort((a, b) => b.r.score - a.r.score);
-  return `<section class="card"><h2>${esc(t('monUses'))}</h2>
+  const want = sizesOf(M), list = E.items('monitor').filter(m => !want.length || !m.s.size || want.includes(Number(m.s.size))).map(m => ({ m, r: E.monitorScore(m, ctx) })).sort((a, b) => b.r.score - a.r.score);
+  const [lo, hi] = E.monSizesFor(M.dist || 75);
+  return `${sizeCard('mon', 'monitor', want, t('monSizeHint', { d: M.dist || 75, a: lo, b: hi }))}
+  <section class="card"><h2>${esc(t('monUses'))}</h2>
    ${['aaa', 'comp', 'work', 'movies', 'creative'].map(k => level('mon.uses.' + k, t('mu_' + k))).join('')}
    <div class="grid2">${field(t('budget'), numIn('mon.budget', '€', 50))}${field(t('distance'), numIn('mon.dist', 'cm', 5))}
    ${field(t('staticH'), numIn('mon.staticH', 'h', 0.5), t('staticHint'))}${field(t('room'), sel('mon.room', [['dark', t('roomDark')], ['mixed', t('roomMixed')], ['bright', t('roomBright')]], M.room))}
-   ${field(t('screenSize'), sel('mon.size', [['any', t('any')], [27, '27"'], [32, '32"']], M.size))}${field(t('gpuFor'), sel('mon.gpuFrom', [['build', t('fromBuild')], ['none', t('noGpu')], ...E.items('gpu').map(g => [g.id, g.name])], M.gpuFrom))}</div></section>
-  <section class="card"><h2>${esc(t('ranked'))}</h2><ul class="prods">${list.map(({ m, r }, i) => prodRow(m, r, i, specLine(m))).join('')}</ul></section>`;
+   ${field(t('gpuFor'), sel('mon.gpuFrom', [['build', t('fromBuild')], ['none', t('noGpu')], ...E.items('gpu').map(g => [g.id, g.name])], M.gpuFrom))}</div></section>
+  <section class="card"><h2>${esc(want.length ? t('rankedSizes', { s: want.map(x => x + '"').join(', ') }) : t('ranked'))}</h2>${list.length ? `<ul class="prods">${list.map(({ m, r }, i) => prodRow(m, r, i, specLine(m))).join('')}</ul>` : `<p class="note">${esc(t('noSize'))}</p>`}
+   <button class="btn" data-act="lookup" data-cat="monitor"${ui.busy === 'lookup' ? ' disabled' : ''}>${esc(t('notListed'))}</button></section>`;
 }
+/* sizes the person chose for a screen type; [] = any. An older single choice ("size": 32) still counts. */
+function sizesOf(o) { if (Array.isArray(o.sizes) && o.sizes.length) return o.sizes.map(Number); return o.size && o.size !== 'any' ? [Number(o.size)] : []; }
+function sizeCard(key, cat, picked, hint) {
+  const opts = E.sizeOptions(cat, mk());
+  return `<section class="card"><h2>${esc(t('sizesH'))}</h2><div class="chips" role="group"><button class="chip${picked.length ? '' : ' on'}" data-act="sizes" data-k="${key}" data-v="" aria-pressed="${!picked.length}">${esc(t('allSizes'))}</button>${opts.map(s => `<button class="chip${picked.includes(s) ? ' on' : ''}" data-act="sizes" data-k="${key}" data-v="${s}" aria-pressed="${picked.includes(s)}">${s}"</button>`).join('')}</div>
+   <p class="note">${esc(t('sizesSub'))} ${esc(hint)}</p></section>`;
+}
+/* other sizes a TV comes in within the choice, so the person sees the whole range they allowed */
+const tvSizesLine = (tv, picked) => { const s = E.sizesOf(tv, mk()).filter(x => !picked.length || picked.includes(x)); return s.length > 1 ? `${s.map(x => x + '"').join('/')} · ` : ''; };
 function prodRow(it, r, i, line, priceText) {
   const tm = E.timing(it, today(), mk()), lasting = tm.reasons.some(r => r.k === 'launchSoon' || r.k === 'shortage');   // the coming sale shows once, above the list
   return `<li data-act="detail" data-id="${it.id}"><div class="ot">${ring(r.score, 46)}<span class="nm"><b>${i + 1}. ${esc(full(it))}</b><small>${esc(line)}</small>${r.why && r.why.length ? `<small class="why">${r.why.slice(0, 3).map(w => esc(reasonText(w))).join(' · ')}</small>` : ''}</span><span class="pr">${priceText || eur(r.price)}${conf(it)}${tm.verdict !== 'buy' && lasting ? `<small class="tm ${tm.verdict}">${esc(t('v_' + tm.verdict))}</small>` : ''}</span></div></li>`;
 }
 function viewTv() {
   const T = S.tv, ctx = { uses: T.uses, staticH: T.staticH, room: T.room, dist: T.dist, budget: T.budget, market: mk() };
-  const list = E.items('tv').map(tv => ({ tv, r: E.tvScore(tv, ctx) })).sort((a, b) => b.r.score - a.r.score), want = E.tvSizeFor(T.dist);
-  return `<section class="card"><h2>${esc(t('tvUses'))}</h2>
+  const picked = sizesOf(T); ctx.sizes = picked;
+  const list = E.items('tv').map(tv => ({ tv, r: E.tvScore(tv, ctx) })).filter(x => !x.r.excluded).sort((a, b) => b.r.score - a.r.score), want = E.tvSizeFor(T.dist);
+  return `${sizeCard('tv', 'tv', picked, t('tvWant', { s: want, d: T.dist }))}
+  <section class="card"><h2>${esc(t('tvUses'))}</h2>
    ${['movies', 'sport', 'gaming', 'tv'].map(k => level('tv.uses.' + k, t('tu_' + k))).join('')}
    <div class="grid2">${field(t('budget'), numIn('tv.budget', '€', 50))}${field(t('seatDist'), numIn('tv.dist', 'cm', 10))}
    ${field(t('room'), sel('tv.room', [['dark', t('roomDark')], ['mixed', t('roomMixed')], ['bright', t('roomBright')]], T.room))}${field(t('tickerH'), numIn('tv.staticH', 'h', 0.5), t('tickerHint'))}</div>
-   <p class="note">${esc(t('tvWant', { s: want, d: T.dist }))}</p></section>
-  <section class="card"><h2>${esc(t('ranked'))}</h2><ul class="prods">${list.map(({ tv, r }, i) => prodRow(tv, r, i, `${r.size ? r.size + '" · ' : ''}${specLine(tv)}`, eur(r.price))).join('')}</ul></section>`;
+   </section>
+  <section class="card"><h2>${esc(picked.length ? t('rankedSizes', { s: picked.map(x => x + '"').join(', ') }) : t('ranked'))}</h2>${list.length ? `<ul class="prods">${list.map(({ tv, r }, i) => prodRow(tv, r, i, `${r.size ? r.size + '" · ' : ''}${tvSizesLine(tv, picked)}${specLine(tv)}`, eur(r.price))).join('')}</ul>` : `<p class="note">${esc(t('noSize'))}</p>`}
+   <button class="btn" data-act="lookup" data-cat="tv"${ui.busy === 'lookup' ? ' disabled' : ''}>${esc(t('notListed'))}</button></section>`;
 }
 function viewCalc() {
   const c = S.calc || (S.calc = { size: 32, res: '3840x2160', hz: 240, dist: 75 }), [w, h] = c.res.split('x').map(Number);
@@ -422,6 +437,7 @@ export function init() {
     if (a === 'go') { S.ui.tab = el.dataset.v; saveUi(); render(); window.scrollTo(0, 0); }
     else if (a === 'ui') { S.ui[el.dataset.k] = el.dataset.v; saveUi(); render(); }
     else if (a === 'set') { setPath(el.dataset.k, el.dataset.v); save(); rerender(); }
+    else if (a === 'sizes') { const o = S[el.dataset.k], v = el.dataset.v; let cur = sizesOf(o); cur = v === '' ? [] : cur.includes(Number(v)) ? cur.filter(x => x !== Number(v)) : [...cur, Number(v)].sort((x, y) => x - y); o.sizes = cur; delete o.size; save(); render(); }
     else if (a === 'profile') { sheetFn = sheetProfile; openSheet(sheetProfile()); }
     else if (a === 'close') { sheetFn = null; closeSheet(); }
     else if (a === 'alts') { const cat = el.dataset.cat; sheetFn = () => sheetAlts(cat); openSheet(sheetFn()); }

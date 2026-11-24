@@ -14,8 +14,8 @@ const DEF = () => ({
   offer: { text: '', fields: null, name: '', url: '' },
   offers: [],                                  // offers the person checked and kept: { id, name, url, price, at, fields }
   found: null,                                 // the last offers Claude found: { at, filters, items }
-  mon: { uses: { aaa: 3, comp: 1, work: 1, movies: 1, creative: 0 }, staticH: 3, room: 'mixed', dist: 75, budget: 1200, gpuFrom: 'build', size: 'any' },
-  tv: { uses: { movies: 3, sport: 1, gaming: 2, tv: 1 }, staticH: 1, room: 'mixed', dist: 300, budget: 2500 },
+  mon: { uses: { aaa: 3, comp: 1, work: 1, movies: 1, creative: 0 }, staticH: 3, room: 'mixed', dist: 75, budget: 1200, gpuFrom: 'build', sizes: [] },
+  tv: { uses: { movies: 3, sport: 1, gaming: 2, tv: 1 }, staticH: 1, room: 'mixed', dist: 300, budget: 2500, sizes: [] },
   choose: { cat: 'phone', prefs: {}, budget: { phone: 1200, headphones: 450, soundbar: 1000, laptop: 2500, tablet: 1000 }, type: 'any', os: 'any' },
   gear: [],                                    // { id, cat, catId, name, bought, price, market, makerM, used, note }
   watch: [],                                   // { id, catId, name, cat, target, log: [{ d, p, shop }], added }
