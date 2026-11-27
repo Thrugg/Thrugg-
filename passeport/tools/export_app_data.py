@@ -13,6 +13,7 @@ from spots_b import SPOTS_B
 from spots_c import SPOTS_C
 from spots_d import SPOTS_D
 from events import EVENTS
+from trips import TRIPS
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'paris.json'
 geo = json.load(open('geocoded.json'))
@@ -142,11 +143,21 @@ LISTS = [
 ]
 lists = [dict(id=i, en=en, fr=fr, sub_en=se, sub_fr=sf, ids=[o['id'] for o in xs]) for i, en, fr, se, sf, xs in LISTS]
 
+# ready-made trips: place names become ids, and every place must exist
+trips = []
+for tr in TRIPS:
+    days = {}
+    for d, t, note, names in tr['days']:
+        for n in names:
+            assert n in ids, ('trip place not in the guide', n)
+        days[d] = dict(t=t, note=note, stops=[ids[n] for n in names])
+    trips.append(dict(id=tr['id'], en=tr['en'], fr=tr['fr'], sub_en=tr['sub_en'], sub_fr=tr['sub_fr'], start=tr['start'], end=tr['end'], days=days))
+
 data = dict(
     v=1, city='paris', name='Paris', built=dt.date.today().isoformat(), checked='2026-11-26',
     center=[2.3290, 48.8590], zoom=12.75,   # the Eiffel Tower to the Marais
     cats=[dict(c=c[0], en=c[1], color=c[2], icon=c[3]) for c in CATEGORIES],
-    spots=out_spots, events=ev_out, parking=pks, lists=lists, aliases=ALIASES,
+    spots=out_spots, events=ev_out, parking=pks, lists=lists, trips=trips, aliases=ALIASES,
     credits=dict(map='© OpenStreetMap contributors · OpenFreeMap', photos='Wikimedia Commons (each photo credited)', weather='Open-Meteo'),
 )
 json.dump(data, open(OUT, 'w'), ensure_ascii=False, separators=(',', ':'))

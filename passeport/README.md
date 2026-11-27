@@ -13,7 +13,7 @@ Open it at https://thrugg.github.io/Thrugg-/passeport/ (on the iPhone: Share →
 | A place | A photo of the place, why it matters, "the shot" (the photo that proves you were there), tips, what is different in December, dated events, price, booking, closing days, and the nearest car parks with Waze and Google Maps links. A warning when it is closed today (Mondays, Tuesdays, 25 December and 1 January, works). |
 | Lists | Your own list (♡ want, ★ must) and ten curated lists: first time, Christmas 2026, palaces & haute cuisine, for two, views, rainy day, free, after dark, eat & drink, beyond Paris. |
 | Passport | A navy cover with your name, your stamps (one per validated visit, inked in the colour of the place's kind, slightly crooked like a real one), points, a rank from Tourist to Ambassador, and 14 badges (all the world icons, the Christmas lights, the Seine bridges, ten arrondissements, the Left Bank…). |
-| Trip | Your dates and base, a page per day with its places in order, warnings for anything closed that day, sunset and dark times, "park once" groups (one car park for several places within walking distance), a driving route, a fly-over of the day on the map, and a link to share the whole trip. |
+| Trip | Your dates and base, a page per day with its places in order, warnings for anything closed that day, sunset and dark times, "park once" groups (one car park for several places within walking distance), a driving route, a fly-over of the day on the map, and a link to share the whole trip. A ready-made **Christmas fortnight by car** (16–30 Dec 2026) loads in one tap: the windows and lights, the museums on their open days, Versailles, châteaux by night and Christmas Day on the Normandy coast (Étretat, Honfleur, Deauville). |
 | Postcard | After a visit: your photo, the stamp, the place and the date as a postcard picture to save or send. |
 
 ## Validating a visit
@@ -31,7 +31,7 @@ Why not trust the photo alone: a photo taken from a web page's camera loses its 
 
 ## The data
 
-`data/paris.json` is what the app reads: 246 places, 55 dated events for the 2026 Christmas season, 671 car parks, 10 curated lists. It is written by `tools/export_app_data.py` from the researched content in `tools/` (see [tools/README.md](tools/README.md)).
+`data/paris.json` is what the app reads: 248 places, 55 dated events for the 2026 Christmas season, 689 car parks, 10 curated lists and one ready-made trip. It is written by `tools/export_app_data.py` from the researched content in `tools/` (see [tools/README.md](tools/README.md)).
 
 `data/paris.xlsx` is the same guide as a workbook, with the categories, the importance scale, the yearly seasons and practical notes (driving and parking rules, tickets, closing days, scams, daylight). `data/paris-spots.csv` and `data/paris-events.csv` are plain-text copies, so changes show in git diffs.
 

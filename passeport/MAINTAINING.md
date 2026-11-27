@@ -17,6 +17,7 @@ Paris on a 3D map with a passport you stamp by validating visits with a photo. F
 | `js/views.js` | Lists, Passport, Trip and Settings. |
 | `js/flows.js` | Validating a visit (the stamp falls), a stamp's page, the postcard, sharing and opening links. |
 | `js/postcard.js` | The 1800×1200 postcard picture. |
+| `tools/trips.py` | The suggested trips. A test fails if a trip sends you to a place on a day it is closed. |
 | `js/store.js` | Saved state (`passeport.v1`), backup export and import. |
 | `js/i18n.js` | French and English for every word of the interface. |
 | `test/passeport.test.mjs` | `node --test passeport/test/*.mjs`: data integrity, sun times against `tools/sun.json`, sparkle, closing days of the real guide, suggestions, search, stamps, badges, trips, share links, EXIF, the visit decision, and that every word exists in both languages. |

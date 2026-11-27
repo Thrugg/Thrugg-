@@ -5,7 +5,7 @@ import { A, $, esc, today, fmtTime, fmtDay, fmtDayLong, fmtDate, fmtDist, catNam
 import { closedOn, eventsOn, hav, walkMin } from './rules.js';
 import { stampSVG, points, rank, badges } from './stamp.js';
 import { sunTimes } from './sky.js';
-import { tripDays, parkOnce, dayWarnings, dayRoute, nav } from './plan.js';
+import { tripDays, parkOnce, dayWarnings, dayRoute, nav, fromTemplate } from './plan.js';
 import * as M from './map.js';
 import { card, openSpot, goTab, refreshMap, rerenderAll, applyTheme, listName } from './ui.js';
 import { shareLink } from './flows.js';
@@ -65,9 +65,14 @@ function passport() {
 }
 
 /* ---------- Plan ---------- */
+/* ready-made trips from the guide, loaded in one tap */
+function suggested(replace) {
+  const ts = A.data.trips || []; if (!ts.length) return '';
+  return `<section class="tpls"><h2>${esc(t('p.tplH'))}</h2>${ts.map(x => { const n = Object.keys(x.days).length, sp = Object.values(x.days).reduce((a, d) => a + d.stops.length, 0); return `<div class="tpl"><b>${esc(S.lang === 'en' ? x.en : x.fr)}</b><p class="muted small">${esc(S.lang === 'en' ? x.sub_en : x.sub_fr)}</p><p class="small">${esc(fmtDay(x.start))} → ${esc(fmtDay(x.end))} · ${esc(t('p.tplCount', { d: n, n: sp }))}</p><button class="btn ${replace ? '' : 'gold '}sm" data-act="trip-tpl" data-id="${esc(x.id)}">${esc(t(replace ? 'p.tplReplace' : 'p.tplUse'))}</button></div>`; }).join('')}</section>`;
+}
 function plan() {
   const tr = S.trip;
-  if (!tr) return `<div class="pane"><header class="ph-h"><h1>${esc(t('tab.plan'))}</h1></header>
+  if (!tr) return `<div class="pane"><header class="ph-h"><h1>${esc(t('tab.plan'))}</h1></header>${suggested(false)}
     <section class="hero-cta"><h2>${esc(t('p.startH'))}</h2><p>${esc(t('p.startP'))}</p>
       <label>${esc(t('p.from'))}<input type="date" id="tStart" value="${today()}"></label><label>${esc(t('p.to'))}<input type="date" id="tEnd"></label>
       <button class="btn gold wide" data-act="trip-create">${esc(t('p.create'))}</button><p class="muted small">${esc(t('p.importHint'))}</p></section></div>`;
@@ -95,6 +100,7 @@ function plan() {
       <div class="stack row">${stops.length ? `<button class="btn" data-act="plan-map">${esc(t('p.onMap'))}</button><button class="btn" data-act="plan-fly">✈︎ ${esc(t('p.fly'))}</button>` : ''}${route ? `<a class="btn" href="${route}" target="_blank" rel="noopener">${esc(t('p.route'))}</a>` : ''}<button class="btn" data-act="plan-add">＋ ${esc(t('p.add'))}</button></div>
     </section>
     <section class="sharebox"><h3>${esc(t('p.shareH'))}</h3><p class="muted small">${esc(t('p.shareP'))}</p><button class="btn" data-act="share-plan">⤴ ${esc(t('p.share'))}</button></section>
+    ${suggested(true)}
   </div>`;
 }
 
@@ -145,6 +151,13 @@ export async function panelAct(act, b) {
       S.trip = { start: s, end: e, days: {}, base: null }; save(); renderPanel(); return;
     }
     case 'trip-edit': tripDialog(); return;
+    case 'trip-tpl': {
+      const x = (A.data.trips || []).find(z => z.id === id); if (!x) return;
+      if (S.trip && !confirm(t('p.tplSure'))) return;
+      S.trip = fromTemplate(x, S.trip && S.trip.base); planDay = null; save(true); renderPanel(); toast(t('p.tplDone'));
+      if (!S.trip.base) setTimeout(tripDialog, 400);
+      return;
+    }
     case 'trip-save': {
       const s = $('#tStart').value, e = $('#tEnd').value, d = $('#dlg');
       if (!s || !e || e < s) return toast(t('p.badDates'));

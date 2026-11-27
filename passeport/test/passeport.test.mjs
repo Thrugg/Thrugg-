@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { hav, walkMin, closedOn, eventsOn, eventSpots, suggest, search, fold, parksFor, dow } from '../js/rules.js';
 import { sunTimes, isNight, nextSparkle, sparklingNow, paris, parisDay } from '../js/sky.js';
 import { stampSVG, points, rank, badges, ICONS, ink, tilt } from '../js/stamp.js';
-import { tripDays, parkOnce, dayWarnings, nav, dayRoute, pack, unpack, cleanShare } from '../js/plan.js';
+import { tripDays, parkOnce, dayWarnings, nav, dayRoute, pack, unpack, cleanShare, fromTemplate } from '../js/plan.js';
 import { parseExif, exifDate, judge } from '../js/camera.js';
 import { DICTS, setLang, t } from '../js/i18n.js';
 
@@ -355,4 +355,24 @@ test('the page has every element the code looks for', () => {
   for (const id of ids) if (!dynamic.has(id)) assert.ok(html.includes(`id="${id}"`), 'index.html lacks #' + id);
   const sw = readFileSync(new URL('sw.js', root), 'utf8');
   for (const f of readdirSync(dir)) assert.ok(sw.includes(`'js/${f}'`), 'the offline copy includes js/' + f);
+});
+
+test('the suggested trip uses real places, respects closing days, and loads as an editable copy', async () => {
+  assert.ok(D.trips && D.trips.length >= 1);
+  const x = D.trips.find(z => z.id === 'xmas-car');
+  const days = tripDays(x.start, x.end);
+  assert.deepEqual(Object.keys(x.days).sort(), days, 'one entry per day');
+  for (const [d, v] of Object.entries(x.days)) {
+    assert.ok(v.t && v.note.length <= 600, d);
+    for (const id of v.stops) assert.ok(byId.has(id), d + ' ' + id);
+    for (const w of dayWarnings(d, v.stops.map(sp))) assert.notEqual(w.c.s, 'closed', `${w.s.id} is closed on ${d}`);
+  }
+  assert.deepEqual(x.days['2026-12-25'].stops, ['etretat-cliffs', 'honfleur', 'deauville']);
+  const tr = fromTemplate(x, { n: 'Home', lat: 48.9, lon: 2.3 });
+  tr.days['2026-12-16'].stops.push('louvre-museum');
+  assert.ok(!x.days['2026-12-16'].stops.includes('louvre-museum'), 'editing the loaded trip leaves the guide alone');
+  assert.equal(tr.base.n, 'Home');
+  const c = cleanShare(await unpack(await pack({ tpl: 'xmas-car', base: { n: 'Home', lat: 48.9, lon: 2.3 }, mine: { honfleur: 'want' } })), new Set(D.spots.map(s => s.id)));
+  assert.deepEqual([c.tpl, c.base.n, c.mine.honfleur], ['xmas-car', 'Home', 'want']);
+  assert.equal(cleanShare({ tpl: '<script>' }, new Set()).tpl, undefined);
 });

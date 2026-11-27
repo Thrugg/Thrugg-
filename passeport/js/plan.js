@@ -76,7 +76,15 @@ export async function unpack(str) {
   throw new Error('Unknown link format');
 }
 
-/* What a shared link may carry, checked before anything is merged: a trip and/or a list of spot ids. */
+/* A trip from a ready-made one in the guide (a copy, so editing it never touches the guide), with the person's own base. */
+export function fromTemplate(tpl, base) {
+  const days = {};
+  for (const [d, v] of Object.entries(tpl.days || {})) days[d] = { t: v.t || '', note: v.note || '', stops: [...(v.stops || [])] };
+  return { start: tpl.start, end: tpl.end, base: base || null, days };
+}
+
+/* What a shared link may carry, checked before anything is merged: a trip and/or a list of spot ids, or the name of a
+   ready-made trip with a base. */
 export function cleanShare(x, knownIds) {
   if (!x || typeof x !== 'object') throw new Error('Empty link');
   const ok = id => typeof id === 'string' && knownIds.has(id);
@@ -91,6 +99,8 @@ export function cleanShare(x, knownIds) {
         out.trip.days[d] = { t: String(v.t || '').slice(0, 80), note: String(v.note || '').slice(0, 600), stops: (Array.isArray(v.stops) ? v.stops : []).filter(ok).slice(0, 20) };
     }
   }
+  if (typeof x.tpl === 'string' && /^[a-z0-9-]{1,40}$/.test(x.tpl)) out.tpl = x.tpl;
+  if (x.base && Number.isFinite(x.base.lat) && Number.isFinite(x.base.lon)) out.base = { n: String(x.base.n || '').slice(0, 60), lat: x.base.lat, lon: x.base.lon };
   if (x.from) out.from = String(x.from).slice(0, 40);
   return out;
 }
