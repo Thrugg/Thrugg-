@@ -48,6 +48,7 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
   <li><a class="app" href="../ecurie/"><span class="ic"><img src="../ecurie/icon-192.png" alt=""></span><span><b>Écurie</b><small>Any car at its mileage: worth, costs, covered by your finances</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../prisme/"><span class="ic"><img src="../prisme/icon-192.png" alt=""></span><span><b>Prisme</b><small>Tech advisor: PC builds that fit, fair ready-made PCs, screens, phones, when to buy</small></span><span class="tag">Synced</span></a></li>
   <li><a class="app" href="../revelateur/"><span class="ic"><img src="../revelateur/icon-192.png" alt=""></span><span><b>Révélateur</b><small>Photos adjusted for what they show, then to your taste</small></span><span class="tag">Synced</span></a></li>
+  <li><a class="app" href="../passeport/"><span class="ic"><img src="../passeport/icon-192.png" alt=""></span><span><b>Passeport</b><small>Paris on a 3D map: places graded 1 to 5, Christmas lights, stamps for your visits</small></span><span class="tag">Synced</span></a></li>
 </ul>
 <p class="note"><a href="../year/">Our year</a>: hikes, stays, nights, wears, records and photos of the year, from all the apps on one page.</p>
 <h2>In Claude</h2>
@@ -109,6 +110,17 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
     if (check) s += ' · ' + check + ' to check for ' + (String(p.name || '').trim() || 'your partner');
     line('../tandem/', s);
   }).catch(() => { });
+  /* Passeport: the trip countdown or day, and the stamps collected */
+  const pp = get('passeport.v1');
+  if (pp && (pp.trip || (pp.visits && Object.keys(pp.visits).length))) {
+    const d0 = new Date(), today = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
+    const diff = (a, b) => Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 864e5);
+    const n = Object.keys(pp.visits || {}).length, stamps = n + ' stamp' + (n === 1 ? '' : 's');
+    const tr = pp.trip;
+    if (tr && today < tr.start) line('../passeport/', diff(today, tr.start) + ' day' + (diff(today, tr.start) === 1 ? '' : 's') + ' to Paris · ' + stamps);
+    else if (tr && today <= tr.end) line('../passeport/', 'Day ' + (diff(tr.start, today) + 1) + ' of ' + (diff(tr.start, tr.end) + 1) + ' in Paris · ' + stamps);
+    else if (n) line('../passeport/', stamps + ' in your passport');
+  }
   /* Révélateur: photos live in its own IndexedDB; only opened when it already exists, so this page never creates it */
   if (indexedDB && indexedDB.databases) indexedDB.databases().then(list => {
     if (!list.some(d => d.name === 'revelateur')) return;

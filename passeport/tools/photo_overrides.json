@@ -1,0 +1,27 @@
+{
+ "set": {
+  "Statue of Liberty replica (Île aux Cygnes)": "File:Paris-ile-aux-cygnes-statue-de-la-liberte-tour-eiffel-seine.jpg",
+  "Seine river cruise": "File:Bateaux Mouches Paris 2011.jpg",
+  "Pierre Hermé (Rue Bonaparte)": "File:Boutique Macarons & Chocolats Pierre Hermé Paris, 4 rue cambon, 1er ar. (interieur) - 2009.jpg",
+  "Poilâne": "File:Poilane, 8 rue du Cherche-Midi, Paris 75006, September 2008.jpg",
+  "Du Pain et des Idées": "File:Du Pain et des Idées, 34 rue Yves Toudic, 75010 Paris, September 2017.jpg",
+  "Opéra Bastille / Palais Garnier performances": "File:Paris, France, Opéra Garnier.jpg",
+  "Bouquinistes on the Seine": "File:Paris 75005 Quai de Montebello Bouquinistes 20071014.jpg",
+  "Rue du Calvaire (Montmartre steps)": "File:Escalier de la rue du calvaire à Montmartre.jpg",
+  "Place de la République": "File:Place de la Republique and Statue of Marianne.jpg",
+  "Bouillon Pigalle": "File:Bouillon Pigalle.jpg",
+  "Rue des Martyrs & SoPi": "File:Rue des Martyrs, Paris.jpg",
+  "La Vallée Village (outlet)": "File:La Vallée Village, février 2025 1.jpg",
+  "Benoit": "File:Benoît Saint-Martin.jpg",
+  "Chapelle du Saint-Esprit (30 rue Lhomond)": "File:Rue Lhomond 28-30 séminaire du Saint-Esprit chapelle de Chalgrin.jpg",
+  "Madame Brasserie (Eiffel Tower)": "File:Galerie extérieure du premier étage de la tour Eiffel.jpg",
+  "Cinéma Les Élysées Lincoln": "File:Elysees Lincoln- Paris.jpg",
+  "Loulou": "File:Panoramics of Jardin des Tuileries, Paris, from Musée des Arts Décoratifs.jpg",
+  "Ladurée (Champs-Élysées)": "File:Ladurée, Champs-Élysées, Paris 8e 002.JPG"
+ },
+ "drop": [
+  "Cédric Grolet Opéra",
+  "Little Red Door",
+  "Philharmonie de Paris"
+ ]
+}

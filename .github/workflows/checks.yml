@@ -20,7 +20,7 @@ jobs:
         run: node --test tests/*.mjs
       - name: App checks
         run: |
-          for d in nocturne seuil ladder grand-tour sillage tandem bridgelab revelateur ecurie prisme; do
+          for d in nocturne seuil ladder grand-tour sillage tandem bridgelab revelateur ecurie prisme passeport; do
             echo "::group::$d"; node --test $d/test/*.mjs; echo "::endgroup::"
           done
       - name: Forge checks
