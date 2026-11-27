@@ -1,0 +1,78 @@
+{
+ "Palais Garnier (Opéra)": {
+  "latlon": [
+   48.87197,
+   2.33163
+  ],
+  "why": "centre of the opera house (OSM match was its restaurant wing)",
+  "wikidata": "Q191740"
+ },
+ "Ladurée (Champs-Élysées)": {
+  "q_list": [
+   "75 Avenue des Champs-Élysées, Paris"
+  ]
+ },
+ "Marché des Enfants Rouges": {
+  "q_list": [
+   "Marché couvert des Enfants Rouges, Paris",
+   "39 Rue de Bretagne, Paris"
+  ]
+ },
+ "La Galerie Dior": {
+  "latlon": [
+   48.86636,
+   2.30476
+  ],
+  "why": "11 rue François 1er, corner of Avenue Montaigne (approx.)"
+ },
+ "Mur des Je t'aime": {
+  "q_list": [
+   "Square Jehan Rictus, Paris"
+  ]
+ },
+ "Le Relais de l'Entrecôte": {
+  "q_list": [
+   "20 Rue Saint-Benoît, Paris"
+  ]
+ },
+ "Statue of Liberty replica (Île aux Cygnes)": {
+  "latlon": [
+   48.84996,
+   2.27958
+  ],
+  "why": "south tip of the Île aux Cygnes by the Pont de Grenelle (approx.)"
+ },
+ "Bois de Boulogne": {
+  "latlon": [
+   48.8625,
+   2.249
+  ],
+  "why": "centre of the woods (approx.)",
+  "wikidata": "Q358994"
+ },
+ "Rue de l'Université (Eiffel view)": {
+  "latlon": [
+   48.8596,
+   2.3006
+  ],
+  "why": "west end of Rue de l'Université near Avenue Rapp, looking at the tower (approx.)"
+ },
+ "Le Jardin RH (RH Paris)": {
+  "q_list": [
+   "23 Avenue des Champs-Élysées, Paris",
+   "RH Paris, Avenue des Champs-Élysées, Paris"
+  ]
+ },
+ "Le Petit RH (RH Paris rooftop)": {
+  "q_list": [
+   "23 Avenue des Champs-Élysées, Paris",
+   "RH Paris, Avenue des Champs-Élysées, Paris"
+  ]
+ },
+ "Francette (barge at the Eiffel Tower)": {
+  "q_list": [
+   "Francette, Paris",
+   "Port de Suffren, Paris"
+  ]
+ }
+}

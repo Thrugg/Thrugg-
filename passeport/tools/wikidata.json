@@ -1,0 +1,754 @@
+{
+ "Q1018039": {
+  "label": "Butte-aux-Cailles",
+  "links": 16
+ },
+ "Q1025686": {
+  "label": "Café de Flore",
+  "links": 26
+ },
+ "Q103456427": {
+  "label": "La Maison Rose",
+  "links": 3
+ },
+ "Q103844498": {
+  "label": "Le Consulat",
+  "links": 0
+ },
+ "Q106357649": {
+  "label": "Delicious",
+  "links": 12
+ },
+ "Q1071456": {
+  "label": "Bouillon Chartier Grands Boulevards",
+  "links": 5
+ },
+ "Q1093108": {
+  "label": "Cirque d'Hiver",
+  "links": 9
+ },
+ "Q1124095": {
+  "label": "Musée de Cluny",
+  "links": 31
+ },
+ "Q113561459": {
+  "label": "Lafayette Coupole",
+  "links": 0
+ },
+ "Q1137613": {
+  "label": "Cour Saint-Émilion",
+  "links": 19
+ },
+ "Q1139243": {
+  "label": "Crazy Horse",
+  "links": 18
+ },
+ "Q1147912": {
+  "label": "Les Deux Magots",
+  "links": 24
+ },
+ "Q115030442": {
+  "label": "Cheval Blanc Paris",
+  "links": 1
+ },
+ "Q1165526": {
+  "label": "Musée Jacquemart-André",
+  "links": 27
+ },
+ "Q1189955": {
+  "label": "Musée de l'Air",
+  "links": 33
+ },
+ "Q1200698": {
+  "label": "Le Bon Marché",
+  "links": 30
+ },
+ "Q123347626": {
+  "label": "Septime",
+  "links": 0
+ },
+ "Q1265070": {
+  "label": "Musée Grévin",
+  "links": 27
+ },
+ "Q12713563": {
+  "label": "Au Pied de Cochon",
+  "links": 1
+ },
+ "Q1284688": {
+  "label": "Fondation Cartier pour l'art contemporain",
+  "links": 14
+ },
+ "Q130388074": {
+  "label": "Bistrot Paul Bert",
+  "links": 0
+ },
+ "Q1314020": {
+  "label": "galerie Vivienne",
+  "links": 16
+ },
+ "Q1319378": {
+  "label": "Musée des Arts Décoratifs",
+  "links": 21
+ },
+ "Q1327886": {
+  "label": "Musée Marmottan Monet",
+  "links": 39
+ },
+ "Q1329141": {
+  "label": "Pont des Arts",
+  "links": 35
+ },
+ "Q1338207": {
+  "label": "Church of Saint Eustache",
+  "links": 33
+ },
+ "Q138101": {
+  "label": "Conciergerie",
+  "links": 43
+ },
+ "Q139695902": {
+  "label": "Sithamparappillai Jegatheepan",
+  "links": 0
+ },
+ "Q1414059": {
+  "label": "parc Monceau",
+  "links": 37
+ },
+ "Q1423353": {
+  "label": "Au Lapin Agile",
+  "links": 17
+ },
+ "Q1445889": {
+  "label": "La Coupole",
+  "links": 11
+ },
+ "Q14955143": {
+  "label": "Le Cinq",
+  "links": 3
+ },
+ "Q1503157": {
+  "label": "Shakespeare and Company",
+  "links": 26
+ },
+ "Q1506": {
+  "label": "place des Terreaux",
+  "links": 10
+ },
+ "Q151030": {
+  "label": "Moulin Rouge",
+  "links": 53
+ },
+ "Q1520841": {
+  "label": "Château de Saint-Germain-en-Laye",
+  "links": 34
+ },
+ "Q1553251": {
+  "label": "Guerlain",
+  "links": 22
+ },
+ "Q1583780": {
+  "label": "La Samaritaine",
+  "links": 30
+ },
+ "Q167863": {
+  "label": "Musée du quai Branly",
+  "links": 36
+ },
+ "Q1726347": {
+  "label": "Parc floral de Paris",
+  "links": 14
+ },
+ "Q1736217": {
+  "label": "Senlis Cathedral",
+  "links": 15
+ },
+ "Q178065": {
+  "label": "Centre Georges Pompidou",
+  "links": 62
+ },
+ "Q180274": {
+  "label": "Notre-Dame de Chartres",
+  "links": 66
+ },
+ "Q1810254": {
+  "label": "Le Train Bleu",
+  "links": 12
+ },
+ "Q188856": {
+  "label": "Panthéon",
+  "links": 60
+ },
+ "Q188977": {
+  "label": "Les Invalides",
+  "links": 56
+ },
+ "Q189503": {
+  "label": "place de la Concorde",
+  "links": 60
+ },
+ "Q191740": {
+  "label": "Fernando Verdasco",
+  "links": 43
+ },
+ "Q193193": {
+  "label": "Sainte Chapelle",
+  "links": 57
+ },
+ "Q193215": {
+  "label": "Château de Chenonceau",
+  "links": 45
+ },
+ "Q19675": {
+  "label": "Louvre Museum",
+  "links": 159
+ },
+ "Q201428": {
+  "label": "Palace of Fontainebleau",
+  "links": 55
+ },
+ "Q2030715": {
+  "label": "Parc de Saint-Cloud",
+  "links": 8
+ },
+ "Q203285": {
+  "label": "Provins",
+  "links": 69
+ },
+ "Q2051953": {
+  "label": "Parc André Citroën",
+  "links": 18
+ },
+ "Q205367": {
+  "label": "Château de Chambord",
+  "links": 54
+ },
+ "Q2059518": {
+  "label": "Hôtel de la Marine",
+  "links": 10
+ },
+ "Q2060889": {
+  "label": "Coulée verte René-Dumont",
+  "links": 21
+ },
+ "Q206521": {
+  "label": "Disneyland Paris",
+  "links": 47
+ },
+ "Q206823": {
+  "label": "Reims Cathedral",
+  "links": 59
+ },
+ "Q2081650": {
+  "label": "Berthillon",
+  "links": 6
+ },
+ "Q20883": {
+  "label": "Mount Saint-Michel",
+  "links": 12
+ },
+ "Q211034": {
+  "label": "île Saint-Louis",
+  "links": 42
+ },
+ "Q212406": {
+  "label": "Auvers-sur-Oise",
+  "links": 61
+ },
+ "Q216357": {
+  "label": "Grande Arche",
+  "links": 50
+ },
+ "Q217925": {
+  "label": "Champ de Mars",
+  "links": 56
+ },
+ "Q22921224": {
+  "label": "Pâtisserie Stohrer",
+  "links": 2
+ },
+ "Q22921405": {
+  "label": "Brasserie Bofinger",
+  "links": 1
+ },
+ "Q22924488": {
+  "label": "Église Saint-Germain-des-Prés",
+  "links": 0
+ },
+ "Q22924739": {
+  "label": "À la mère de famille",
+  "links": 0
+ },
+ "Q23402": {
+  "label": "Musée d'Orsay",
+  "links": 120
+ },
+ "Q2372049": {
+  "label": "Grand Gallery of Evolution",
+  "links": 6
+ },
+ "Q243": {
+  "label": "Eiffel Tower",
+  "links": 177
+ },
+ "Q2599177": {
+  "label": "Maison de Victor Hugo",
+  "links": 15
+ },
+ "Q263359": {
+  "label": "Lipp",
+  "links": 10
+ },
+ "Q28785": {
+  "label": "Sacré-Cœur",
+  "links": 59
+ },
+ "Q28924": {
+  "label": "Catacombs of Paris",
+  "links": 46
+ },
+ "Q2896854": {
+  "label": "Le Grand Véfour",
+  "links": 7
+ },
+ "Q290355": {
+  "label": "pont de Bir-Hakeim",
+  "links": 27
+ },
+ "Q2919066": {
+  "label": "Musée de Montmartre",
+  "links": 17
+ },
+ "Q2946": {
+  "label": "Palace of Versailles",
+  "links": 105
+ },
+ "Q295844": {
+  "label": "Church of Saint-Sulpice",
+  "links": 36
+ },
+ "Q2981": {
+  "label": "Notre-Dame de Paris",
+  "links": 116
+ },
+ "Q3075489": {
+  "label": "Louis Vuitton Foundation",
+  "links": 36
+ },
+ "Q3090513": {
+  "label": "Jardin d'Acclimatation",
+  "links": 28
+ },
+ "Q309458": {
+  "label": "Jardin du Luxembourg",
+  "links": 50
+ },
+ "Q311": {
+  "label": "Père Lachaise Cemetery",
+  "links": 67
+ },
+ "Q3162586": {
+  "label": "jardin du Palais-Royal",
+  "links": 4
+ },
+ "Q3162589": {
+  "label": "Jardin du Pré-Catelan",
+  "links": 5
+ },
+ "Q3223818": {
+  "label": "Le Jules Verne",
+  "links": 5
+ },
+ "Q323767": {
+  "label": "Montparnasse Tower",
+  "links": 47
+ },
+ "Q3289864": {
+  "label": "Aligre Greenmarket",
+  "links": 3
+ },
+ "Q3289922": {
+  "label": "Marché des Enfants Rouges",
+  "links": 6
+ },
+ "Q330564": {
+  "label": "La Madeleine",
+  "links": 46
+ },
+ "Q3330509": {
+  "label": "Musée Albert-Kahn",
+  "links": 8
+ },
+ "Q335277": {
+  "label": "Pont Neuf",
+  "links": 43
+ },
+ "Q3378907": {
+  "label": "Philharmonie de Paris",
+  "links": 17
+ },
+ "Q3394227": {
+  "label": "Polidor",
+  "links": 5
+ },
+ "Q3427906": {
+  "label": "Brasserie Julien",
+  "links": 3
+ },
+ "Q3447571": {
+  "label": "Rue Crémieux",
+  "links": 7
+ },
+ "Q3494658": {
+  "label": "square Jehan-Rictus",
+  "links": 3
+ },
+ "Q3503965": {
+  "label": "Sunset/Sunside",
+  "links": 2
+ },
+ "Q358994": {
+  "label": "Lenora",
+  "links": 11
+ },
+ "Q392564": {
+  "label": "Grand Mosque of Paris",
+  "links": 46
+ },
+ "Q43688220": {
+  "label": "Musée Yves Saint Laurent Paris",
+  "links": 3
+ },
+ "Q45107": {
+  "label": "Angelina",
+  "links": 7
+ },
+ "Q457318": {
+  "label": "Grand Palais",
+  "links": 50
+ },
+ "Q476516": {
+  "label": "Rouen Cathedral",
+  "links": 51
+ },
+ "Q4828216": {
+  "label": "avenue de Champagne",
+  "links": 4
+ },
+ "Q517995": {
+  "label": "Le Caveau de la Huchette",
+  "links": 4
+ },
+ "Q526595": {
+  "label": "place du Tertre",
+  "links": 29
+ },
+ "Q532113": {
+  "label": "parc des Buttes-Chaumont",
+  "links": 26
+ },
+ "Q550": {
+  "label": "avenue des Champs-Élysées",
+  "links": 89
+ },
+ "Q56255196": {
+  "label": "Atelier des Lumières",
+  "links": 1
+ },
+ "Q56309501": {
+  "label": "Saint-Ouen flea market",
+  "links": 4
+ },
+ "Q583251": {
+  "label": "Saint-Étienne-du-Mont",
+  "links": 26
+ },
+ "Q604550": {
+  "label": "Jardin des serres d'Auteuil",
+  "links": 16
+ },
+ "Q638423": {
+  "label": "Opéra Bastille",
+  "links": 41
+ },
+ "Q640447": {
+  "label": "Musée Carnavalet",
+  "links": 31
+ },
+ "Q640968": {
+  "label": "Hôtel de Ville, Paris",
+  "links": 36
+ },
+ "Q643520": {
+  "label": "Place Vendôme",
+  "links": 41
+ },
+ "Q64436": {
+  "label": "Arc de Triomphe",
+  "links": 85
+ },
+ "Q6455598": {
+  "label": "L'Arpège",
+  "links": 6
+ },
+ "Q650519": {
+  "label": "Musée Rodin",
+  "links": 38
+ },
+ "Q656054": {
+  "label": "Hôtel Ritz Paris",
+  "links": 35
+ },
+ "Q663673": {
+  "label": "Château de Vincennes",
+  "links": 40
+ },
+ "Q684846": {
+  "label": "Château de Malmaison",
+  "links": 26
+ },
+ "Q691375": {
+  "label": "Bourse de commerce",
+  "links": 10
+ },
+ "Q726781": {
+  "label": "Musée de l'Orangerie",
+  "links": 35
+ },
+ "Q730948": {
+  "label": "Jardin des plantes",
+  "links": 35
+ },
+ "Q739976": {
+  "label": "Vaux-le-Vicomte",
+  "links": 40
+ },
+ "Q743206": {
+  "label": "Musée Picasso",
+  "links": 38
+ },
+ "Q746647": {
+  "label": "Montmartre Cemetery",
+  "links": 41
+ },
+ "Q751293": {
+  "label": "Café Procope",
+  "links": 22
+ },
+ "Q766938": {
+  "label": "Château de Chantilly",
+  "links": 28
+ },
+ "Q769842": {
+  "label": "Chapel of Our Lady of the Miraculous Medal",
+  "links": 10
+ },
+ "Q810151": {
+  "label": "Basilique de Saint-Denis",
+  "links": 18
+ },
+ "Q818517": {
+  "label": "Tuileries Garden",
+  "links": 47
+ },
+ "Q820892": {
+  "label": "Petit Palais",
+  "links": 47
+ },
+ "Q857276": {
+  "label": "Musée d'art moderne de Paris",
+  "links": 40
+ },
+ "Q860166": {
+  "label": "Arab World Institute",
+  "links": 30
+ },
+ "Q860172": {
+  "label": "Canal Saint-Martin",
+  "links": 38
+ },
+ "Q898629": {
+  "label": "place des Vosges",
+  "links": 39
+ },
+ "Q899223": {
+  "label": "Pavillons de Bercy",
+  "links": 6
+ },
+ "Q950446": {
+  "label": "parc de Belleville",
+  "links": 16
+ },
+ "Q99562": {
+  "label": "Montmartre funicular",
+  "links": 24
+ },
+ "Q1027432": {
+  "label": "rue du Faubourg-Saint-Honoré",
+  "links": 23
+ },
+ "Q113997926": {
+  "label": "La Grande Épicerie de Paris",
+  "links": 0
+ },
+ "Q1216332": {
+  "label": "Ladurée",
+  "links": 17
+ },
+ "Q1253609": {
+  "label": "Christkindelsmärik",
+  "links": 13
+ },
+ "Q1334247": {
+  "label": "Harry's New York Bar",
+  "links": 4
+ },
+ "Q13360213": {
+  "label": "Chaillot Palace",
+  "links": 34
+ },
+ "Q1388761": {
+  "label": "Pierre Hermé",
+  "links": 10
+ },
+ "Q141500519": {
+  "label": "La Vallee Village",
+  "links": 0
+ },
+ "Q1473446": {
+  "label": "Claude Monet Foundation",
+  "links": 10
+ },
+ "Q186115": {
+  "label": "Montmartre",
+  "links": 61
+ },
+ "Q187840": {
+  "label": "Palais Garnier",
+  "links": 61
+ },
+ "Q20892": {
+  "label": "Le Mont Saint-Michel",
+  "links": 86
+ },
+ "Q209626": {
+  "label": "bois de Boulogne",
+  "links": 49
+ },
+ "Q2112543": {
+  "label": "rue Mouffetard",
+  "links": 15
+ },
+ "Q218613": {
+  "label": "Galeries Lafayette Haussmann",
+  "links": 32
+ },
+ "Q2233532": {
+  "label": "banks of the Seine",
+  "links": 14
+ },
+ "Q3025643": {
+  "label": "Deyrolle",
+  "links": 4
+ },
+ "Q321621": {
+  "label": "Latin Quarter",
+  "links": 44
+ },
+ "Q334186": {
+  "label": "Royal abbey of Saint-Germain-des-Prés",
+  "links": 37
+ },
+ "Q3403689": {
+  "label": "Printemps Haussmann",
+  "links": 3
+ },
+ "Q3447482": {
+  "label": "Rue Cler",
+  "links": 2
+ },
+ "Q390418": {
+  "label": "Pont Alexandre III",
+  "links": 44
+ },
+ "Q4167": {
+  "label": "Festival of Lights",
+  "links": 15
+ },
+ "Q735620": {
+  "label": "avenue Montaigne",
+  "links": 18
+ },
+ "Q749573": {
+  "label": "Le Marais",
+  "links": 36
+ },
+ "Q8044": {
+  "label": "Petit Trianon",
+  "links": 36
+ },
+ "Q913864": {
+  "label": "Mariage Frères",
+  "links": 7
+ },
+ "Q1094338": {
+  "label": "Cité des Sciences et de l'Industrie",
+  "links": 38
+ },
+ "Q16632474": {
+  "label": "The Peninsula Paris",
+  "links": 12
+ },
+ "Q16639825": {
+  "label": "Grand Café Capucines",
+  "links": 1
+ },
+ "Q1809902": {
+  "label": "Le Grand Rex",
+  "links": 17
+ },
+ "Q1817122": {
+  "label": "Château d'Écouen",
+  "links": 16
+ },
+ "Q188190": {
+  "label": "Élysée Palace",
+  "links": 64
+ },
+ "Q217708": {
+  "label": "Hôtel George-V",
+  "links": 10
+ },
+ "Q28495553": {
+  "label": "Site Richelieu-Louvois",
+  "links": 1
+ },
+ "Q290936": {
+  "label": "Étretat",
+  "links": 58
+ },
+ "Q3076041": {
+  "label": "Medici Fountain",
+  "links": 13
+ },
+ "Q3145622": {
+  "label": "Hôtel Pauilhac",
+  "links": 2
+ },
+ "Q3145671": {
+  "label": "Hôtel Salomon de Rothschild",
+  "links": 4
+ },
+ "Q3285427": {
+  "label": "Mandarin Oriental Paris",
+  "links": 5
+ },
+ "Q3398566": {
+  "label": "Port de Suffren",
+  "links": 1
+ },
+ "Q377592": {
+  "label": "Parc Astérix",
+  "links": 25
+ }
+}

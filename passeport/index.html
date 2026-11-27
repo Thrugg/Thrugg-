@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Passeport · Paris</title>
+<meta name="description" content="Paris on a 3D map: 246 places graded 1 to 5, a photo of each, Christmas lights and events, car parks, and a passport you stamp with your own photos.">
+<meta name="theme-color" content="#f1ebe0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Passeport">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preload" href="data/paris.json" as="fetch" crossorigin>
+<link rel="preload" href="fonts/bodoni-moda-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="preconnect" href="https://upload.wikimedia.org">
+<link rel="stylesheet" href="app.css">
+<script src="../cloud.js"></script>
+</head>
+<body>
+<div id="app">
+  <div id="map" role="region" aria-label="Carte"></div>
+  <header id="top">
+    <a class="brand" href="../apps/" data-i18n-aria="shell.brand"><b>P</b>Passeport</a>
+    <button class="searchbtn" data-act="search"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg><span data-i18n="shell.search">Chercher dans Paris</span></button>
+  </header>
+  <nav id="chips" aria-label="Filtres"></nav>
+  <div id="fabs">
+    <button class="fab" data-act="three-d" data-i18n-aria="shell.3d">3D</button>
+    <button class="fab" data-act="locate" data-i18n-aria="shell.locate"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 1h2v3.1A8 8 0 0 1 19.9 11H23v2h-3.1A8 8 0 0 1 13 19.9V23h-2v-3.1A8 8 0 0 1 4.1 13H1v-2h3.1A8 8 0 0 1 11 4.1zm1 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm0 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg></button>
+    <button class="fab" data-act="theme" data-i18n-aria="shell.theme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.3 2a8 8 0 1 0 9.7 9.7A7 7 0 0 1 12.3 2z"/></svg></button>
+  </div>
+  <section id="sheet" data-s="peek" aria-label="Paris">
+    <div class="grab" aria-hidden="true"></div>
+    <div id="sheetBody"><p class="muted" data-i18n="shell.loading">Ouverture du guide…</p></div>
+  </section>
+  <main id="panel" hidden></main>
+  <nav id="tabs" aria-label="Sections"></nav>
+</div>
+<dialog id="dlg"></dialog>
+<div id="fx" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="notice" role="status" hidden></div>
+<input id="cam" type="file" accept="image/*" hidden>
+<svg id="svgdefs" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"></svg>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

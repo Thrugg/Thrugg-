@@ -1,0 +1,16 @@
+{
+  "name": "Passeport · Paris",
+  "short_name": "Passeport",
+  "description": "Paris on a 3D map: places graded 1 to 5, a photo of each, Christmas lights, car parks, and a passport you stamp with your own photos.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1c2e55",
+  "theme_color": "#f1ebe0",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
