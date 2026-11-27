@@ -6,7 +6,7 @@ import { A, $, esc, fmtDay, fmtDate, fmtTime, catName, catColor, photo, toast, d
 import { locate, pickPhoto, readExif, shrink, judge, putPhoto, getPhoto, delPhoto } from './camera.js';
 import { stampSVG, badges, points, INK_FILTER } from './stamp.js';
 import { makePostcard } from './postcard.js';
-import { pack, unpack, cleanShare } from './plan.js';
+import { pack, unpack, cleanShare, fromTemplate } from './plan.js';
 import { renderSpot, refreshMap, renderTabs, rerenderAll } from './ui.js';
 import { renderPanel } from './views.js';
 
@@ -96,6 +96,7 @@ export async function shareLink(payload, title) {
 export async function openShared(code) {
   let x;
   try { x = cleanShare(await unpack(code), new Set(A.data.spots.map(s => s.id))); } catch (e) { toast(t('share.bad')); return; }
+  if (x.tpl && !x.trip) { const tp = (A.data.trips || []).find(z => z.id === x.tpl); if (tp) x.trip = fromTemplate(tp, x.base); }
   const nMine = x.mine ? Object.keys(x.mine).length : 0, days = x.trip ? Object.values(x.trip.days).filter(d => d.stops.length || d.t).length : 0;
   dialog(`<div class="pad"><h2>${esc(t('share.h'))}</h2><p>${esc(x.from ? t('share.from', { n: x.from }) : t('share.anon'))}</p><ul class="plain">${nMine ? `<li>★ ${esc(t('share.mine', { n: nMine }))}</li>` : ''}${x.trip ? `<li>✈︎ ${esc(t('share.trip', { a: fmtDay(x.trip.start), b: fmtDay(x.trip.end), n: days }))}</li>` : ''}</ul>
     ${x.trip && S.trip ? `<p class="muted small">${esc(t('share.replace'))}</p>` : ''}<div class="stack row end"><button class="btn ghost" data-act="dlg-close">${esc(t('a.cancel'))}</button><button class="btn gold" data-act="share-accept" autofocus>${esc(t('share.accept'))}</button></div></div>`);

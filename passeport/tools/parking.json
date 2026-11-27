@@ -4070,6 +4070,270 @@
 "area": "out"
 },
 {
+"id": "w820409872",
+"name": "",
+"lat": 49.423136,
+"lon": 0.231601,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "r14679710",
+"name": "",
+"lat": 49.424698,
+"lon": 0.229706,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w547746697",
+"name": "",
+"lat": 49.421889,
+"lon": 0.23043,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w623578850",
+"name": "",
+"lat": 49.418236,
+"lon": 0.237752,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w1539850877",
+"name": "",
+"lat": 49.417531,
+"lon": 0.230652,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w550971519",
+"name": "",
+"lat": 49.417456,
+"lon": 0.241092,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w1186671634",
+"name": "",
+"lat": 49.421712,
+"lon": 0.230766,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w1311253305",
+"name": "",
+"lat": 49.416043,
+"lon": 0.23829,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w551429324",
+"name": "",
+"lat": 49.415525,
+"lon": 0.241651,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w820409876",
+"name": "",
+"lat": 49.424237,
+"lon": 0.229351,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w1186763948",
+"name": "",
+"lat": 49.416702,
+"lon": 0.228874,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w1186671627",
+"name": "",
+"lat": 49.421541,
+"lon": 0.230365,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "n7749548182",
+"name": "",
+"lat": 49.422913,
+"lon": 0.221025,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "no",
+"area": "out"
+},
+{
+"id": "w550970797",
+"name": "",
+"lat": 49.41574,
+"lon": 0.244606,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "no",
+"area": "out"
+},
+{
+"id": "w623803448",
+"name": "",
+"lat": 49.416046,
+"lon": 0.244883,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w160501733",
+"name": "",
+"lat": 49.354035,
+"lon": 0.074013,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w63615909",
+"name": "",
+"lat": 49.360628,
+"lon": 0.069183,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w63614556",
+"name": "",
+"lat": 49.358406,
+"lon": 0.067071,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w165397033",
+"name": "",
+"lat": 49.354717,
+"lon": 0.070461,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w63613651",
+"name": "",
+"lat": 49.362045,
+"lon": 0.069315,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w63615832",
+"name": "",
+"lat": 49.36553,
+"lon": 0.072629,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w111174824",
+"name": "",
+"lat": 49.351873,
+"lon": 0.060143,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
+"id": "w63612586",
+"name": "",
+"lat": 49.355164,
+"lon": 0.058021,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "w946415951",
+"name": "",
+"lat": 49.354385,
+"lon": 0.056636,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
+"area": "out"
+},
+{
 "id": "w280599640",
 "name": "",
 "lat": 49.009478,
@@ -4796,6 +5060,17 @@
 "area": "out"
 },
 {
+"id": "w369230258",
+"name": "Parking Cours des Fossés",
+"lat": 49.418704,
+"lon": 0.234851,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
 "id": "w41987058",
 "name": "Parking De Gaulle",
 "lat": 49.249841,
@@ -4873,6 +5148,17 @@
 "area": "out"
 },
 {
+"id": "w688736445",
+"name": "Parking Indigo Foch",
+"lat": 49.366215,
+"lon": 0.079377,
+"kind": "multi-storey",
+"operator": "Indigo",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
 "id": "w156249450",
 "name": "Parking Indigo Pologne",
 "lat": 48.897408,
@@ -4936,6 +5222,17 @@
 "operator": "",
 "capacity": null,
 "fee": "yes",
+"area": "out"
+},
+{
+"id": "w1537557006",
+"name": "Parking PL",
+"lat": 49.427306,
+"lon": 0.237185,
+"kind": "surface",
+"operator": "",
+"capacity": null,
+"fee": "",
 "area": "out"
 },
 {
@@ -5187,6 +5484,17 @@
 "lon": 1.487952,
 "kind": "underground",
 "operator": "",
+"capacity": null,
+"fee": "yes",
+"area": "out"
+},
+{
+"id": "r21974965",
+"name": "Parking du Bassin du Centre",
+"lat": 49.419391,
+"lon": 0.236732,
+"kind": "surface",
+"operator": "Commune de Honfleur",
 "capacity": null,
 "fee": "yes",
 "area": "out"

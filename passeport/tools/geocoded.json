@@ -1665,6 +1665,20 @@
   "osm": "relation/2673357",
   "wikidata": "Q290936"
  },
+ "Honfleur (old harbour)": {
+  "lat": 49.420177,
+  "lon": 0.233152,
+  "how": "OSM: Vieux Bassin, Quai Sainte-Catherine, Honfleur, Lisieux, Calvados, Normandie, France métropolitaine, 14600, Fra",
+  "osm": "way/200953834",
+  "wikidata": "Q16682634"
+ },
+ "Deauville (Les Planches)": {
+  "lat": 49.360729,
+  "lon": 0.066468,
+  "how": "OSM: Promenade des Planches, Deauville, Lisieux, Calvados, Normandie, France métropolitaine, 14800, France",
+  "osm": "way/32241699",
+  "wikidata": "Q3234770"
+ },
  "iFLY Paris (indoor skydiving)": {
   "lat": 48.895752,
   "lon": 2.387976,

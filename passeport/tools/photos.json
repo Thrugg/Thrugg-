@@ -2793,5 +2793,31 @@
   "author": "Poulpy",
   "license": "CC BY-SA 3.0",
   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+ },
+ "Honfleur (old harbour)": {
+  "file": "Vieux bassin Honfleur.JPG",
+  "how": "Wikidata image",
+  "w": 4000,
+  "h": 2161,
+  "t250": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Vieux_bassin_Honfleur.JPG/250px-Vieux_bassin_Honfleur.JPG",
+  "t500": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Vieux_bassin_Honfleur.JPG/500px-Vieux_bassin_Honfleur.JPG",
+  "t960": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Vieux_bassin_Honfleur.JPG/960px-Vieux_bassin_Honfleur.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Vieux_bassin_Honfleur.JPG",
+  "author": "Rebexho",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+ },
+ "Deauville (Les Planches)": {
+  "file": "Deauville-planches.jpg",
+  "how": "Wikidata image",
+  "w": 2071,
+  "h": 3021,
+  "t250": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Deauville-planches.jpg/250px-Deauville-planches.jpg",
+  "t500": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Deauville-planches.jpg/500px-Deauville-planches.jpg",
+  "t960": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Deauville-planches.jpg/960px-Deauville-planches.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Deauville-planches.jpg",
+  "author": "Morburre",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
  }
 }
