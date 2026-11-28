@@ -31,7 +31,7 @@ Why not trust the photo alone: a photo taken from a web page's camera loses its 
 
 ## The data
 
-`data/paris.json` is what the app reads: 248 places, 55 dated events for the 2026 Christmas season, 689 car parks, 10 curated lists and one ready-made trip. It is written by `tools/export_app_data.py` from the researched content in `tools/` (see [tools/README.md](tools/README.md)).
+`data/paris.json` is what the app reads: 249 places, 55 dated events for the 2026 Christmas season, 689 car parks, 10 curated lists and one ready-made trip. It is written by `tools/export_app_data.py` from the researched content in `tools/` (see [tools/README.md](tools/README.md)).
 
 `data/paris.xlsx` is the same guide as a workbook, with the categories, the importance scale, the yearly seasons and practical notes (driving and parking rules, tickets, closing days, scams, daylight). `data/paris-spots.csv` and `data/paris-events.csv` are plain-text copies, so changes show in git diffs.
 

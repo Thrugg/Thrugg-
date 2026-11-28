@@ -3,7 +3,7 @@
    photos (Wikimedia Commons) are kept as you look at them, the newest ones only, so an area you opened at breakfast
    still draws in the métro. Weather, address search and sync always go to the network. Your own photos never pass
    through here: they are made on the phone and stay in its storage. */
-const V = 'passeport-2026.11.27c', TILES = 'passeport-tiles-1', PHOTOS = 'passeport-photos-1';
+const V = 'passeport-2026.11.28a', TILES = 'passeport-tiles-1', PHOTOS = 'passeport-photos-1';
 const TILE_MAX = 3000, PHOTO_MAX = 900;
 const CORE = ['./', 'index.html', 'app.css', 'data/paris.json', 'manifest.webmanifest', 'icon-192.png', '../cloud.js',
   'js/main.js', 'js/app.js', 'js/ui.js', 'js/views.js', 'js/flows.js', 'js/map.js', 'js/store.js', 'js/i18n.js', 'js/rules.js', 'js/sky.js', 'js/stamp.js', 'js/plan.js', 'js/camera.js', 'js/postcard.js',
