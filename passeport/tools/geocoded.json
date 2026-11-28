@@ -1665,6 +1665,13 @@
   "osm": "relation/2673357",
   "wikidata": "Q290936"
  },
+ "Au Bourguignon du Marais": {
+  "lat": 48.855443,
+  "lon": 2.357491,
+  "how": "OSM: Au Bourguignon du Marais, Rue François Miron, Quartier Saint-Gervais, Paris 4e Arrondissement, Paris, Île-de-F",
+  "osm": "node/9797562742",
+  "wikidata": ""
+ },
  "Honfleur (old harbour)": {
   "lat": 49.420177,
   "lon": 0.233152,
